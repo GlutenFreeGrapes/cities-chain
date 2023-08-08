@@ -335,10 +335,10 @@ async def repeat(interaction: discord.Interaction, num: app_commands.Range[int,-
                         where server_id = ?''', data=(interaction.guild_id,))
             c=cur.fetchone()[0] 
             if c:
-                await interaction.response.send_message('Minimum number of cities before repeating set to **%s**.'%num)
+                await interaction.response.send_message('Minimum number of cities before repeating set to **%s**.'%f'{num:,}')
             else:
                 await interaction.response.send_message('Repeats set to **ON**. ')
-                await interaction.channel.send('Minimum number of cities before repeating set to **%s**.'%num)
+                await interaction.channel.send('Minimum number of cities before repeating set to **%s**.'%f'{num:,}')
             cur.execute('''update server_info
                         set repeats = ?,
                         min_repeat = ?
@@ -358,7 +358,7 @@ async def population(interaction: discord.Interaction, population: app_commands.
                     set min_pop = ?
                     where server_id = ?''', data=(population,interaction.guild_id))
         conn.commit()
-        await interaction.response.send_message('Minimum number of cities before repeating set to **%s**.'%population)
+        await interaction.response.send_message('Minimum number of cities before repeating set to **%s**.'%f'{population:,}')
     else:
         await interaction.followup.send('Command can only be used after the chain has ended.')
 
@@ -665,9 +665,9 @@ async def on_message(message:discord.Message):
                             if sinfo[3]:
                                 poss=allnames[allnames['population']>=sinfo[2]]
                                 newid=int(random.choice(poss.index))
-                                await message.channel.send('<@%s> RUINED IT AT **%s**!! Next city is **%s.** **No going twice.**'%(message.author.id,len(citieslist),poss.at[newid,'name']))
+                                await message.channel.send('<@%s> RUINED IT AT **%s**!! Next city is **%s.** **No going twice.**'%(message.author.id,f"{len(citieslist):,}",poss.at[newid,'name']))
                             else:
-                                await message.channel.send('<@%s> RUINED IT AT **%s**!! **No going twice.**'%(message.author.id,len(citieslist)))
+                                await message.channel.send('<@%s> RUINED IT AT **%s**!! **No going twice.**'%(message.author.id,f"{len(citieslist):,}"))
                             cur.execute('''insert into chain_info(server_id,user_id,round_number,count,city_id,name,admin1,country,country_code,alt_country,time_placed,valid) values (?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,res[0],n[0],n[2],n[1][0],n[1][1],n[3][0] if n[3] else None,int(message.created_at.timestamp()),False))
                             cur.execute('''update server_info set chain_end = ?, current_letter = ?, last_user = ? where server_id = ?''',data=(True,'-',None,guildid))
                             if sinfo[3]:
@@ -702,14 +702,14 @@ async def on_message(message:discord.Message):
                             poss=allnames[allnames['population']>=sinfo[2]]
                             newid=int(random.choice(poss.index))
                             if sinfo[4]:
-                                await message.channel.send('<@%s> RUINED IT AT **%s**!! Next city is **%s.** **No repeats within `%s` cities.**'%(message.author.id,len(citieslist),poss.at[newid,'name'],sinfo[1]))
+                                await message.channel.send('<@%s> RUINED IT AT **%s**!! Next city is **%s.** **No repeats within `%s` cities.**'%(message.author.id,f"{len(citieslist):,}",poss.at[newid,'name'],f"{sinfo[1]:,}"))
                             else:
-                                await message.channel.send('<@%s> RUINED IT AT **%s**!! Next city is **%s.** **No repeats.**'%(message.author.id,len(citieslist),poss.at[newid,'name']))
+                                await message.channel.send('<@%s> RUINED IT AT **%s**!! Next city is **%s.** **No repeats.**'%(message.author.id,f"{len(citieslist):,}",poss.at[newid,'name']))
                         else:
                             if sinfo[4]:
-                                await message.channel.send('<@%s> RUINED IT AT **%s**!! **No repeats within `%s` cities.**'%(message.author.id,len(citieslist),sinfo[1]))
+                                await message.channel.send('<@%s> RUINED IT AT **%s**!! **No repeats within `%s` cities.**'%(message.author.id,f"{len(citieslist):,}",f"{sinfo[1]:,}"))
                             else:
-                                await message.channel.send('<@%s> RUINED IT AT **%s**!! **No repeats.**'%(message.author.id,len(citieslist)))
+                                await message.channel.send('<@%s> RUINED IT AT **%s**!! **No repeats.**'%(message.author.id,f"{len(citieslist):,}"))
                         cur.execute('''insert into chain_info(server_id,user_id,round_number,count,city_id,name,admin1,country,country_code,alt_country,time_placed,valid) values (?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,res[0],n[0],n[2],n[1][0],n[1][1],n[3][0] if n[3] else None,int(message.created_at.timestamp()),False))
                         cur.execute('''update server_info set chain_end = ?, current_letter = ?, last_user = ? where server_id = ?''',data=(True,'-',None,guildid))
                         if sinfo[3]:
@@ -742,9 +742,9 @@ async def on_message(message:discord.Message):
                     if sinfo[3]:
                         poss=allnames[allnames['population']>=sinfo[2]]
                         newid=int(random.choice(poss.index))
-                        await message.channel.send('<@%s> RUINED IT AT **%s**!! Next city is **%s.** **City must have population of at least `%s`.**'%(message.author.id,len(citieslist),poss.at[newid,'name'],sinfo[2]))
+                        await message.channel.send('<@%s> RUINED IT AT **%s**!! Next city is **%s.** **City must have a population of at least `%s`.**'%(message.author.id,f"{len(citieslist):,}",poss.at[newid,'name'],f"{sinfo[2]:,}"))
                     else:
-                        await message.channel.send('<@%s> RUINED IT AT **%s**!! **City must have population of at least `%s`.**'%(message.author.id,len(citieslist),sinfo[2]))
+                        await message.channel.send('<@%s> RUINED IT AT **%s**!! **City must have a population of at least `%s`.**'%(message.author.id,f"{len(citieslist):,}",f"{sinfo[2]:,}"))
                     cur.execute('''insert into chain_info(server_id,user_id,round_number,count,city_id,name,admin1,country,country_code,alt_country,time_placed,valid) values (?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,res[0],n[0],n[2],n[1][0],n[1][1],n[3][0] if n[3] else None,int(message.created_at.timestamp()),False))
                     cur.execute('''update server_info set chain_end = ?, current_letter = ?, last_user = ? where server_id = ?''',data=(True,'-',None,guildid))
                     if sinfo[3]:
@@ -777,9 +777,9 @@ async def on_message(message:discord.Message):
                 if sinfo[3]:
                     poss=allnames[allnames['population']>=sinfo[2]]
                     newid=int(random.choice(poss.index))
-                    await message.channel.send('<@%s> RUINED IT AT **%s**!! Next city is **%s.** **Wrong letter.**'%(message.author.id,len(citieslist),poss.at[newid,'name']))
+                    await message.channel.send('<@%s> RUINED IT AT **%s**!! Next city is **%s.** **Wrong letter.**'%(message.author.id,f"{len(citieslist):,}",poss.at[newid,'name']))
                 else:
-                    await message.channel.send('<@%s> RUINED IT AT **%s**!! **Wrong letter.**'%(message.author.id,len(citieslist)))
+                    await message.channel.send('<@%s> RUINED IT AT **%s**!! **Wrong letter.**'%(message.author.id,f"{len(citieslist):,}"))
                 cur.execute('''insert into chain_info(server_id,user_id,round_number,count,city_id,name,admin1,country,country_code,alt_country,time_placed,valid) values (?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,res[0],n[0],n[2],n[1][0],n[1][1],n[3][0] if n[3] else None,int(message.created_at.timestamp()),False))
                 cur.execute('''update server_info set chain_end = ?, current_letter = ?, last_user = ? where server_id = ?''',data=(True,'-',None,guildid))
                 if sinfo[3]:
@@ -813,9 +813,9 @@ async def on_message(message:discord.Message):
             if sinfo[3]:
                 poss=allnames[allnames['population']>=sinfo[2]]
                 newid=int(random.choice(poss.index))
-                await message.channel.send('<@%s> RUINED IT AT **%s**!! Next city is **%s.** **City not recognized.**'%(message.author.id,len(citieslist),poss.at[newid,'name']))
+                await message.channel.send('<@%s> RUINED IT AT **%s**!! Next city is **%s.** **City not recognized.**'%(message.author.id,f"{len(citieslist):,}",poss.at[newid,'name']))
             else:
-                await message.channel.send('<@%s> RUINED IT AT **%s**!! **City not recognized.**'%(message.author.id,len(citieslist)))
+                await message.channel.send('<@%s> RUINED IT AT **%s**!! **City not recognized.**'%(message.author.id,f"{len(citieslist):,}"))
             cur.execute('''insert into chain_info(server_id,user_id,round_number,count,name,time_placed,valid) values (?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,message.content[len(sinfo[10]):],int(message.created_at.timestamp()),False))
             cur.execute('''update server_info set chain_end = ?, current_letter = ?, last_user = ? where server_id = ?''',data=(True,'-',None,guildid))
             if sinfo[3]:
@@ -851,7 +851,7 @@ async def server(interaction: discord.Interaction):
     cur.execute('select round_number,min_repeat,min_pop,choose_city,repeats,current_letter,last_user,max_chain,last_best,prefix from server_info where server_id = ?',data=(guildid,))
     sinfo=cur.fetchone()
     cur.execute('select * from chain_info where server_id = ? and round_number = ?',data=(guildid,sinfo[0]))
-    embed.description='Round: **%s**\nCurrent letter: **%s**\nCurrent length: **%s**\nLast user: **%s**\nLongest chain: **%s** %s\nMinimum population: **%s**\nChoose city: **%s**\nRepeats: **%s**\nPrefix: **%s**'%(sinfo[0],sinfo[5],cur.rowcount,'<@'+str(sinfo[6])+'>' if sinfo[6] else '-',sinfo[7],'<t:'+str(sinfo[8])+':R>' if sinfo[8] else '',sinfo[2],'enabled' if sinfo[3] else 'disabled', 'only after %s cities'%sinfo[1] if sinfo[4] else 'allowed',sinfo[9])
+    embed.description='Round: **%s**\nCurrent letter: **%s**\nCurrent length: **%s**\nLast user: **%s**\nLongest chain: **%s** %s\nMinimum population: **%s**\nChoose city: **%s**\nRepeats: **%s**\nPrefix: **%s**'%(f'{sinfo[0]:,}',sinfo[5],f'{cur.rowcount:,}','<@'+str(sinfo[6])+'>' if sinfo[6] else '-',f'{sinfo[7]:,}','<t:'+str(sinfo[8])+':R>' if sinfo[8] else '',f'{sinfo[2]:,}','enabled' if sinfo[3] else 'disabled', 'only after %s cities'%f'{sinfo[1]:,}' if sinfo[4] else 'allowed',sinfo[9])
     await interaction.response.send_message(embed=embed)
 
 @stats.command(description="Displays user statistics.")
@@ -873,11 +873,11 @@ async def user(interaction: discord.Interaction, member:Optional[discord.Member]
         else:
             embed.set_author(name=member.name)
         if (uinfo[0]+uinfo[1])>0:
-            embed.add_field(name='Global Stats',value=f"Correct: **{uinfo[0]}**\nIncorrect: **{uinfo[1]}**\nCorrect Rate: **{round(uinfo[0]/(uinfo[0]+uinfo[1])*10000)/100}%**\nScore: **{uinfo[2]}**\nLast Active: <t:{uinfo[3]}:R>",inline=True)
+            embed.add_field(name='Global Stats',value=f"Correct: **{f'{uinfo[0]:,}'}**\nIncorrect: **{f'{uinfo[1]:,}'}**\nCorrect Rate: **{round(uinfo[0]/(uinfo[0]+uinfo[1])*10000)/100}%**\nScore: **{f'{uinfo[2]:,}'}**\nLast Active: <t:{uinfo[3]}:R>",inline=True)
         cur.execute('select correct,incorrect,score,last_active from server_user_info where user_id = ? and server_id = ?',data=(member.id,interaction.guild_id))
         if cur.rowcount>0:
             uinfo=cur.fetchone()
-            embed.add_field(name='Stats for ```%s```'%interaction.guild.name,value=f"Correct: **{uinfo[0]}**\nIncorrect: **{uinfo[1]}**\nCorrect Rate: **{round(uinfo[0]/(uinfo[0]+uinfo[1])*10000)/100}%**\nScore: **{uinfo[2]}**\nLast Active: <t:{uinfo[3]}:R>",inline=True)
+            embed.add_field(name='Stats for ```%s```'%interaction.guild.name,value=f"Correct: **{f'{uinfo[0]:,}'}**\nIncorrect: **{f'{uinfo[1]:,}'}**\nCorrect Rate: **{round(uinfo[0]/(uinfo[0]+uinfo[1])*10000)/100}%**\nScore: **{f'{uinfo[2]:,}'}**\nLast Active: <t:{uinfo[3]}:R>",inline=True)
         await interaction.response.send_message(embed=embed)
 
 @stats.command(description="Displays list of cities that cannot be repeated.")
@@ -1019,8 +1019,8 @@ async def round(interaction: discord.Interaction,round_num:app_commands.Range[in
                     fmt.append(':x: '+i[0]+' :flag_'+i[2][1].lower()+':'+''.join(':flag_'+j.lower()+':' for j in i[3]))
                 else:
                     fmt.append(':x: '+i[0]+', '+i[3]+' :flag_'+i[2][1].lower()+':')
-        embed=discord.Embed(title="Round %s - `%s`"%(round_num,interaction.guild.name), color=discord.Colour.from_rgb(0,255,0),description='\n'.join(fmt[:25]))
-        view=Paginator(1,fmt,"Round %s - `%s`"%(round_num,interaction.guild.name),math.ceil(len(fmt)/25),interaction.user.id)
+        embed=discord.Embed(title="Round %s - `%s`"%(f'{round_num:,}',interaction.guild.name), color=discord.Colour.from_rgb(0,255,0),description='\n'.join(fmt[:25]))
+        view=Paginator(1,fmt,"Round %s - `%s`"%(f'{round_num:,}',interaction.guild.name),math.ceil(len(fmt)/25),interaction.user.id)
         await interaction.response.send_message(embed=embed,view=view)
         view.message=await interaction.original_response()
     else:
@@ -1032,7 +1032,7 @@ async def slb(interaction: discord.Interaction):
     cur.execute('''select user_id,score from server_user_info where server_id = ?''',data=(interaction.guild_id,))
     if cur.rowcount>0:
         l=sorted([(i[1],i[0]) for i in cur],reverse=1)
-        embed.description='\n'.join([f'**{n+1}. **<@{i[1]}> - **{i[0]}**' for n,i in enumerate(l[:10])])
+        embed.description='\n'.join([f'**{n+1}. **<@{i[1]}> - **{f"{i[0]:,}"}**' for n,i in enumerate(l[:10])])
     else:
         embed.description='```null```'
     await interaction.response.send_message(embed=embed)    
@@ -1043,7 +1043,7 @@ async def lb(interaction: discord.Interaction):
     cur.execute('''select user_id,score from global_user_info''',data=(interaction.guild_id,))
     if cur.rowcount>0:
         l=sorted([(i[1],i[0]) for i in cur],reverse=1)
-        embed.description='\n'.join([f'**{n+1}. **<@{i[1]}> - **{i[0]}**' for n,i in enumerate(l[:10])])
+        embed.description='\n'.join([f'**{n+1}. **<@{i[1]}> - **{f"{i[0]:,}"}**' for n,i in enumerate(l[:10])])
     else:
         embed.description='```null```'
     await interaction.response.send_message(embed=embed)
@@ -1105,17 +1105,17 @@ async def repeat(interaction: discord.Interaction):
 
 @get.command(name='popular-cities',description="Displays most popular cities and countries added to chain.")
 async def popular(interaction: discord.Interaction):
-    cur.execute('''select distinct city_id from chain_info where server_id = ? and city_id >= 0''',data=(interaction.guild_id,))
+    cur.execute('''select distinct city_id from chain_info where server_id = ? and city_id >= 0 and valid = 1''',data=(interaction.guild_id,))
     cities=[i[0] for i in cur]
-    cur.execute('''select distinct country_code from chain_info where server_id = ? and country_code is not null''',data=(interaction.guild_id,))
+    cur.execute('''select distinct country_code from chain_info where server_id = ? and country_code is not null and valid = 1''',data=(interaction.guild_id,))
     countries=[i[0] for i in cur]
-    cur.execute('''select distinct alt_country from chain_info where server_id = ? and alt_country is not null''',data=(interaction.guild_id,))
+    cur.execute('''select distinct alt_country from chain_info where server_id = ? and alt_country is not null and valid = 1''',data=(interaction.guild_id,))
     countries.extend([i[0] for i in cur])
     embed=discord.Embed(title="Popular Cities/Countries - `%s`"%interaction.guild.name,color=discord.Colour.from_rgb(0,255,0))
     if len(cities)>0:
         fmt=[]
         for i in cities:
-            cur.execute('''select count(*) from chain_info where server_id = ? and city_id = ?''',data=(interaction.guild_id,i))
+            cur.execute('''select count(*) from chain_info where server_id = ? and city_id = ? and valid = 1''',data=(interaction.guild_id,i))
             c=cur.fetchone()[0]
             if 'admin1' in whole[i]['default']:
                 if 'alternate countries' in whole[i]['location']:
@@ -1129,14 +1129,14 @@ async def popular(interaction: discord.Interaction):
                     loctuple=(whole[i]['default']['name'],whole[i]['location']['country code'])
             fmt.append((c,', '.join(loctuple)))
         fmt=sorted(fmt,key = lambda x:(-x[0],x[1]))[:10]
-        embed.add_field(name='Cities',value='\n'.join(['%s. %s - **%s**' %(n+1,i[1],i[0]) for (n,i) in enumerate(fmt)]))
+        embed.add_field(name='Cities',value='\n'.join(['%s. %s - **%s**' %(n+1,i[1],f"{i[0]:,}") for (n,i) in enumerate(fmt)]))
         fmt=[]
         for i in countries:
-            cur.execute('''select count(*) from chain_info where server_id = ? and (country_code = ? or alt_country = ?)''',data=(interaction.guild_id,i,i))
+            cur.execute('''select count(*) from chain_info where server_id = ? and (country_code = ? or alt_country = ? and valid = 1)''',data=(interaction.guild_id,i,i))
             c=cur.fetchone()[0]
             fmt.append((c,iso2[i]))
         fmt=sorted(fmt,key = lambda x:(-x[0],x[1]))[:10]
-        embed.add_field(name='Countries',value='\n'.join(['%s. %s - **%s**' %(n+1,i[1],i[0]) for (n,i) in enumerate(fmt)]))
+        embed.add_field(name='Countries',value='\n'.join(['%s. %s - **%s**' %(n+1,i[1],f"{i[0]:,}") for (n,i) in enumerate(fmt)]))
     else:
         embed.add_field(name='Cities',value='```null```')
         embed.add_field(name='Countries',value='```null```')
@@ -1153,7 +1153,7 @@ async def bestrds(interaction: discord.Interaction):
             cur.execute('''select count(*) from chain_info where server_id = ? and round_number = ? and valid = ?''',data=(interaction.guild_id,i,True))
             maxc=cur.fetchone()[0]
             if maxc>0:
-                cur.execute('''select distinct user_id from chain_info where server_id = ? and round_number = ?''',data=(interaction.guild_id,i))
+                cur.execute('''select distinct user_id from chain_info where server_id = ? and round_number = ?  and valid = ? and user_id is not null''',data=(interaction.guild_id,i,True))
                 part=cur.rowcount
                 cur.execute('''select city_id,name from chain_info where server_id = ? and round_number = ? and count = ?''',data=(interaction.guild_id,i,1))
                 b1=cur.fetchone()
@@ -1184,9 +1184,9 @@ async def bestrds(interaction: discord.Interaction):
                             else:
                                 loctuple=(j[1]+' (%s)'%whole[j[0]]['default']['name'],whole[j[0]]['location']['country code'])
                     b.append(', '.join(loctuple))
-                fmt.append((maxc,i,part,tuple(b)))
+                fmt.append((f'{maxc:,}',f'{i:,}',f'{part:,}',tuple(b)))
             else:
-                fmt.append((0,i,1,("None","None")))
+                fmt.append((0,f'{i:,}',1,("None","None")))
 
         fmt=sorted(fmt,reverse=1)[:5]
         for i in fmt:
@@ -1219,7 +1219,7 @@ async def cityinfo(interaction: discord.Interaction, city:str, province:Optional
             embed.add_field(name='Country',value=res[1]['location']['country code']+' ('+res[1]['default']['country']+')',inline=True)
         if 'admin1' in res[1]['location']:
             embed.add_field(name='Administrative Division',value=res[1]['default']['admin1'],inline=True)
-        embed.add_field(name='Population',value=res[1]['population'],inline=True)
+        embed.add_field(name='Population',value=f"{res[1]['population']:,}",inline=True)
         await interaction.response.send_message(embed=embed)
     else:
         await interaction.response.send_message('City not recognized. Please try again. ')
