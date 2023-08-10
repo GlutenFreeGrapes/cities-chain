@@ -15,7 +15,6 @@ cur = conn.cursor()
 # cur.execute('drop database cities_chain')
 
 cur.execute('create database if not exists cities_chain')
-# cur.execute('show databases')
 cur.execute('use cities_chain')
 
 cur.execute('''create table if not exists server_info(
@@ -620,7 +619,7 @@ async def on_message(message:discord.Message):
                         loctuple=(res[2]+' (%s)'%res[1]['default']['name'],res[1]['location']['country code']+'/'+'/'.join(res[1]['location']['alternate countries']))
                     else:
                         loctuple=(res[2]+' (%s)'%res[1]['default']['name'],res[1]['location']['country code'])
-            print(message.guild.name,message.author.name,loctuple,res[1]['population'])
+            # print(message.guild.name,message.author.name,loctuple,res[1]['population'])
             if (sinfo[7]=='-' or sinfo[7]==letters[0]):
                 if sinfo[2]<=res[1]['population']:
                     cur.execute('''select city_id from repeat_info where server_id = ?''', data=(guildid,))
@@ -809,7 +808,7 @@ async def on_message(message:discord.Message):
             cur.execute('''select incorrect,score from global_user_info where user_id=?''',data=(authorid,))
             uinfo=cur.fetchone()
             cur.execute('''update global_user_info set incorrect = ?, score = ?, last_active = ? where user_id = ?''',data=(uinfo[0]+1,uinfo[1]-1,int(message.created_at.timestamp()),authorid))
-            print(message.guild.name,message.content[len(sinfo[10]):])
+            # print(message.guild.name,message.author.name,message.content[len(sinfo[10]):])
             if sinfo[3]:
                 poss=allnames[allnames['population']>=sinfo[2]]
                 newid=int(random.choice(poss.index))
@@ -1048,8 +1047,7 @@ async def lb(interaction: discord.Interaction):
         embed.description='```null```'
     await interaction.response.send_message(embed=embed)
 
-get = app_commands.Group(name='get',description="description")
-@get.command(description="Displays all cities and their reactions.")
+@stats.command(description="Displays all cities and their reactions.")
 async def react(interaction: discord.Interaction):
     embed=discord.Embed(title='Cities With Reactions',color=discord.Colour.from_rgb(0,255,0))
     cur.execute('''select city_id,reaction from react_info where server_id = ?''', data=(interaction.guild_id,))
@@ -1076,7 +1074,7 @@ async def react(interaction: discord.Interaction):
         embed.description=="```null```"
         await interaction.response.send_message(embed=embed)
 
-@get.command(description="Displays all cities that can be repeated.")
+@stats.command(description="Displays all cities that can be repeated.")
 async def repeat(interaction: discord.Interaction):
     embed=discord.Embed(title='Repeats Rule Exceptions',color=discord.Colour.from_rgb(0,255,0))
     cur.execute('''select city_id from repeat_info where server_id = ?''', data=(interaction.guild_id,))
@@ -1103,7 +1101,7 @@ async def repeat(interaction: discord.Interaction):
         embed.description=="```null```"
     await interaction.response.send_message(embed=embed)
 
-@get.command(name='popular-cities',description="Displays most popular cities and countries added to chain.")
+@stats.command(name='popular-cities',description="Displays most popular cities and countries added to chain.")
 async def popular(interaction: discord.Interaction):
     cur.execute('''select distinct city_id from chain_info where server_id = ? and city_id >= 0 and valid = 1''',data=(interaction.guild_id,))
     cities=[i[0] for i in cur]
@@ -1142,7 +1140,7 @@ async def popular(interaction: discord.Interaction):
         embed.add_field(name='Countries',value='```null```')
     await interaction.response.send_message(embed=embed)
 
-@get.command(name='best-rounds',description="Displays longest chains in server.")
+@stats.command(name='best-rounds',description="Displays longest chains in server.")
 async def bestrds(interaction: discord.Interaction):
     cur.execute('''select round_number from server_info where server_id = ?''',data=(interaction.guild_id,))
     rounds=range(1,cur.fetchone()[0]+1)
@@ -1184,23 +1182,23 @@ async def bestrds(interaction: discord.Interaction):
                             else:
                                 loctuple=(j[1]+' (%s)'%whole[j[0]]['default']['name'],whole[j[0]]['location']['country code'])
                     b.append(', '.join(loctuple))
-                fmt.append((f'{maxc:,}',f'{i:,}',f'{part:,}',tuple(b)))
+                fmt.append((maxc,i,part,tuple(b)))
             else:
-                fmt.append((0,f'{i:,}',1,("None","None")))
+                fmt.append((0,i,1,("None","None")))
 
         fmt=sorted(fmt,reverse=1)[:5]
         for i in fmt:
             if i[0]>1:
-                embed.add_field(name='%s - %s'%i[3],value='Length: %s\nRound: %s\nParticipants: %s'%(i[:3]))
+                embed.add_field(name='%s - %s'%i[3],value='Length: %s\nRound: %s\nParticipants: %s'%(f'{i[0]:,}',f'{i[1]:,}',f'{i[2]:,}'))
             elif i[0]==1:
-                embed.add_field(name='%s'%i[3][0],value='Length: %s\nRound: %s\nParticipants: %s'%(i[:3]))
+                embed.add_field(name='%s'%i[3][0],value='Length: %s\nRound: %s\nParticipants: %s'%(f'{i[0]:,}',f'{i[1]:,}',f'{i[2]:,}'))
             else:
-                embed.add_field(name='None',value='Length: %s\nRound: %s\nParticipants: %s'%(i[:3]))
+                embed.add_field(name='None',value='Length: %s\nRound: %s\nParticipants: %s'%(f'{i[0]:,}',f'{i[1]:,}',f'{i[2]:,}'))
     else:
         embed.add_field(name='',value='```null```')
     await interaction.response.send_message(embed=embed)
 
-@get.command(name='city-info',description='Gets information for a given city.')
+@tree.command(name='city-info',description='Gets information for a given city.')
 @app_commands.describe(city="The city to get information for",province="State, province, etc that the city is located in",country="Country the city is located in")
 async def cityinfo(interaction: discord.Interaction, city:str, province:Optional[str]=None, country:Optional[str]=None):
     res=search_cities(city,province,country)
@@ -1209,17 +1207,37 @@ async def cityinfo(interaction: discord.Interaction, city:str, province:Optional
         embed=discord.Embed(title='Information - %s'%dname,color=discord.Colour.from_rgb(0,255,0))
         embed.add_field(name='Geonames ID',value=res[0],inline=True)
         embed.add_field(name='Name',value=dname,inline=True)
-        anames=set(res[1]['names'].keys())
-        anames.remove(dname)
-        if len(anames)>0:
-            embed.add_field(name='Alternate Names',value=','.join(anames),inline=False)
+        altnames=res[1]['alt names']
+        if len(altnames)>0:
+            joinednames='`'+'`,`'.join(altnames)+'`'
+            if len(joinednames)<=1024:
+                embed.add_field(name='Alternate Names',value=joinednames,inline=False)
+            else:
+                embed.add_field(name='Alternate Names',value='List of alternate names too long. Use `/alt-names [city]` to get list of alternate names.',inline=False)
+        else:
+            embed.add_field(name='',value='',inline=False)
+        if 'admin1 code' in res[1]['location']:
+            embed.add_field(name='Administrative Division',value=res[1]['default']['admin1'],inline=True)
         if 'alternate countries' in res[1]['location']:
             embed.add_field(name='Countries',value=res[1]['location']['country code']+' ('+res[1]['default']['country']+')\n'+tuple(res[1]['location']['alternate countries'])[0]+' ('+tuple(res[1]['default']['alt countries'])[0]+')\n',inline=True)
         else:
             embed.add_field(name='Country',value=res[1]['location']['country code']+' ('+res[1]['default']['country']+')',inline=True)
-        if 'admin1' in res[1]['location']:
-            embed.add_field(name='Administrative Division',value=res[1]['default']['admin1'],inline=True)
         embed.add_field(name='Population',value=f"{res[1]['population']:,}",inline=True)
+        await interaction.response.send_message(embed=embed)
+    else:
+        await interaction.response.send_message('City not recognized. Please try again. ')
+
+@tree.command(name='alt-names',description='Gets alternate names for a given city.')
+@app_commands.describe(city="The city to get alternate names for",province="State, province, etc that the city is located in",country="Country the city is located in")
+async def altnames(interaction: discord.Interaction, city:str, province:Optional[str]=None, country:Optional[str]=None):
+    res=search_cities(city,province,country)
+    if res:
+        dname=res[1]['default']['name']
+        embed=discord.Embed(title='Information - %s'%dname,color=discord.Colour.from_rgb(0,255,0))
+        if 'alt names' in res[1]:
+            embed.description='`'+'`,`'.join(res[1]['alt names'])+'`'
+        else:
+            embed.description='There are no alternate names for this city.'
         await interaction.response.send_message(embed=embed)
     else:
         await interaction.response.send_message('City not recognized. Please try again. ')
@@ -1241,6 +1259,5 @@ tree.add_command(assign)
 tree.add_command(add)
 tree.add_command(remove)
 tree.add_command(stats)
-tree.add_command(get)
 
 client.run('BOT TOKEN')
