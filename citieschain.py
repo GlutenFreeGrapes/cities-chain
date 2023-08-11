@@ -363,7 +363,7 @@ async def population(interaction: discord.Interaction, population: app_commands.
 
 @assign.command(description="Sets the prefix to listen to.")
 @app_commands.describe(prefix="Prefix that all cities to be chained must begin with")
-async def prefix(interaction: discord.Interaction, prefix: app_commands.Range[str,0,10]):
+async def prefix(interaction: discord.Interaction, prefix: Optional[app_commands.Range[str,0,10]]=''):
     cur.execute('''select chain_end from server_info
                 where server_id = ?''', data=(interaction.guild_id,))
     c=cur.fetchone()[0] 
@@ -372,7 +372,10 @@ async def prefix(interaction: discord.Interaction, prefix: app_commands.Range[st
                     set prefix = ?
                     where server_id = ?''', data=(prefix,interaction.guild_id))
         conn.commit()
-        await interaction.response.send_message('Prefix set to **%s**.'%prefix)
+        if prefix!='':
+            await interaction.response.send_message('Prefix set to **%s**.'%prefix)
+        else:
+            await interaction.response.send_message('Prefix removed.')
     else:
         await interaction.followup.send('Command can only be used after the chain has ended.')
 
@@ -850,7 +853,7 @@ async def server(interaction: discord.Interaction):
     cur.execute('select round_number,min_repeat,min_pop,choose_city,repeats,current_letter,last_user,max_chain,last_best,prefix from server_info where server_id = ?',data=(guildid,))
     sinfo=cur.fetchone()
     cur.execute('select * from chain_info where server_id = ? and round_number = ?',data=(guildid,sinfo[0]))
-    embed.description='Round: **%s**\nCurrent letter: **%s**\nCurrent length: **%s**\nLast user: **%s**\nLongest chain: **%s** %s\nMinimum population: **%s**\nChoose city: **%s**\nRepeats: **%s**\nPrefix: **%s**'%(f'{sinfo[0]:,}',sinfo[5],f'{cur.rowcount:,}','<@'+str(sinfo[6])+'>' if sinfo[6] else '-',f'{sinfo[7]:,}','<t:'+str(sinfo[8])+':R>' if sinfo[8] else '',f'{sinfo[2]:,}','enabled' if sinfo[3] else 'disabled', 'only after %s cities'%f'{sinfo[1]:,}' if sinfo[4] else 'allowed',sinfo[9])
+    embed.description='Round: **%s**\nCurrent letter: **%s**\nCurrent length: **%s**\nLast user: **%s**\nLongest chain: **%s** %s\nMinimum population: **%s**\nChoose city: **%s**\nRepeats: **%s**\nPrefix: %s'%(f'{sinfo[0]:,}',sinfo[5],f'{cur.rowcount:,}','<@'+str(sinfo[6])+'>' if sinfo[6] else '-',f'{sinfo[7]:,}','<t:'+str(sinfo[8])+':R>' if sinfo[8] else '',f'{sinfo[2]:,}','enabled' if sinfo[3] else 'disabled', 'only after %s cities'%f'{sinfo[1]:,}' if sinfo[4] else 'allowed','**'+sinfo[9]+'**' if sinfo[9]!='' else None)
     await interaction.response.send_message(embed=embed)
 
 @stats.command(description="Displays user statistics.")
