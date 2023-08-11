@@ -1207,8 +1207,8 @@ async def cityinfo(interaction: discord.Interaction, city:str, province:Optional
         embed=discord.Embed(title='Information - %s'%dname,color=discord.Colour.from_rgb(0,255,0))
         embed.add_field(name='Geonames ID',value=res[0],inline=True)
         embed.add_field(name='Name',value=dname,inline=True)
-        altnames=res[1]['alt names']
-        if len(altnames)>0:
+        if 'alt names' in res[1]:
+            altnames=res[1]['alt names']
             joinednames='`'+'`,`'.join(altnames)+'`'
             if len(joinednames)<=1024:
                 embed.add_field(name='Alternate Names',value=joinednames,inline=False)
