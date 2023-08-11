@@ -1203,6 +1203,8 @@ async def bestrds(interaction: discord.Interaction):
 
 @tree.command(name='city-info',description='Gets information for a given city.')
 @app_commands.describe(city="The city to get information for",province="State, province, etc that the city is located in",country="Country the city is located in")
+@app_commands.rename(province='administrative-division')
+@app_commands.autocomplete(country=countrycomplete)
 async def cityinfo(interaction: discord.Interaction, city:str, province:Optional[str]=None, country:Optional[str]=None):
     res=search_cities(city,province,country)
     if res:
@@ -1232,6 +1234,8 @@ async def cityinfo(interaction: discord.Interaction, city:str, province:Optional
 
 @tree.command(name='alt-names',description='Gets alternate names for a given city.')
 @app_commands.describe(city="The city to get alternate names for",province="State, province, etc that the city is located in",country="Country the city is located in")
+@app_commands.rename(province='administrative-division')
+@app_commands.autocomplete(country=countrycomplete)
 async def altnames(interaction: discord.Interaction, city:str, province:Optional[str]=None, country:Optional[str]=None):
     res=search_cities(city,province,country)
     if res:
