@@ -982,7 +982,7 @@ async def round(interaction: discord.Interaction,round_num:app_commands.Range[in
     cur.execute('''select round_number from server_info where server_id = ?''',data=(guildid,))
     s=cur.fetchone()
     cur.execute('''select name,admin1,country,country_code,alt_country,city_id,valid from chain_info where server_id = ? and round_number = ? order by count asc''',data=(guildid,round_num))
-    if round_num<s[0]:
+    if round_num<=s[0]:
         cutoff=[]
         for i in cur:
             if i[5]==-1:
