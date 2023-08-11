@@ -18,11 +18,11 @@ Cities chain bot
 \
 \
 \
-`/set repeat [num]`: sets number of different cities that have to be said before a city can be repeated again - if set to -1, repeating is disallowed
+`/set repeat [num]`: sets number of different cities that have to be said before a city can be repeated again. **If set to -1, repeating is disallowed.**
 
 `/set population [population]`: sets minimum population for cities
 
-`/set prefix [prefix]`: sets prefix to use when listening for cities
+`/set prefix ([prefix])`: sets prefix to use when listening for cities
 
 `/set choose-city`: if turned on, allows bot to choose the city that begins the next chain
 \
