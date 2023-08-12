@@ -1,0 +1,11 @@
+version: '3.7'
+services:
+  bot:
+    restart: always
+    image: ghcr.io/GlutenFreeGrapes/cities-chain:main
+    environment:
+      DB_USER: cities_chain
+      DB_PASSWORD: some_secure_password
+      DB_HOST: 127.0.0.1
+      DB_NAME: cities_chain
+      DISCORD_TOKEN: discord_bot_token

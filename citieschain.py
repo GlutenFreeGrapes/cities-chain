@@ -2,20 +2,25 @@ import discord,pickle,re,pandas as pd,random,math,mariadb,json
 from discord import app_commands
 from typing import Optional,Literal
 import asyncio
+from os import environ as env
+from dotenv import load_dotenv
+load_dotenv()
+
 intents = discord.Intents.default()
 intents.message_content = True
 
+env.setdefault("DB_NAME", "cities_chain")
 conn = mariadb.connect(
-    user='INSERT USER HERE',
-    password='INSERT PASSWORD HERE',
-    host="INSERT HOST HERE",
+    user=env["DB_USER"],
+    password=env["DB_PASSWORD"],
+    host=env["DB_HOST"],
     database=None)
 cur = conn.cursor() 
 
 # cur.execute('drop database cities_chain')
 
-cur.execute('create database if not exists cities_chain')
-cur.execute('use cities_chain')
+cur.execute('create database if not exists ' + env["DB_NAME"])
+cur.execute('use ' + env["DB_NAME"])
 
 cur.execute('''create table if not exists server_info(
             server_id bigint, 
@@ -1259,4 +1264,4 @@ tree.add_command(add)
 tree.add_command(remove)
 tree.add_command(stats)
 
-client.run('BOT TOKEN')
+client.run(env["DISCORD_TOKEN"])

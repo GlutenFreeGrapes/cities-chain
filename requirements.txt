@@ -1,0 +1,6 @@
+discord
+pandas
+mariadb
+python-dotenv
+asyncio
+typing
