@@ -4,3 +4,4 @@ mariadb
 python-dotenv
 asyncio
 typing
+pickle
