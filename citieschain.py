@@ -1254,14 +1254,6 @@ async def ping(interaction: discord.Interaction):
     latency = client.latency
     await interaction.response.send_message('Pong! %s ms'%(latency*1000))
 
-@tree.command(description='Owner only')
-async def sync(interaction: discord.Interaction):
-    if interaction.user.id == 675520542463492148:
-        await tree.sync()
-        await interaction.response.send_message(embed=discord.Embed(colour=discord.Colour.og_blurple(),description='Command tree synced.'))
-    else:
-        await interaction.response.send_message(embed=discord.Embed(colour=discord.Colour.from_rgb(255,0,0),description='You must be the owner to use this command!'))
-
 tree.add_command(assign)
 tree.add_command(add)
 tree.add_command(remove)
