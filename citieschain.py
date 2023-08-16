@@ -1,4 +1,4 @@
-import discord,pickle,re,pandas as pd,random,math,mariadb,json
+import discord,pickle,re,pandas as pd,random,math,mariadb
 from discord import app_commands
 from typing import Optional,Literal
 import asyncio
@@ -17,7 +17,7 @@ conn = mariadb.connect(
     database=None)
 cur = conn.cursor() 
 
-# cur.execute('drop database cities_chain')
+# cur.execute('drop database ' + env["DB_NAME"])
 
 cur.execute('create database if not exists ' + env["DB_NAME"])
 cur.execute('use ' + env["DB_NAME"])
@@ -186,25 +186,14 @@ def search_cities_chain(query):
     p=re.sub('\s*,\s*',',',q).split(',')
     city=','.join(p[0:-1])
     results=[]
-    if q!=city:
-        for i in whole:
-            b=whole[i]['default']['name']
-            if q==b.casefold() or city==b.casefold():
-                results.append((i,whole[i],b,1))
-            else:
-                for j in whole[i]['names']:
-                    if q==j.casefold() or city==j.casefold():
-                        results.append((i,whole[i],j,0))
-                        break
-    else:
-        for i in whole:
-            if q==whole[i]['default']['name'].casefold():
-                results.append((i,whole[i],whole[i]['default']['name'],1))
-            else:
-                for j in whole[i]['names']:
-                    if q==j.casefold():
-                        results.append((i,whole[i],j,0))
-                        break
+    for i in whole:
+        if city==whole[i]['default']['name'].casefold():
+            results.append((i,whole[i],whole[i]['default']['name'],1))
+        else:
+            for j in whole[i]['names']:
+                if city==j.casefold():
+                    results.append((i,whole[i],j,0))
+                    break
     if len(p)>1:
         otherdivision=p[-1]
         results=[i for i in results if any(otherdivision==i[1]['location'][j].casefold() if j in codes else (any(otherdivision==k.casefold() for k in i[1]['location'][j])) for j in i[1]['location'])]
@@ -1238,10 +1227,8 @@ async def cityinfo(interaction: discord.Interaction, city:str, province:Optional
         embed.add_field(name='Geonames ID',value=res[0],inline=True)
         embed.add_field(name='Name',value=dname,inline=True)
         if 'alt names' in res[1]:
-            altnames=res[1]['alt names']
-            joinednames='`'+'`,`'.join(altnames)+'`'
-            if len(joinednames)<=1024:
-                embed.add_field(name='Alternate Names',value=joinednames,inline=False)
+            if len(res[1]['alt names'])<=1024:
+                embed.add_field(name='Alternate Names',value=res[1]['alt names'],inline=False)
             else:
                 embed.add_field(name='Alternate Names',value='List of alternate names too long. Use `/alt-names [city]` to get list of alternate names.',inline=False)
         else:
@@ -1268,7 +1255,7 @@ async def altnames(interaction: discord.Interaction, city:str, province:Optional
         dname=res[1]['default']['name']
         embed=discord.Embed(title='Information - %s'%dname,color=discord.Colour.from_rgb(0,255,0))
         if 'alt names' in res[1]:
-            embed.description='`'+'`,`'.join(res[1]['alt names'])+'`'
+            embed.description=res[1]['alt names']
         else:
             embed.description='There are no alternate names for this city.'
         await interaction.followup.send(embed=embed)
