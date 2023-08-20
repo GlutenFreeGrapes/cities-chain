@@ -1,4 +1,4 @@
-import discord,pickle,re,pandas as pd,random,math,mariadb
+import discord,re,pandas as pd,random,math,mariadb,numpy as np
 from discord import app_commands
 from typing import Optional,Literal
 import asyncio
@@ -8,6 +8,12 @@ load_dotenv()
 
 intents = discord.Intents.default()
 intents.message_content = True
+
+citydata,countriesdata,admin1data,admin2data=pd.read_csv('cities.txt',sep='\t',keep_default_na=False,na_values='',dtype={'admin1':str,'admin2':str,'alt-country':str}),pd.read_csv('countries.txt',sep='\t',keep_default_na=False,na_values=''),pd.read_csv('admin1.txt',sep='\t',keep_default_na=False,na_values='',dtype={'admin1':str}),pd.read_csv('admin2.txt',sep='\t',keep_default_na=False,na_values='',dtype={'admin1':str,'admin2':str,})
+citydata=citydata.fillna(np.nan).replace([np.nan], [None])
+countriesdata=countriesdata.fillna(np.nan).replace([np.nan], [None])
+admin1data=admin1data.fillna(np.nan).replace([np.nan], [None])
+admin2data=admin2data.fillna(np.nan).replace([np.nan], [None])
 
 env.setdefault("DB_NAME", "cities_chain")
 conn = mariadb.connect(
@@ -96,16 +102,8 @@ cur.execute('''create table if not exists chain_info(
 client = discord.Client(intents=intents)
 tree=app_commands.tree.CommandTree(client)
 
-with open('cities dict.txt','rb') as f:
-    whole=pickle.load(f)
-
-ad={'id':[],'name':[],'population':[]}
-for i in whole:
-    ad['id'].append(i)
-    ad['name'].append(whole[i]['default']['name'])
-    ad['population'].append(whole[i]['population'])
-allnames=pd.DataFrame(ad)
-allnames=allnames.set_index('id')
+allnames=citydata[citydata['default']==1]
+allnames=allnames.set_index('geonameid')[['name','population']]
 
 allcountries=['Afghanistan', 'Aland Islands', 'Albania', 'Algeria', 'American Samoa', 'Andorra', 'Angola', 'Anguilla', 'Antarctica', 'Antigua and Barbuda', 'Argentina', 'Armenia', 'Aruba', 'Australia', 'Austria', 'Azerbaijan', 'Bahamas', 'Bahrain', 'Bangladesh', 'Barbados', 'Belarus', 'Belgium', 'Belize', 'Benin', 'Bermuda', 'Bhutan', 'Bolivia', 'Bonaire, Saint Eustatius and Saba ', 'Bosnia and Herzegovina', 'Botswana', 'Bouvet Island', 'Brazil', 'British Indian Ocean Territory', 'British Virgin Islands', 'Brunei', 'Bulgaria', 'Burkina Faso', 'Burundi', 'Cabo Verde', 'Cambodia', 'Cameroon', 'Canada', 'Cayman Islands', 'Central African Republic', 'Chad', 'Chile', 'China', 'Christmas Island', 'Cocos Islands', 'Colombia', 'Comoros', 'Cook Islands', 'Costa Rica', 'Croatia', 'Cuba', 'Curacao', 'Cyprus', 'Czechia', 'Democratic Republic of the Congo', 'Denmark', 'Djibouti', 'Dominica', 'Dominican Republic', 'Ecuador', 'Egypt', 'El Salvador', 'Equatorial Guinea', 'Eritrea', 'Estonia', 'Eswatini', 'Ethiopia', 'Falkland Islands', 'Faroe Islands', 'Fiji', 'Finland', 'France', 'French Guiana', 'French Polynesia', 'French Southern Territories', 'Gabon', 'Gambia', 'Georgia', 'Germany', 'Ghana', 'Gibraltar', 'Greece', 'Greenland', 'Grenada', 'Guadeloupe', 'Guam', 'Guatemala', 'Guernsey', 'Guinea', 'Guinea-Bissau', 'Guyana', 'Haiti', 'Heard Island and McDonald Islands', 'Honduras', 'Hong Kong', 'Hungary', 'Iceland', 'India', 'Indonesia', 'Iran', 'Iraq', 'Ireland', 'Isle of Man', 'Israel', 'Italy', 'Ivory Coast', 'Jamaica', 'Japan', 'Jersey', 'Jordan', 'Kazakhstan', 'Kenya', 'Kiribati', 'Kosovo', 'Kuwait', 'Kyrgyzstan', 'Laos', 'Latvia', 'Lebanon', 'Lesotho', 'Liberia', 'Libya', 'Liechtenstein', 'Lithuania', 'Luxembourg', 'Macao', 'Madagascar', 'Malawi', 'Malaysia', 'Maldives', 'Mali', 'Malta', 'Marshall Islands', 'Martinique', 'Mauritania', 'Mauritius', 'Mayotte', 'Mexico', 'Micronesia', 'Moldova', 'Monaco', 'Mongolia', 'Montenegro', 'Montserrat', 'Morocco', 'Mozambique', 'Myanmar', 'Namibia', 'Nauru', 'Nepal', 'Netherlands', 'Netherlands Antilles', 'New Caledonia', 'New Zealand', 'Nicaragua', 'Niger', 'Nigeria', 'Niue', 'Norfolk Island', 'North Korea', 'North Macedonia', 'Northern Mariana Islands', 'Norway', 'Oman', 'Pakistan', 'Palau', 'Palestinian Territory', 'Panama', 'Papua New Guinea', 'Paraguay', 'Peru', 'Philippines', 'Pitcairn', 'Poland', 'Portugal', 'Puerto Rico', 'Qatar', 'Republic of the Congo', 'Reunion', 'Romania', 'Russia', 'Rwanda', 'Saint Barthelemy', 'Saint Helena', 'Saint Kitts and Nevis', 'Saint Lucia', 'Saint Martin', 'Saint Pierre and Miquelon', 'Saint Vincent and the Grenadines', 'Samoa', 'San Marino', 'Sao Tome and Principe', 'Saudi Arabia', 'Senegal', 'Serbia', 'Serbia and Montenegro', 'Seychelles', 'Sierra Leone', 'Singapore', 'Sint Maarten', 'Slovakia', 'Slovenia', 'Solomon Islands', 'Somalia', 'South Africa', 'South Georgia and the South Sandwich Islands', 'South Korea', 'South Sudan', 'Spain', 'Sri Lanka', 'Sudan', 'Suriname', 'Svalbard and Jan Mayen', 'Sweden', 'Switzerland', 'Syria', 'Taiwan', 'Tajikistan', 'Tanzania', 'Thailand', 'Timor Leste', 'Togo', 'Tokelau', 'Tonga', 'Trinidad and Tobago', 'Tunisia', 'Turkey', 'Turkmenistan', 'Turks and Caicos Islands', 'Tuvalu', 'U.S. Virgin Islands', 'Uganda', 'Ukraine', 'United Arab Emirates', 'United Kingdom', 'United States', 'United States Minor Outlying Islands', 'Uruguay', 'Uzbekistan', 'Vanuatu', 'Vatican', 'Venezuela', 'Vietnam', 'Wallis and Futuna', 'Western Sahara', 'Yemen', 'Zambia', 'Zimbabwe']
 iso2={'AD': 'Andorra', 'AE': 'United Arab Emirates', 'AF': 'Afghanistan', 'AG': 'Antigua and Barbuda', 'AI': 'Anguilla', 'AL': 'Albania', 'AM': 'Armenia', 'AO': 'Angola', 'AQ': 'Antarctica', 'AR': 'Argentina', 'AS': 'American Samoa', 'AT': 'Austria', 'AU': 'Australia', 'AW': 'Aruba', 'AX': 'Aland Islands', 'AZ': 'Azerbaijan', 'BA': 'Bosnia and Herzegovina', 'BB': 'Barbados', 'BD': 'Bangladesh', 'BE': 'Belgium', 'BF': 'Burkina Faso', 'BG': 'Bulgaria', 'BH': 'Bahrain', 'BI': 'Burundi', 'BJ': 'Benin', 'BL': 'Saint Barthelemy', 'BM': 'Bermuda', 'BN': 'Brunei', 'BO': 'Bolivia', 'BQ': 'Bonaire, Saint Eustatius and Saba ', 'BR': 'Brazil', 'BS': 'Bahamas', 'BT': 'Bhutan', 'BV': 'Bouvet Island', 'BW': 'Botswana', 'BY': 'Belarus', 'BZ': 'Belize', 'CA': 'Canada', 'CC': 'Cocos Islands', 'CD': 'Democratic Republic of the Congo', 'CF': 'Central African Republic', 'CG': 'Republic of the Congo', 'CH': 'Switzerland', 'CI': 'Ivory Coast', 'CK': 'Cook Islands', 'CL': 'Chile', 'CM': 'Cameroon', 'CN': 'China', 'CO': 'Colombia', 'CR': 'Costa Rica', 'CU': 'Cuba', 'CV': 'Cabo Verde', 'CW': 'Curacao', 'CX': 'Christmas Island', 'CY': 'Cyprus', 'CZ': 'Czechia', 'DE': 'Germany', 'DJ': 'Djibouti', 'DK': 'Denmark', 'DM': 'Dominica', 'DO': 'Dominican Republic', 'DZ': 'Algeria', 'EC': 'Ecuador', 'EE': 'Estonia', 'EG': 'Egypt', 'EH': 'Western Sahara', 'ER': 'Eritrea', 'ES': 'Spain', 'ET': 'Ethiopia', 'FI': 'Finland', 'FJ': 'Fiji', 'FK': 'Falkland Islands', 'FM': 'Micronesia', 'FO': 'Faroe Islands', 'FR': 'France', 'GA': 'Gabon', 'GB': 'United Kingdom', 'GD': 'Grenada', 'GE': 'Georgia', 'GF': 'French Guiana', 'GG': 'Guernsey', 'GH': 'Ghana', 'GI': 'Gibraltar', 'GL': 'Greenland', 'GM': 'Gambia', 'GN': 'Guinea', 'GP': 'Guadeloupe', 'GQ': 'Equatorial Guinea', 'GR': 'Greece', 'GS': 'South Georgia and the South Sandwich Islands', 'GT': 'Guatemala', 'GU': 'Guam', 'GW': 'Guinea-Bissau', 'GY': 'Guyana', 'HK': 'Hong Kong', 'HM': 'Heard Island and McDonald Islands', 'HN': 'Honduras', 'HR': 'Croatia', 'HT': 'Haiti', 'HU': 'Hungary', 'ID': 'Indonesia', 'IE': 'Ireland', 'IL': 'Israel', 'IM': 'Isle of Man', 'IN': 'India', 'IO': 'British Indian Ocean Territory', 'IQ': 'Iraq', 'IR': 'Iran', 'IS': 'Iceland', 'IT': 'Italy', 'JE': 'Jersey', 'JM': 'Jamaica', 'JO': 'Jordan', 'JP': 'Japan', 'KE': 'Kenya', 'KG': 'Kyrgyzstan', 'KH': 'Cambodia', 'KI': 'Kiribati', 'KM': 'Comoros', 'KN': 'Saint Kitts and Nevis', 'KP': 'North Korea', 'KR': 'South Korea', 'XK': 'Kosovo', 'KW': 'Kuwait', 'KY': 'Cayman Islands', 'KZ': 'Kazakhstan', 'LA': 'Laos', 'LB': 'Lebanon', 'LC': 'Saint Lucia', 'LI': 'Liechtenstein', 'LK': 'Sri Lanka', 'LR': 'Liberia', 'LS': 'Lesotho', 'LT': 'Lithuania', 'LU': 'Luxembourg', 'LV': 'Latvia', 'LY': 'Libya', 'MA': 'Morocco', 'MC': 'Monaco', 'MD': 'Moldova', 'ME': 'Montenegro', 'MF': 'Saint Martin', 'MG': 'Madagascar', 'MH': 'Marshall Islands', 'MK': 'North Macedonia', 'ML': 'Mali', 'MM': 'Myanmar', 'MN': 'Mongolia', 'MO': 'Macao', 'MP': 'Northern Mariana Islands', 'MQ': 'Martinique', 'MR': 'Mauritania', 'MS': 'Montserrat', 'MT': 'Malta', 'MU': 'Mauritius', 'MV': 'Maldives', 'MW': 'Malawi', 'MX': 'Mexico', 'MY': 'Malaysia', 'MZ': 'Mozambique', 'NA': 'Namibia', 'NC': 'New Caledonia', 'NE': 'Niger', 'NF': 'Norfolk Island', 'NG': 'Nigeria', 'NI': 'Nicaragua', 'NL': 'Netherlands', 'NO': 'Norway', 'NP': 'Nepal', 'NR': 'Nauru', 'NU': 'Niue', 'NZ': 'New Zealand', 'OM': 'Oman', 'PA': 'Panama', 'PE': 'Peru', 'PF': 'French Polynesia', 'PG': 'Papua New Guinea', 'PH': 'Philippines', 'PK': 'Pakistan', 'PL': 'Poland', 'PM': 'Saint Pierre and Miquelon', 'PN': 'Pitcairn', 'PR': 'Puerto Rico', 'PS': 'Palestinian Territory', 'PT': 'Portugal', 'PW': 'Palau', 'PY': 'Paraguay', 'QA': 'Qatar', 'RE': 'Reunion', 'RO': 'Romania', 'RS': 'Serbia', 'RU': 'Russia', 'RW': 'Rwanda', 'SA': 'Saudi Arabia', 'SB': 'Solomon Islands', 'SC': 'Seychelles', 'SD': 'Sudan', 'SS': 'South Sudan', 'SE': 'Sweden', 'SG': 'Singapore', 'SH': 'Saint Helena', 'SI': 'Slovenia', 'SJ': 'Svalbard and Jan Mayen', 'SK': 'Slovakia', 'SL': 'Sierra Leone', 'SM': 'San Marino', 'SN': 'Senegal', 'SO': 'Somalia', 'SR': 'Suriname', 'ST': 'Sao Tome and Principe', 'SV': 'El Salvador', 'SX': 'Sint Maarten', 'SY': 'Syria', 'SZ': 'Eswatini', 'TC': 'Turks and Caicos Islands', 'TD': 'Chad', 'TF': 'French Southern Territories', 'TG': 'Togo', 'TH': 'Thailand', 'TJ': 'Tajikistan', 'TK': 'Tokelau', 'TL': 'Timor Leste', 'TM': 'Turkmenistan', 'TN': 'Tunisia', 'TO': 'Tonga', 'TR': 'Turkey', 'TT': 'Trinidad and Tobago', 'TV': 'Tuvalu', 'TW': 'Taiwan', 'TZ': 'Tanzania', 'UA': 'Ukraine', 'UG': 'Uganda', 'UM': 'United States Minor Outlying Islands', 'US': 'United States', 'UY': 'Uruguay', 'UZ': 'Uzbekistan', 'VA': 'Vatican', 'VC': 'Saint Vincent and the Grenadines', 'VE': 'Venezuela', 'VG': 'British Virgin Islands', 'VI': 'U.S. Virgin Islands', 'VN': 'Vietnam', 'VU': 'Vanuatu', 'WF': 'Wallis and Futuna', 'WS': 'Samoa', 'YE': 'Yemen', 'YT': 'Mayotte', 'ZA': 'South Africa', 'ZM': 'Zambia', 'ZW': 'Zimbabwe', 'CS': 'Serbia and Montenegro', 'AN': 'Netherlands Antilles'}
@@ -116,66 +114,60 @@ ccodes={'country code'}
 anames={'admin1 names','admin2 names'}
 cnames={'country names',"alternate countries",'alternate country names'}
 def search_cities(city,province,country):
-    q=re.sub(',$','',city.casefold().strip())
-    if q[-1]==',':
-        q=q[:-1]
-    results=[]
-    for i in whole:
-        if q==whole[i]['default']['name'].casefold():
-            results.append((i,whole[i],whole[i]['default']['name'],1))
-        else:
-            for j in whole[i]['names']:
-                if q==j.casefold():
-                    results.append((i,whole[i],j,0))
-                    break
+    city=re.sub(',$','',city.casefold().strip())
+    if city[-1]==',':
+        city=city[:-1]
+    res1=citydata[(citydata['name'].str.casefold()==city)]
+    res2=citydata[(citydata['decoded'].str.casefold()==city)]
+    res3=citydata[(citydata['punct space'].str.casefold()==city)]
+    res4=citydata[(citydata['punct empty'].str.casefold()==city)]
+    results=res1[res1['default']==1]
+    s='name'
+    if results.shape[0]==0:
+        results=res2[res2['default']==1]
+        s='decoded'
+        if results.shape[0]==0:
+            results=res3[res3['default']==1]
+            s='punct space'
+            if results.shape[0]==0:
+                results=res4[res4['default']==1]
+                s='punct empty'
+                if results.shape[0]==0:
+                    results=res1[res1['default']==0]
+                    s='name'
+                    if results.shape[0]==0:
+                        results=res2[res2['default']==0]
+                        s='decoded'
+                        if results.shape[0]==0:
+                            results=res3[res3['default']==0]
+                            s='punct space'
+                            if results.shape[0]==0:
+                                results=res4[res4['default']==0]
+                                s='punct empty'
     if province:
-        r=[]
-        p=province.casefold()
-        for i in results:
-            breakout=False
-            for j in acodes:
-                if j in i[1]['location']:
-                    if p==i[1]['location'][j].casefold():
-                        r.append(i)
-                        breakout=True
-                        break
-            if not breakout:
-                for j in anames:
-                    if j in i[1]['location']:
-                        for k in i[1]['location'][j]:
-                            if p==k.casefold():
-                                r.append(i)
-                                breakout=True
-                                break
-                        if breakout:
-                            break
-        results=r
+        p=province.casefold().strip()
+        a1choice=admin1data[(admin1data['name'].str.casefold()==p)|(admin1data['admin1'].str.casefold()==p)]
+        a2choice=admin2data[(admin2data['name'].str.casefold()==p)|(admin2data['admin2'].str.casefold()==p)]
+        a1choice=set(zip(a1choice['country'],a1choice['admin1']))
+        a2choice=set(zip(a2choice['country'],a2choice['admin1'],a2choice['admin2']))
+        rcol=results.columns
+        a1results=pd.DataFrame(columns=rcol)
+        for i in a1choice:
+            a1results=pd.concat([a1results,results[(results['country']==i[0])&(results['admin1']==i[1])]])
+        a2results=pd.DataFrame(columns=rcol)
+        for i in a2choice:
+            a2results=pd.concat([a2results,results[(results['country']==i[0])&(results['admin1']==i[1])&(results['admin2']==i[2])]])
+        results=pd.concat([a1results,a2results]).drop_duplicates()
     if country:
-        r=[]
-        c=country.casefold()
-        for i in results:
-            breakout=False
-            for j in ccodes:
-                if j in i[1]['location']:
-                    if c==i[1]['location'][j].casefold():
-                        r.append(i)
-                        breakout=True
-                        break
-            if not breakout:
-                for j in cnames:
-                    if j in i[1]['location']:
-                        for k in i[1]['location'][j]:
-                            if c==k.casefold():
-                                r.append(i)
-                                breakout=True
-                                break
-                        if breakout:
-                            break
-        results=r
+        c=country.casefold().strip()
+        cchoice=countriesdata[(countriesdata['name'].str.casefold()==c)|(countriesdata['country'].str.casefold()==c)]
+        cchoice=set(cchoice['country'])
+        results=results[results['country'].isin(cchoice)|results['alt-country'].isin(cchoice)]
     if len(results)==0:
         return None
     else:
-        return sorted(results,key=lambda x: (x[3],x[1]['population']),reverse=True)[0][:3]
+        r=results.sort_values('population',ascending=0).head(1).iloc[0]
+        return (int(r['geonameid']),r,r[s])
 
 codes={'country code','admin1 code','admin2 code'}
 names={'country names','admin1 names','admin2 names',"alternate countries",'alternate country names'}
@@ -184,23 +176,57 @@ def search_cities_chain(query):
     if q[-1]==',':
         q=q[:-1]
     p=re.sub('\s*,\s*',',',q).split(',')
-    city=','.join(p[0:-1])
-    results=[]
-    for i in whole:
-        if city==whole[i]['default']['name'].casefold():
-            results.append((i,whole[i],whole[i]['default']['name'],1))
-        else:
-            for j in whole[i]['names']:
-                if city==j.casefold():
-                    results.append((i,whole[i],j,0))
-                    break
+    city=p[0]
+    res1=citydata[(citydata['name'].str.casefold()==city)]
+    res2=citydata[(citydata['decoded'].str.casefold()==city)]
+    res3=citydata[(citydata['punct space'].str.casefold()==city)]
+    res4=citydata[(citydata['punct empty'].str.casefold()==city)]
+    results=res1[res1['default']==1]
+    s='name'
+    if results.shape[0]==0:
+        results=res2[res2['default']==1]
+        s='decoded'
+        if results.shape[0]==0:
+            results=res3[res3['default']==1]
+            s='punct space'
+            if results.shape[0]==0:
+                results=res4[res4['default']==1]
+                s='punct empty'
+                if results.shape[0]==0:
+                    results=res1[res1['default']==0]
+                    s='name'
+                    if results.shape[0]==0:
+                        results=res2[res2['default']==0]
+                        s='decoded'
+                        if results.shape[0]==0:
+                            results=res3[res3['default']==0]
+                            s='punct space'
+                            if results.shape[0]==0:
+                                results=res4[res4['default']==0]
+                                s='punct empty'
     if len(p)>1:
         otherdivision=p[-1]
-        results=[i for i in results if any(otherdivision==i[1]['location'][j].casefold() if j in codes else (any(otherdivision==k.casefold() for k in i[1]['location'][j])) for j in i[1]['location'])]
-    if len(results)==0:
+        cchoice=countriesdata[(countriesdata['name'].str.casefold()==otherdivision)|(countriesdata['country'].str.casefold()==otherdivision)]
+        a1choice=admin1data[(admin1data['name'].str.casefold()==otherdivision)|(admin1data['admin1'].str.casefold()==otherdivision)]
+        a2choice=admin2data[(admin2data['name'].str.casefold()==otherdivision)|(admin2data['admin2'].str.casefold()==otherdivision)]
+        cchoice=set(cchoice['country'])
+        a1choice=set(zip(a1choice['country'],a1choice['admin1']))
+        a2choice=set(zip(a2choice['country'],a2choice['admin1'],a2choice['admin2']))
+        cresults=results[results['country'].isin(cchoice)|results['alt-country'].isin(cchoice)]
+        rcol=results.columns
+        a1results=pd.DataFrame(columns=rcol)
+        for i in a1choice:
+            a1results=pd.concat([a1results,results[(results['country']==i[0])&(results['admin1']==i[1])]])
+        a2results=pd.DataFrame(columns=rcol)
+        for i in a2choice:
+            a2results=pd.concat([a2results,results[(results['country']==i[0])&(results['admin1']==i[1])&(results['admin2']==i[2])]])
+        results=pd.concat([cresults,a1results,a2results])
+        results=results.drop_duplicates()
+    if results.shape[0]==0:
         return None
     else:
-        return sorted(results,key=lambda x: (x[3],x[1]['population']),reverse=True)[0][:3]
+        r=results.sort_values('population',ascending=0).head(1).iloc[0]
+        return (int(r['geonameid']),r,r[s])
 
 class Paginator(discord.ui.View):
     def __init__(self,page,blist,title,lens,user):
@@ -303,6 +329,7 @@ assign = app_commands.Group(name="set", description="description")
 
 @assign.command(description="Sets the channel for the bot to monitor for cities chain.")
 @app_commands.describe(channel="The channel where the cities chain will happen")
+@app_commands.checks.has_permissions(manage_channels=1)
 async def channel(interaction: discord.Interaction, channel: discord.TextChannel|discord.Thread):
     await interaction.response.defer()
     cur.execute('''update server_info
@@ -389,22 +416,13 @@ async def choosecity(interaction: discord.Interaction, option:Literal["on","off"
         if option=='on':
             poss=allnames[allnames['population']>=c[1]]
             newid=int(random.choice(poss.index))
-            entr=whole[newid]
+            entr=citydata[(citydata['geonameid']==newid) & (citydata['default']==1)]
             nname=poss.at[newid,'name']
-            if 'admin1' in entr['default']:
-                if 'alternate countries' in entr['location']:
-                    n=(nname,entr['default']['country'],entr['location']['country code'],entr['default']['admin1'],tuple(entr['location']['alternate countries']))
-                else:
-                    n=(nname,entr['default']['country'],entr['location']['country code'],entr['default']['admin1'],None)
-            else:
-                if 'alternate countries' in entr['location']:
-                    n=(nname,entr['default']['country'],entr['location']['country code'],None,tuple(entr['location']['alternate countries']))
-                else:
-                    n=(nname,entr['default']['country'],entr['location']['country code'],None,None)
+            n=(nname,iso2[entr['country'].iloc[0]],entr['country'].iloc[0],admin1data[(admin1data['country']==entr['country'].iloc[0])&(admin1data['admin1']==entr['admin1'].iloc[0])&(admin1data['default']==1)]['name'].iloc[0],(entr['alt-country'].iloc[0],))
             cur.execute('''update server_info
                         set choose_city = ?,
                             current_letter = ?
-                        where server_id = ?''', data=(True,entr['names'][nname][1],guildid))
+                        where server_id = ?''', data=(True,entr['last letter'].iloc[0],guildid))
             cur.execute('''insert into chain_info(server_id,city_id,round_number,count,name,admin1,country,country_code,alt_country,time_placed,valid)
                         values (?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,newid,c[2]+1,1,n[0],n[3],n[1],n[2],n[4][0] if n[4] else None,int(interaction.created_at.timestamp()),True))
             await interaction.followup.send('Choose_city set to **ON**. Next city is **%s.**'%nname)
@@ -579,51 +597,35 @@ async def on_message(message:discord.Message):
         citieslist=[i for (i,) in cur]
         res=search_cities_chain(message.content[len(sinfo[10]):])
         if res:
-            if not ((res[2].replace(' ','').isalpha() and res[2].isascii()) or res[2]==res[1]['default']['name']):
-                if 'admin1' in res[1]['default']:
-                    if 'alternate countries' in res[1]['location']:
-                        n=(res[2]+' ('+res[1]['default']['name']+')',(res[1]['default']['country'],res[1]['location']['country code']),res[1]['default']['admin1'],tuple(res[1]['location']['alternate countries']))
-                    else:
-                        n=(res[2]+' ('+res[1]['default']['name']+')',(res[1]['default']['country'],res[1]['location']['country code']),res[1]['default']['admin1'],None)
-                else:
-                    if 'alternate countries' in res[1]['location']:
-                        n=(res[2]+' ('+res[1]['default']['name']+')',(res[1]['default']['country'],res[1]['location']['country code']),None,tuple(res[1]['location']['alternate countries']))
-                    else:
-                        n=(res[2]+' ('+res[1]['default']['name']+')',(res[1]['default']['country'],res[1]['location']['country code']),None,None)
+            j=citydata[(citydata['geonameid']==res[0])&(citydata['default']==1)].iloc[0]
+            name,adm1,country,altcountry=j['name'],admin1data[(admin1data['country']==j['country'])&(admin1data['admin1']==j['admin1'])&(admin1data['default']==1)]['name'].iloc[0],j['country'],j['alt-country']
+            if not ((res[2].replace(' ','').isalpha() and res[2].isascii()) or res[1]['default']==1):
+                n=(res[2]+' ('+name+')',(iso2[country],country),adm1,(altcountry,))
             else:
-                if 'admin1' in res[1]['default']:
-                    if 'alternate countries' in res[1]['location']:
-                        n=(res[2],(res[1]['default']['country'],res[1]['location']['country code']),res[1]['default']['admin1'],tuple(res[1]['location']['alternate countries']))
-                    else:
-                        n=(res[2],(res[1]['default']['country'],res[1]['location']['country code']),res[1]['default']['admin1'],None)
-                else:
-                    if 'alternate countries' in res[1]['location']:
-                        n=(res[2],(res[1]['default']['country'],res[1]['location']['country code']),None,tuple(res[1]['location']['alternate countries']))
-                    else:
-                        n=(res[2],(res[1]['default']['country'],res[1]['location']['country code']),None,None)
-            letters=res[1]['names'][res[2]]
-            if res[2]==res[1]['default']['name']:
-                if 'admin1' in res[1]['default']:
-                    if 'alternate countries' in res[1]['location']:
-                        loctuple=(res[2],res[1]['default']['admin1'],res[1]['location']['country code']+'/'+'/'.join(res[1]['location']['alternate countries']))
-                    else:
-                        loctuple=(res[2],res[1]['default']['admin1'],res[1]['location']['country code'])
-                else:
-                    if 'alternate countries' in res[1]['location']:
-                        loctuple=(res[2],res[1]['location']['country code']+'/'+'/'.join(res[1]['location']['alternate countries']))
-                    else:
-                        loctuple=(res[2],res[1]['location']['country code'])
-            else:
-                if 'admin1' in res[1]['default']:
-                    if 'alternate countries' in res[1]['location']:
-                        loctuple=(res[2]+' (%s)'%res[1]['default']['name'],res[1]['default']['admin1'],res[1]['location']['country code']+'/'+'/'.join(res[1]['location']['alternate countries']))
-                    else:
-                        loctuple=(res[2]+' (%s)'%res[1]['default']['name'],res[1]['default']['admin1'],res[1]['location']['country code'])
-                else:
-                    if 'alternate countries' in res[1]['location']:
-                        loctuple=(res[2]+' (%s)'%res[1]['default']['name'],res[1]['location']['country code']+'/'+'/'.join(res[1]['location']['alternate countries']))
-                    else:
-                        loctuple=(res[2]+' (%s)'%res[1]['default']['name'],res[1]['location']['country code'])
+                n=(res[2],(iso2[country],country),adm1,(altcountry,))
+            letters=(res[1]['first letter'],res[1]['last letter'])
+            # if res[1]['default']==1:
+            #     if adm1:
+            #         if altcountry:
+            #             loctuple=(res[2],adm1,country+'/'+altcountry)
+            #         else:
+            #             loctuple=(res[2],adm1,country)
+            #     else:
+            #         if altcountry:
+            #             loctuple=(res[2],country+'/'+altcountry)
+            #         else:
+            #             loctuple=(res[2],country)
+            # else:
+            #     if adm1:
+            #         if altcountry:
+            #             loctuple=(res[2]+' (%s)'%name,adm1,country+'/'+altcountry)
+            #         else:
+            #             loctuple=(res[2]+' (%s)'%name,adm1,country)
+            #     else:
+            #         if altcountry:
+            #             loctuple=(res[2]+' (%s)'%name,country+'/'+altcountry)
+            #         else:
+            #             loctuple=(res[2]+' (%s)'%name,country)
             # print(message.guild.name,message.author.name,loctuple,res[1]['population'])
             if (sinfo[7]=='-' or sinfo[7]==letters[0]):
                 if sinfo[2]<=res[1]['population']:
@@ -655,7 +657,7 @@ async def on_message(message:discord.Message):
                             cur.execute('''select reaction from react_info where server_id = ? and city_id = ?''', data=(guildid,res[0]))
                             if cur.rowcount>0:
                                 await message.add_reaction(cur.fetchone()[0])
-                            if not ((res[2].replace(' ','').isalpha() and res[2].isascii()) or res[2]==res[1]['default']['name']):
+                            if not ((res[2].replace(' ','').isalpha() and res[2].isascii())):
                                 await message.add_reaction(regionalindicators[letters[1]])
                             cur.execute('''insert into chain_info(server_id,user_id,round_number,count,city_id,name,admin1,country,country_code,alt_country,time_placed,valid) values (?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,res[0],n[0],n[2],n[1][0],n[1][1],n[3][0] if n[3] else None,int(message.created_at.timestamp()),True))
                         else:
@@ -675,22 +677,13 @@ async def on_message(message:discord.Message):
                             cur.execute('''insert into chain_info(server_id,user_id,round_number,count,city_id,name,admin1,country,country_code,alt_country,time_placed,valid) values (?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,res[0],n[0],n[2],n[1][0],n[1][1],n[3][0] if n[3] else None,int(message.created_at.timestamp()),False))
                             cur.execute('''update server_info set chain_end = ?, current_letter = ?, last_user = ? where server_id = ?''',data=(True,'-',None,guildid))
                             if sinfo[3]:
-                                entr=whole[newid]
+                                entr=citydata[(citydata['geonameid']==newid) & (citydata['default']==1)]
                                 nname=poss.at[newid,'name']
-                                if 'admin1' in entr['default']:
-                                    if 'alternate countries' in entr['location']:
-                                        n=(nname,entr['default']['country'],entr['location']['country code'],entr['default']['admin1'],tuple(entr['location']['alternate countries']))
-                                    else:
-                                        n=(nname,entr['default']['country'],entr['location']['country code'],entr['default']['admin1'],None)
-                                else:
-                                    if 'alternate countries' in entr['location']:
-                                        n=(nname,entr['default']['country'],entr['location']['country code'],None,tuple(entr['location']['alternate countries']))
-                                    else:
-                                        n=(nname,entr['default']['country'],entr['location']['country code'],None,None)
+                                n=(nname,iso2[entr['country'].iloc[0]],entr['country'].iloc[0],admin1data[(admin1data['country']==entr['country'].iloc[0])&(admin1data['admin1']==entr['admin1'].iloc[0])&(admin1data['default']==1)]['name'].iloc[0],(entr['alt-country'].iloc[0],))
                                 cur.execute('''update server_info
                                             set choose_city = ?,
                                                 current_letter = ?
-                                            where server_id = ?''', data=(True,entr['names'][nname][1],guildid))
+                                            where server_id = ?''', data=(True,entr['last letter'].iloc[0],guildid))
                                 cur.execute('''insert into chain_info(server_id,city_id,round_number,count,name,admin1,country,country_code,alt_country,time_placed,valid)
                                             values (?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,newid,sinfo[0]+1,1,n[0],n[3],n[1],n[2],n[4][0] if n[4] else None,int(message.created_at.timestamp()),True))
 
@@ -717,22 +710,13 @@ async def on_message(message:discord.Message):
                         cur.execute('''insert into chain_info(server_id,user_id,round_number,count,city_id,name,admin1,country,country_code,alt_country,time_placed,valid) values (?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,res[0],n[0],n[2],n[1][0],n[1][1],n[3][0] if n[3] else None,int(message.created_at.timestamp()),False))
                         cur.execute('''update server_info set chain_end = ?, current_letter = ?, last_user = ? where server_id = ?''',data=(True,'-',None,guildid))
                         if sinfo[3]:
-                            entr=whole[newid]
+                            entr=citydata[(citydata['geonameid']==newid) & (citydata['default']==1)]
                             nname=poss.at[newid,'name']
-                            if 'admin1' in entr['default']:
-                                if 'alternate countries' in entr['location']:
-                                    n=(nname,entr['default']['country'],entr['location']['country code'],entr['default']['admin1'],tuple(entr['location']['alternate countries']))
-                                else:
-                                    n=(nname,entr['default']['country'],entr['location']['country code'],entr['default']['admin1'],None)
-                            else:
-                                if 'alternate countries' in entr['location']:
-                                    n=(nname,entr['default']['country'],entr['location']['country code'],None,tuple(entr['location']['alternate countries']))
-                                else:
-                                    n=(nname,entr['default']['country'],entr['location']['country code'],None,None)
+                            n=(nname,iso2[entr['country'].iloc[0]],entr['country'].iloc[0],admin1data[(admin1data['country']==entr['country'].iloc[0])&(admin1data['admin1']==entr['admin1'].iloc[0])&(admin1data['default']==1)]['name'].iloc[0],(entr['alt-country'].iloc[0],))
                             cur.execute('''update server_info
                                         set choose_city = ?,
                                             current_letter = ?
-                                        where server_id = ?''', data=(True,entr['names'][nname][1],guildid))
+                                        where server_id = ?''', data=(True,entr['last letter'].iloc[0],guildid))
                             cur.execute('''insert into chain_info(server_id,city_id,round_number,count,name,admin1,country,country_code,alt_country,time_placed,valid)
                                         values (?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,newid,sinfo[0]+1,1,n[0],n[3],n[1],n[2],n[4][0] if n[4] else None,int(message.created_at.timestamp()),True))
                 else:
@@ -752,22 +736,13 @@ async def on_message(message:discord.Message):
                     cur.execute('''insert into chain_info(server_id,user_id,round_number,count,city_id,name,admin1,country,country_code,alt_country,time_placed,valid) values (?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,res[0],n[0],n[2],n[1][0],n[1][1],n[3][0] if n[3] else None,int(message.created_at.timestamp()),False))
                     cur.execute('''update server_info set chain_end = ?, current_letter = ?, last_user = ? where server_id = ?''',data=(True,'-',None,guildid))
                     if sinfo[3]:
-                        entr=whole[newid]
+                        entr=citydata[(citydata['geonameid']==newid) & (citydata['default']==1)]
                         nname=poss.at[newid,'name']
-                        if 'admin1' in entr['default']:
-                            if 'alternate countries' in entr['location']:
-                                n=(nname,entr['default']['country'],entr['location']['country code'],entr['default']['admin1'],tuple(entr['location']['alternate countries']))
-                            else:
-                                n=(nname,entr['default']['country'],entr['location']['country code'],entr['default']['admin1'],None)
-                        else:
-                            if 'alternate countries' in entr['location']:
-                                n=(nname,entr['default']['country'],entr['location']['country code'],None,tuple(entr['location']['alternate countries']))
-                            else:
-                                n=(nname,entr['default']['country'],entr['location']['country code'],None,None)
+                        n=(nname,iso2[entr['country'].iloc[0]],entr['country'].iloc[0],admin1data[(admin1data['country']==entr['country'].iloc[0])&(admin1data['admin1']==entr['admin1'].iloc[0])&(admin1data['default']==1)]['name'].iloc[0],(entr['alt-country'].iloc[0],))
                         cur.execute('''update server_info
                                     set choose_city = ?,
                                         current_letter = ?
-                                    where server_id = ?''', data=(True,entr['names'][nname][1],guildid))
+                                    where server_id = ?''', data=(True,entr['last letter'].iloc[0],guildid))
                         cur.execute('''insert into chain_info(server_id,city_id,round_number,count,name,admin1,country,country_code,alt_country,time_placed,valid)
                                     values (?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,newid,sinfo[0]+1,1,n[0],n[3],n[1],n[2],n[4][0] if n[4] else None,int(message.created_at.timestamp()),True))
             else:
@@ -787,22 +762,13 @@ async def on_message(message:discord.Message):
                 cur.execute('''insert into chain_info(server_id,user_id,round_number,count,city_id,name,admin1,country,country_code,alt_country,time_placed,valid) values (?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,res[0],n[0],n[2],n[1][0],n[1][1],n[3][0] if n[3] else None,int(message.created_at.timestamp()),False))
                 cur.execute('''update server_info set chain_end = ?, current_letter = ?, last_user = ? where server_id = ?''',data=(True,'-',None,guildid))
                 if sinfo[3]:
-                    entr=whole[newid]
+                    entr=citydata[(citydata['geonameid']==newid) & (citydata['default']==1)]
                     nname=poss.at[newid,'name']
-                    if 'admin1' in entr['default']:
-                        if 'alternate countries' in entr['location']:
-                            n=(nname,entr['default']['country'],entr['location']['country code'],entr['default']['admin1'],tuple(entr['location']['alternate countries']))
-                        else:
-                            n=(nname,entr['default']['country'],entr['location']['country code'],entr['default']['admin1'],None)
-                    else:
-                        if 'alternate countries' in entr['location']:
-                            n=(nname,entr['default']['country'],entr['location']['country code'],None,tuple(entr['location']['alternate countries']))
-                        else:
-                            n=(nname,entr['default']['country'],entr['location']['country code'],None,None)
+                    n=(nname,iso2[entr['country'].iloc[0]],entr['country'].iloc[0],admin1data[(admin1data['country']==entr['country'].iloc[0])&(admin1data['admin1']==entr['admin1'].iloc[0])&(admin1data['default']==1)]['name'].iloc[0],(entr['alt-country'].iloc[0],))
                     cur.execute('''update server_info
                                 set choose_city = ?,
                                     current_letter = ?
-                                where server_id = ?''', data=(True,entr['names'][nname][1],guildid))
+                                where server_id = ?''', data=(True,entr['last letter'].iloc[0],guildid))
                     cur.execute('''insert into chain_info(server_id,city_id,round_number,count,name,admin1,country,country_code,alt_country,time_placed,valid)
                                 values (?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,int(newid),sinfo[0]+1,1,n[0],n[3],n[1],n[2],n[4][0] if n[4] else None,int(message.created_at.timestamp()),True))
         else:
@@ -823,22 +789,13 @@ async def on_message(message:discord.Message):
             cur.execute('''insert into chain_info(server_id,user_id,round_number,count,name,time_placed,valid) values (?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,message.content[len(sinfo[10]):],int(message.created_at.timestamp()),False))
             cur.execute('''update server_info set chain_end = ?, current_letter = ?, last_user = ? where server_id = ?''',data=(True,'-',None,guildid))
             if sinfo[3]:
-                entr=whole[newid]
+                entr=citydata[(citydata['geonameid']==newid) & (citydata['default']==1)]
                 nname=poss.at[newid,'name']
-                if 'admin1' in entr['default']:
-                    if 'alternate countries' in entr['location']:
-                        n=(nname,entr['default']['country'],entr['location']['country code'],entr['default']['admin1'],tuple(entr['location']['alternate countries']))
-                    else:
-                        n=(nname,entr['default']['country'],entr['location']['country code'],entr['default']['admin1'],None)
-                else:
-                    if 'alternate countries' in entr['location']:
-                        n=(nname,entr['default']['country'],entr['location']['country code'],None,tuple(entr['location']['alternate countries']))
-                    else:
-                        n=(nname,entr['default']['country'],entr['location']['country code'],None,None)
+                n=(nname,iso2[entr['country'].iloc[0]],entr['country'].iloc[0],admin1data[(admin1data['country']==entr['country'].iloc[0])&(admin1data['admin1']==entr['admin1'].iloc[0])&(admin1data['default']==1)]['name'].iloc[0],(entr['alt-country'].iloc[0],))
                 cur.execute('''update server_info
                             set choose_city = ?,
                                 current_letter = ?
-                            where server_id = ?''', data=(True,entr['names'][nname][1],guildid))
+                            where server_id = ?''', data=(True,entr['last letter'].iloc[0],guildid))
                 cur.execute('''insert into chain_info(server_id,city_id,round_number,count,name,admin1,country,country_code,alt_country,time_placed,valid)
                             values (?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,newid,sinfo[0]+1,1,n[0],n[3],n[1],n[2],n[4][0] if n[4] else None,int(message.created_at.timestamp()),True))
     conn.commit()
@@ -1067,20 +1024,22 @@ async def react(interaction: discord.Interaction):
     if cur.rowcount>0:
         fmt=[]
         for (i,r) in cur:
-            if 'admin1' in whole[i]['default']:
-                if 'alternate countries' in whole[i]['location']:
-                    loctuple=(whole[i]['default']['name'],whole[i]['default']['admin1'],whole[i]['location']['country code']+'/'+'/'.join(whole[i]['location']['alternate countries']))
+            j=citydata[(citydata['geonameid']==i)&(citydata['default']==1)].iloc[0]
+            k,l,m,n=j['name'],admin1data[(admin1data['country']==j['country'])&(admin1data['admin1']==j['admin1'])&(admin1data['default']==1)]['name'].iloc[0],j['country'],j['alt-country']
+            if l:
+                if n:
+                    loctuple=(k,l,m+'/'+n)
                 else:
-                    loctuple=(whole[i]['default']['name'],whole[i]['default']['admin1'],whole[i]['location']['country code'])
+                    loctuple=(k,l,m)
             else:
-                if 'alternate countries' in whole[i]['location']:
-                    loctuple=(whole[i]['default']['name'],whole[i]['location']['country code']+'/'+'/'.join(whole[i]['location']['alternate countries']))
+                if n:
+                    loctuple=(k,m+'/'+n)
                 else:
-                    loctuple=(whole[i]['default']['name'],whole[i]['location']['country code'])
+                    loctuple=(k,m)
             fmt.append(('- '+', '.join(loctuple),r))
         fmt=sorted(fmt)
         embed.description='\n'.join([i[0]+' '+i[1] for i in fmt[:25]])
-        view=Paginator(1,fmt,"Cities With Reactions",math.ceil(len(fmt)/25),interaction.user.id)
+        view=Paginator(1,[i[0]+' '+i[1] for i in fmt],"Cities With Reactions",math.ceil(len(fmt)/25),interaction.user.id)
         await interaction.followup.send(embed=embed,view=view)
         view.message=await interaction.original_response()
     else:
@@ -1095,25 +1054,27 @@ async def repeat(interaction: discord.Interaction):
     if cur.rowcount>0:
         fmt=[]
         for (i,) in cur:
-            if 'admin1' in whole[i]['default']:
-                if 'alternate countries' in whole[i]['location']:
-                    loctuple=(whole[i]['default']['name'],whole[i]['default']['admin1'],whole[i]['location']['country code']+'/'+'/'.join(whole[i]['location']['alternate countries']))
+            j=citydata[(citydata['geonameid']==i)&(citydata['default']==1)].iloc[0]
+            k,l,m,n=j['name'],admin1data[(admin1data['country']==j['country'])&(admin1data['admin1']==j['admin1'])&(admin1data['default']==1)]['name'].iloc[0],j['country'],j['alt-country']
+            if l:
+                if n:
+                    loctuple=(k,l,m+'/'+n)
                 else:
-                    loctuple=(whole[i]['default']['name'],whole[i]['default']['admin1'],whole[i]['location']['country code'])
+                    loctuple=(k,l,m)
             else:
-                if 'alternate countries' in whole[i]['location']:
-                    loctuple=(whole[i]['default']['name'],whole[i]['location']['country code']+'/'+'/'.join(whole[i]['location']['alternate countries']))
+                if n:
+                    loctuple=(k,m+'/'+n)
                 else:
-                    loctuple=(whole[i]['default']['name'],whole[i]['location']['country code'])
+                    loctuple=(k,m)
             fmt.append('- '+', '.join(loctuple))
         fmt=sorted(fmt)
-        embed.description='\n'.join(fmt[25:(i+1)*25])
+        embed.description='\n'.join(fmt[:25])
         view=Paginator(1,fmt,"Repeats Rule Exceptions",math.ceil(len(fmt)/25),interaction.user.id)
         await interaction.followup.send(embed=embed,view=view)
         view.message=await interaction.original_response()
     else:
         embed.description=="```null```"
-    await interaction.followup.send(embed=embed)
+        await interaction.followup.send(embed=embed)
 
 @stats.command(name='popular-cities',description="Displays most popular cities and countries added to chain.")
 async def popular(interaction: discord.Interaction):
@@ -1130,16 +1091,18 @@ async def popular(interaction: discord.Interaction):
         for i in cities:
             cur.execute('''select count(*) from chain_info where server_id = ? and city_id = ? and valid = 1''',data=(interaction.guild_id,i))
             c=cur.fetchone()[0]
-            if 'admin1' in whole[i]['default']:
-                if 'alternate countries' in whole[i]['location']:
-                    loctuple=(whole[i]['default']['name'],whole[i]['default']['admin1'],whole[i]['location']['country code']+'/'+'/'.join(whole[i]['location']['alternate countries']))
+            j=citydata[(citydata['geonameid']==i)&(citydata['default']==1)].iloc[0]
+            k,l,m,n=j['name'],admin1data[(admin1data['country']==j['country'])&(admin1data['admin1']==j['admin1'])&(admin1data['default']==1)]['name'].iloc[0],j['country'],j['alt-country']
+            if l:
+                if n:
+                    loctuple=(k,l,m+'/'+n)
                 else:
-                    loctuple=(whole[i]['default']['name'],whole[i]['default']['admin1'],whole[i]['location']['country code'])
+                    loctuple=(k,l,m)
             else:
-                if 'alternate countries' in whole[i]['location']:
-                    loctuple=(whole[i]['default']['name'],whole[i]['location']['country code']+'/'+'/'.join(whole[i]['location']['alternate countries']))
+                if n:
+                    loctuple=(k,m+'/'+n)
                 else:
-                    loctuple=(whole[i]['default']['name'],whole[i]['location']['country code'])
+                    loctuple=(k,m)
             fmt.append((c,', '.join(loctuple)))
         fmt=sorted(fmt,key = lambda x:(-x[0],x[1]))[:10]
         embed.add_field(name='Cities',value='\n'.join(['%s. %s - **%s**' %(n+1,i[1],f"{i[0]:,}") for (n,i) in enumerate(fmt)]))
@@ -1175,28 +1138,31 @@ async def bestrds(interaction: discord.Interaction):
                 b2=cur.fetchone()
                 b=[]
                 for j in (b1,b2):
-                    if j[1]==whole[j[0]]['default']['name']:
-                        if 'admin1' in whole[j[0]]['default']:
-                            if 'alternate countries' in whole[j[0]]['location']:
-                                loctuple=(j[1],whole[j[0]]['default']['admin1'],whole[j[0]]['location']['country code']+'/'+'/'.join(whole[j[0]]['location']['alternate countries']))
+                    o=citydata[(citydata['geonameid']==j[0])&(citydata['default']==1)].iloc[0]
+                    k,l,m,n=o['name'],admin1data[(admin1data['country']==o['country'])&(admin1data['admin1']==o['admin1'])&(admin1data['default']==1)]['name'].iloc[0],o['country'],o['alt-country']
+                    
+                    if j[1]==k:
+                        if l:
+                            if n:
+                                loctuple=(j[1],l,m+'/'+n)
                             else:
-                                loctuple=(j[1],whole[j[0]]['default']['admin1'],whole[j[0]]['location']['country code'])
+                                loctuple=(j[1],l,m)
                         else:
-                            if 'alternate countries' in whole[j[0]]['location']:
-                                loctuple=(j[1],whole[j[0]]['location']['country code']+'/'+'/'.join(whole[j[0]]['location']['alternate countries']))
+                            if n:
+                                loctuple=(j[1],m+'/'+n)
                             else:
-                                loctuple=(j[1],whole[j[0]]['location']['country code'])
+                                loctuple=(j[1],m)
                     else:
-                        if 'admin1' in whole[j[0]]['default']:
-                            if 'alternate countries' in whole[j[0]]['location']:
-                                loctuple=(j[1]+' (%s)'%whole[j[0]]['default']['name'],whole[j[0]]['default']['admin1'],whole[j[0]]['location']['country code']+'/'+'/'.join(whole[j[0]]['location']['alternate countries']))
+                        if l:
+                            if n:
+                                loctuple=(j[1]+' (%s)'%k,l,m+'/'+n)
                             else:
-                                loctuple=(j[1]+' (%s)'%whole[j[0]]['default']['name'],whole[j[0]]['default']['admin1'],whole[j[0]]['location']['country code'])
+                                loctuple=(j[1]+' (%s)'%k,l,m)
                         else:
-                            if 'alternate countries' in whole[j[0]]['location']:
-                                loctuple=(j[1]+' (%s)'%whole[j[0]]['default']['name'],whole[j[0]]['location']['country code']+'/'+'/'.join(whole[j[0]]['location']['alternate countries']))
+                            if n:
+                                loctuple=(j[1]+' (%s)'%k,m+'/'+n)
                             else:
-                                loctuple=(j[1]+' (%s)'%whole[j[0]]['default']['name'],whole[j[0]]['location']['country code'])
+                                loctuple=(j[1]+' (%s)'%k,m)
                     b.append(', '.join(loctuple))
                 fmt.append((maxc,i,part,tuple(b)))
             else:
@@ -1222,24 +1188,28 @@ async def cityinfo(interaction: discord.Interaction, city:str, province:Optional
     await interaction.response.defer()
     res=search_cities(city,province,country)
     if res:
-        dname=res[1]['default']['name']
+        aname=citydata[(citydata['geonameid']==res[0])]
+        default=aname[(aname['default']==1)].iloc[0]
+        dname=default['name']
         embed=discord.Embed(title='Information - %s'%dname,color=discord.Colour.from_rgb(0,255,0))
         embed.add_field(name='Geonames ID',value=res[0],inline=True)
         embed.add_field(name='Name',value=dname,inline=True)
-        if 'alt names' in res[1]:
-            if len(res[1]['alt names'])<=1024:
-                embed.add_field(name='Alternate Names',value=res[1]['alt names'],inline=False)
+        alts=aname[(aname['default']==0)]['name']
+        if alts.shape[0]!=0:
+            joinednames='`'+'`,`'.join(alts)+'`'
+            if len(joinednames)<=1024:
+                embed.add_field(name='Alternate Names',value=joinednames,inline=False)
             else:
                 embed.add_field(name='Alternate Names',value='List of alternate names too long. Use `/alt-names [city]` to get list of alternate names.',inline=False)
         else:
             embed.add_field(name='',value='',inline=False)
-        if 'admin1 code' in res[1]['location']:
-            embed.add_field(name='Administrative Division',value=res[1]['default']['admin1'],inline=True)
-        if 'alternate countries' in res[1]['location']:
-            embed.add_field(name='Countries',value=res[1]['location']['country code']+' ('+res[1]['default']['country']+')\n'+tuple(res[1]['location']['alternate countries'])[0]+' ('+tuple(res[1]['default']['alt countries'])[0]+')\n',inline=True)
+        if default['admin1']:
+            embed.add_field(name='Administrative Division',value=admin1data[(admin1data['country']==default['country'])&(admin1data['admin1']==default['admin1'])&(admin1data['default']==1)]['name'].iloc[0],inline=True)
+        if default['alt-country']:
+            embed.add_field(name='Countries',value=default['country']+' ('+iso2[default['country']]+')\n'+default['alt-country']+' ('+iso2[default['alt-country']]+')',inline=True)
         else:
-            embed.add_field(name='Country',value=res[1]['location']['country code']+' ('+res[1]['default']['country']+')',inline=True)
-        embed.add_field(name='Population',value=f"{res[1]['population']:,}",inline=True)
+            embed.add_field(name='Country',value=default['country']+' ('+iso2[default['country']]+')',inline=True)
+        embed.add_field(name='Population',value=f"{default['population']:,}",inline=True)
         await interaction.followup.send(embed=embed)
     else:
         await interaction.followup.send('City not recognized. Please try again. ')
@@ -1252,10 +1222,13 @@ async def altnames(interaction: discord.Interaction, city:str, province:Optional
     await interaction.response.defer()
     res=search_cities(city,province,country)
     if res:
-        dname=res[1]['default']['name']
-        embed=discord.Embed(title='Information - %s'%dname,color=discord.Colour.from_rgb(0,255,0))
-        if 'alt names' in res[1]:
-            embed.description=res[1]['alt names']
+        aname=citydata[(citydata['geonameid']==res[0])]
+        default=aname[aname['default']==1].iloc[0]
+        dname=default['name']
+        embed=discord.Embed(title='Alternate Names - %s'%dname,color=discord.Colour.from_rgb(0,255,0))
+        alts=aname[aname['default']==0]['name']
+        if alts.shape[0]>0:
+            embed.description='`'+'`,`'.join(alts)+'`'
         else:
             embed.description='There are no alternate names for this city.'
         await interaction.followup.send(embed=embed)
