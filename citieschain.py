@@ -329,7 +329,7 @@ assign = app_commands.Group(name="set", description="description")
 
 @assign.command(description="Sets the channel for the bot to monitor for cities chain.")
 @app_commands.describe(channel="The channel where the cities chain will happen")
-@app_commands.checks.has_permissions(manage_channels=1)
+@app_commands.checks.has_permissions(manage_messages=True,manage_channels=True,kick_members=True,ban_members=True)
 async def channel(interaction: discord.Interaction, channel: discord.TextChannel|discord.Thread):
     await interaction.response.defer()
     cur.execute('''update server_info
