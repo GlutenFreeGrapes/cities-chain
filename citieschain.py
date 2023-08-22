@@ -325,132 +325,118 @@ async def on_ready():
 async def on_guild_join(guild):
     cur.execute('''insert into server_info(server_id) VALUES (?)''',data=(guild.id,))
 
-assign = app_commands.Group(name="set", description="description")
+modperms=discord.Permissions(moderate_members=True)
+
+assign = app_commands.Group(name="set", description="Set different things for the chain.",default_permissions=modperms)
 
 @assign.command(description="Sets the channel for the bot to monitor for cities chain.")
 @app_commands.describe(channel="The channel where the cities chain will happen")
-# @app_commands.checks.has_permissions(moderate_members=True)
 async def channel(interaction: discord.Interaction, channel: discord.TextChannel|discord.Thread):
     await interaction.response.defer()
-    if interaction.permissions.moderate_members:
-        cur.execute('''update server_info
-            set channel_id = ?
-            where server_id = ?''', data=(channel.id,interaction.guild_id))
-        conn.commit()
-        await interaction.followup.send('Channel set to <#%s>.'%channel.id)
-    else:
-        await interaction.followup.send(embed=discord.Embed(color=discord.Colour.from_rgb(255,0,0),description="You do not have permission to run this command."))
+    cur.execute('''update server_info
+        set channel_id = ?
+        where server_id = ?''', data=(channel.id,interaction.guild_id))
+    conn.commit()
+    await interaction.followup.send('Channel set to <#%s>.'%channel.id)
 
 @assign.command(description="Sets the gap between when a city can be repeated in the chain.")
 @app_commands.describe(num="The minimum number of cities before they can repeat again, set to -1 to disallow any repeats")
 async def repeat(interaction: discord.Interaction, num: app_commands.Range[int,-1,None]):
     await interaction.response.defer()
-    if interaction.permissions.moderate_members:
-        cur.execute('''select chain_end from server_info
-                    where server_id = ?''', data=(interaction.guild_id,))
-        c=cur.fetchone()[0]  
-        if c:
-            if num==-1:
-                cur.execute('''update server_info
-                            set repeats = ?
-                            where server_id = ?''', data=(False,interaction.guild_id))
-                conn.commit()
-                await interaction.followup.send('Repeats set to **OFF**. ')
-            else:
-                cur.execute('''select repeats from server_info
-                            where server_id = ?''', data=(interaction.guild_id,))
-                c=cur.fetchone()[0] 
-                if c:
-                    await interaction.followup.send('Minimum number of cities before repeating set to **%s**.'%f'{num:,}')
-                else:
-                    await interaction.followup.send('Repeats set to **ON**. ')
-                    await interaction.channel.send('Minimum number of cities before repeating set to **%s**.'%f'{num:,}')
-                cur.execute('''update server_info
-                            set repeats = ?,
-                            min_repeat = ?
-                            where server_id = ?''', data=(True,num,interaction.guild_id))
-                conn.commit()
+    cur.execute('''select chain_end from server_info
+                where server_id = ?''', data=(interaction.guild_id,))
+    c=cur.fetchone()[0]  
+    if c:
+        if num==-1:
+            cur.execute('''update server_info
+                        set repeats = ?
+                        where server_id = ?''', data=(False,interaction.guild_id))
+            conn.commit()
+            await interaction.followup.send('Repeats set to **OFF**. ')
         else:
-            await interaction.followup.send('Command can only be used after the chain has ended.')
+            cur.execute('''select repeats from server_info
+                        where server_id = ?''', data=(interaction.guild_id,))
+            c=cur.fetchone()[0] 
+            if c:
+                await interaction.followup.send('Minimum number of cities before repeating set to **%s**.'%f'{num:,}')
+            else:
+                await interaction.followup.send('Repeats set to **ON**. ')
+                await interaction.channel.send('Minimum number of cities before repeating set to **%s**.'%f'{num:,}')
+            cur.execute('''update server_info
+                        set repeats = ?,
+                        min_repeat = ?
+                        where server_id = ?''', data=(True,num,interaction.guild_id))
+            conn.commit()
     else:
-        await interaction.followup.send(embed=discord.Embed(color=discord.Colour.from_rgb(255,0,0),description="You do not have permission to run this command."))
+        await interaction.followup.send('Command can only be used after the chain has ended.')
 
 @assign.command(description="Sets the minimum population of cities in the chain.")
 @app_commands.describe(population="The minimum population of cities in the chain")
 async def population(interaction: discord.Interaction, population: app_commands.Range[int,1,None]):
     await interaction.response.defer()
-    if interaction.permissions.moderate_members:
-        cur.execute('''select chain_end from server_info
-                    where server_id = ?''', data=(interaction.guild_id,))
-        c=cur.fetchone()[0] 
-        if c:
-            cur.execute('''update server_info
-                        set min_pop = ?
-                        where server_id = ?''', data=(population,interaction.guild_id))
-            conn.commit()
-            await interaction.followup.send('Minimum number of cities before repeating set to **%s**.'%f'{population:,}')
-        else:
-            await interaction.followup.send('Command can only be used after the chain has ended.')
+    cur.execute('''select chain_end from server_info
+                where server_id = ?''', data=(interaction.guild_id,))
+    c=cur.fetchone()[0] 
+    if c:
+        cur.execute('''update server_info
+                    set min_pop = ?
+                    where server_id = ?''', data=(population,interaction.guild_id))
+        conn.commit()
+        await interaction.followup.send('Minimum number of cities before repeating set to **%s**.'%f'{population:,}')
     else:
-        await interaction.followup.send(embed=discord.Embed(color=discord.Colour.from_rgb(255,0,0),description="You do not have permission to run this command."))
+        await interaction.followup.send('Command can only be used after the chain has ended.')
 
 @assign.command(description="Sets the prefix to listen to.")
 @app_commands.describe(prefix="Prefix that all cities to be chained must begin with")
 async def prefix(interaction: discord.Interaction, prefix: Optional[app_commands.Range[str,0,10]]=''):
     await interaction.response.defer()
-    if interaction.permissions.moderate_members:
-        cur.execute('''select chain_end from server_info
-                    where server_id = ?''', data=(interaction.guild_id,))
-        c=cur.fetchone()[0] 
-        if c:
-            cur.execute('''update server_info
-                        set prefix = ?
-                        where server_id = ?''', data=(prefix,interaction.guild_id))
-            conn.commit()
-            if prefix!='':
-                await interaction.followup.send('Prefix set to **%s**.'%prefix)
-            else:
-                await interaction.followup.send('Prefix removed.')
+    cur.execute('''select chain_end from server_info
+                where server_id = ?''', data=(interaction.guild_id,))
+    c=cur.fetchone()[0] 
+    if c:
+        cur.execute('''update server_info
+                    set prefix = ?
+                    where server_id = ?''', data=(prefix,interaction.guild_id))
+        conn.commit()
+        if prefix!='':
+            await interaction.followup.send('Prefix set to **%s**.'%prefix)
         else:
-            await interaction.followup.send('Command can only be used after the chain has ended.')
+            await interaction.followup.send('Prefix removed.')
     else:
-        await interaction.followup.send(embed=discord.Embed(color=discord.Colour.from_rgb(255,0,0),description="You do not have permission to run this command."))
+        await interaction.followup.send('Command can only be used after the chain has ended.')
 
 @assign.command(name='choose-city',description="Toggles if bot can choose starting city for the next chain.")
 @app_commands.describe(option="on to let the bot choose the next city, off otherwise")
 async def choosecity(interaction: discord.Interaction, option:Literal["on","off"]):
     await interaction.response.defer()
-    if interaction.permissions.moderate_members:
-        guildid=interaction.guild_id
-        cur.execute('''select chain_end,min_pop,round_number from server_info
-                    where server_id = ?''', data=(interaction.guild_id,))
-        c=cur.fetchone()
-        if c[0]:
-            if option=='on':
-                poss=allnames[allnames['population']>=c[1]]
-                newid=int(random.choice(poss.index))
-                entr=citydata[(citydata['geonameid']==newid) & (citydata['default']==1)]
-                nname=poss.at[newid,'name']
-                n=(nname,iso2[entr['country'].iloc[0]],entr['country'].iloc[0],admin1data[(admin1data['country']==entr['country'].iloc[0])&(admin1data['admin1']==entr['admin1'].iloc[0])&(admin1data['default']==1)]['name'].iloc[0],(entr['alt-country'].iloc[0],))
-                cur.execute('''update server_info
-                            set choose_city = ?,
-                                current_letter = ?
-                            where server_id = ?''', data=(True,entr['last letter'].iloc[0],guildid))
-                cur.execute('''insert into chain_info(server_id,city_id,round_number,count,name,admin1,country,country_code,alt_country,time_placed,valid)
-                            values (?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,newid,c[2]+1,1,n[0],n[3],n[1],n[2],n[4][0] if n[4] else None,int(interaction.created_at.timestamp()),True))
-                await interaction.followup.send('Choose_city set to **ON**. Next city is **%s.**'%nname)
-            else:
-                cur.execute('''update server_info
-                            set choose_city = ?,
-                                current_letter = ?
-                            where server_id = ?''',data=(False,'-',guildid))
-                cur.execute('''delete from chain_info where server_id = ? and round_number = ?''',data=(guildid,c[2]+1))
-                await interaction.followup.send('Choose_city set to **OFF**. Choose the next city to start the chain. ')
-            conn.commit()
+    guildid=interaction.guild_id
+    cur.execute('''select chain_end,min_pop,round_number from server_info
+                where server_id = ?''', data=(interaction.guild_id,))
+    c=cur.fetchone()
+    if c[0]:
+        if option=='on':
+            poss=allnames[allnames['population']>=c[1]]
+            newid=int(random.choice(poss.index))
+            entr=citydata[(citydata['geonameid']==newid) & (citydata['default']==1)]
+            nname=poss.at[newid,'name']
+            n=(nname,iso2[entr['country'].iloc[0]],entr['country'].iloc[0],admin1data[(admin1data['country']==entr['country'].iloc[0])&(admin1data['admin1']==entr['admin1'].iloc[0])&(admin1data['default']==1)]['name'].iloc[0],(entr['alt-country'].iloc[0],))
+            cur.execute('''update server_info
+                        set choose_city = ?,
+                            current_letter = ?
+                        where server_id = ?''', data=(True,entr['last letter'].iloc[0],guildid))
+            cur.execute('''insert into chain_info(server_id,city_id,round_number,count,name,admin1,country,country_code,alt_country,time_placed,valid)
+                        values (?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,newid,c[2]+1,1,n[0],n[3],n[1],n[2],n[4][0] if n[4] else None,int(interaction.created_at.timestamp()),True))
+            await interaction.followup.send('Choose_city set to **ON**. Next city is **%s.**'%nname)
         else:
-            await interaction.followup.send('Command can only be used after the chain has ended.')
+            cur.execute('''update server_info
+                        set choose_city = ?,
+                            current_letter = ?
+                        where server_id = ?''',data=(False,'-',guildid))
+            cur.execute('''delete from chain_info where server_id = ? and round_number = ?''',data=(guildid,c[2]+1))
+            await interaction.followup.send('Choose_city set to **OFF**. Choose the next city to start the chain. ')
+        conn.commit()
     else:
-        await interaction.followup.send(embed=discord.Embed(color=discord.Colour.from_rgb(255,0,0),description="You do not have permission to run this command."))
+        await interaction.followup.send('Command can only be used after the chain has ended.')
 
 async def countrycomplete(interaction: discord.Interaction, search: str):
     if search=='':
@@ -461,7 +447,7 @@ async def countrycomplete(interaction: discord.Interaction, search: str):
     results.extend([iso3[i] for i in iso3 if i.casefold().startswith(s) and iso3[i] not in results])
     return [app_commands.Choice(name=i,value=i) for i in results[:10]]
 
-add = app_commands.Group(name='add',description="description")
+add = app_commands.Group(name='add', description="Adds reactions/repeats for the chain.",default_permissions=modperms)
 @add.command(description="Adds reaction for a city. When cityed, react to client's message with emoji to react to city with.")
 @app_commands.describe(city="The city that the client will react to",province="State, province, etc that the city is located in",country="Country the city is located in")
 @app_commands.rename(province='administrative-division')
@@ -524,7 +510,7 @@ async def repeat(interaction: discord.Interaction, city:str, province:Optional[s
     else:
         await interaction.followup.send('Command can only be used after the chain has ended.')
 
-remove = app_commands.Group(name='remove',description="description")
+remove = app_commands.Group(name='remove', description="Removes reactions/repeats for the chain.",default_permissions=modperms)
 @remove.command(description="Removes reaction for a city.")
 @app_commands.describe(city="The city that the client will not react to",province="State, province, etc that the city is located in",country="Country the city is located in")
 @app_commands.rename(province='administrative-division')
