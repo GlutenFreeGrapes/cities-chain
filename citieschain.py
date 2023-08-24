@@ -42,6 +42,7 @@ cur.execute('''create table if not exists server_info(
             max_chain int default 0, 
             last_best int,
             prefix varchar(10) default '!',
+            processing bool default false,
             primary key(server_id))''')
 
 cur.execute('''create table if not exists react_info(
@@ -363,7 +364,6 @@ class Confirmation(discord.ui.View):
         for i in cur.fetchall():
             cur.execute('''select correct,incorrect,score from global_user_info where user_id=?''',data=(i[0],))
             j=cur.fetchone()
-            print(i,j)
             if (i[1]-j[0]==0) and (i[2]-j[1]==0) and (i[3]-j[2]==0):
                 cur.execute('''delete from global_user_info where user_id=?''',data=(i[0],))
             else:
@@ -636,7 +636,6 @@ async def on_message(message:discord.Message):
     authorid=message.author.id
     if authorid!=client.user.id:
         guildid=message.guild.id
-        
         cur.execute('''select
                         round_number,
                         min_repeat,
@@ -659,6 +658,11 @@ async def on_message(message:discord.Message):
                 if cur.rowcount==0:
                     cur.execute('''insert into global_user_info(user_id) values (?)''',data=(authorid,))
                 cur.execute('''insert into server_user_info(user_id,server_id) values (?,?)''',data=(authorid,guildid))
+            processing=cur.fetchone()[0]
+
+            if not processing:
+                cur.execute('''update server_info set processing=? where server_id = ?''',data=(True,guildid))
+                conn.commit()
             if sinfo[5]:
                 cur.execute('''update server_info set chain_end = ?, round_number = ? where server_id = ?''',data=(False,sinfo[0]+1,guildid))
             cur.execute('''select
@@ -678,8 +682,19 @@ async def on_message(message:discord.Message):
             sinfo=cur.fetchone()
             cur.execute('''select city_id from chain_info where server_id = ? and round_number = ? order by count asc''',data=(guildid,sinfo[0]))
             citieslist=[i for (i,) in cur]
+            cur.execute('''select processing from server_info where server_id = ?''',data=(guildid,))
+            
+
             res=search_cities_chain(message.content[len(sinfo[10]):])
             if res:
+
+                while processing:
+                    cur.execute('''select processing from server_info where server_id = ?''',data=(guildid,))
+                    processing=cur.fetchone()[0]
+                if not processing:
+                    cur.execute('''update server_info set processing=? where server_id = ?''',data=(True,guildid))
+                    conn.commit()
+                    
                 cur.execute('''select
                         round_number,
                         min_repeat,
@@ -732,7 +747,7 @@ async def on_message(message:discord.Message):
                             repeatset=set(cur.fetchall())
                         else:
                             repeatset=set()
-                        if ((sinfo[4] and res[0] not in citieslist[:sinfo[1]]) or (not sinfo[4] and res[0] not in citieslist) or (res[0] in repeatset)):
+                        if ((sinfo[4] and res[0] not in set(citieslist[:sinfo[1]])) or (not sinfo[4] and res[0] not in set(citieslist)) or (res[0] in repeatset)):
                             if sinfo[8]!=message.author.id:
                                 
 
@@ -742,22 +757,20 @@ async def on_message(message:discord.Message):
                                 cur.execute('''select correct,score from global_user_info where user_id=?''',data=(authorid,))
                                 uinfo=cur.fetchone()
                                 cur.execute('''update global_user_info set correct = ?, score = ?, last_active = ? where user_id = ?''',data=(uinfo[0]+1,uinfo[1]+1,int(message.created_at.timestamp()),authorid))
-                                
+                                cur.execute('''update server_info set last_user = ?, current_letter = ? where server_id = ?''',data=(authorid,letters[1],guildid))
+                                cur.execute('''insert into chain_info(server_id,user_id,round_number,count,city_id,name,admin1,country,country_code,alt_country,time_placed,valid) values (?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,res[0],n[0],n[2],n[1][0],n[1][1],n[3][0] if n[3] else None,int(message.created_at.timestamp()),True))
+
                                 if sinfo[9]<(len(citieslist)+1):
                                     cur.execute('''update server_info set max_chain = ?,last_best = ? where server_id = ?''',data=(len(citieslist)+1,int(message.created_at.timestamp()),guildid))
                                     await message.add_reaction('\N{BALLOT BOX WITH CHECK}')
                                 else:
                                     await message.add_reaction('\N{WHITE HEAVY CHECK MARK}')
                                 
-                                cur.execute('''update server_info set last_user = ?, current_letter = ? where server_id = ?''',data=(authorid,letters[1],guildid))
-
-
                                 cur.execute('''select reaction from react_info where server_id = ? and city_id = ?''', data=(guildid,res[0]))
                                 if cur.rowcount>0:
                                     await message.add_reaction(cur.fetchone()[0])
                                 if not ((res[2].replace(' ','').isalpha() and res[2].isascii())):
                                     await message.add_reaction(regionalindicators[letters[1]])
-                                cur.execute('''insert into chain_info(server_id,user_id,round_number,count,city_id,name,admin1,country,country_code,alt_country,time_placed,valid) values (?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,res[0],n[0],n[2],n[1][0],n[1][1],n[3][0] if n[3] else None,int(message.created_at.timestamp()),True))
                             else:
                                 await message.add_reaction('\N{CROSS MARK}')
                                 cur.execute('''select incorrect,score from server_user_info where server_id = ? and user_id = ?''',data=(guildid,authorid))
@@ -896,6 +909,7 @@ async def on_message(message:discord.Message):
                                 where server_id = ?''', data=(True,entr['last letter'].iloc[0],guildid))
                     cur.execute('''insert into chain_info(server_id,city_id,round_number,count,name,admin1,country,country_code,alt_country,time_placed,valid)
                                 values (?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,int(newid),sinfo[0]+1,1,n[0],n[3],n[1],n[2],n[4][0] if n[4] else None,int(message.created_at.timestamp()),True))
+        cur.execute('''update server_info set processing=? where server_id = ?''',data=(False,guildid))
         conn.commit()
 
 stats = app_commands.Group(name='stats',description="description")
