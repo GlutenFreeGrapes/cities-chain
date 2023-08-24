@@ -76,9 +76,7 @@ cur.execute('''create table if not exists server_user_info(
             last_active int,
             primary key(user_id,server_id),
             foreign key(server_id)
-                references server_info(server_id),
-            foreign key(user_id)
-                references global_user_info(user_id))''')
+                references server_info(server_id))''')
 
 cur.execute('''create table if not exists chain_info(
             server_id bigint, 
@@ -95,9 +93,7 @@ cur.execute('''create table if not exists chain_info(
             valid bool,
             primary key(server_id,city_id,round_number,count),
             foreign key(server_id)
-                references server_info(server_id),
-            foreign key(user_id)
-                references global_user_info(user_id))''')
+                references server_info(server_id))''')
 
 client = discord.Client(intents=intents)
 tree=app_commands.tree.CommandTree(client)
@@ -204,11 +200,50 @@ def search_cities_chain(query):
                             if results.shape[0]==0:
                                 results=res4[res4['default']==0]
                                 s='punct empty'
-    if len(p)>1:
-        otherdivision=p[-1]
+    if len(p)==2:
+        otherdivision=p[1]
         cchoice=countriesdata[(countriesdata['name'].str.casefold()==otherdivision)|(countriesdata['country'].str.casefold()==otherdivision)]
         a1choice=admin1data[(admin1data['name'].str.casefold()==otherdivision)|(admin1data['admin1'].str.casefold()==otherdivision)]
         a2choice=admin2data[(admin2data['name'].str.casefold()==otherdivision)|(admin2data['admin2'].str.casefold()==otherdivision)]
+        cchoice=set(cchoice['country'])
+        a1choice=set(zip(a1choice['country'],a1choice['admin1']))
+        a2choice=set(zip(a2choice['country'],a2choice['admin1'],a2choice['admin2']))
+        cresults=results[results['country'].isin(cchoice)|results['alt-country'].isin(cchoice)]
+        rcol=results.columns
+        a1results=pd.DataFrame(columns=rcol)
+        for i in a1choice:
+            a1results=pd.concat([a1results,results[(results['country']==i[0])&(results['admin1']==i[1])]])
+        a2results=pd.DataFrame(columns=rcol)
+        for i in a2choice:
+            a2results=pd.concat([a2results,results[(results['country']==i[0])&(results['admin1']==i[1])&(results['admin2']==i[2])]])
+        results=pd.concat([cresults,a1results,a2results])
+        results=results.drop_duplicates()
+    elif len(p)==3:
+        otherdivision=p[1]
+        country=p[2]
+        cchoice=countriesdata[(countriesdata['name'].str.casefold()==country)|(countriesdata['country'].str.casefold()==country)]
+        a1choice=admin1data[(admin1data['name'].str.casefold()==otherdivision)|(admin1data['admin1'].str.casefold()==otherdivision)]
+        a2choice=admin2data[(admin2data['name'].str.casefold()==otherdivision)|(admin2data['admin2'].str.casefold()==otherdivision)]
+        cchoice=set(cchoice['country'])
+        a1choice=set(zip(a1choice['country'],a1choice['admin1']))
+        a2choice=set(zip(a2choice['country'],a2choice['admin1'],a2choice['admin2']))
+        cresults=results[results['country'].isin(cchoice)|results['alt-country'].isin(cchoice)]
+        rcol=results.columns
+        a1results=pd.DataFrame(columns=rcol)
+        for i in a1choice:
+            a1results=pd.concat([a1results,results[(results['country']==i[0])&(results['admin1']==i[1])]])
+        a2results=pd.DataFrame(columns=rcol)
+        for i in a2choice:
+            a2results=pd.concat([a2results,results[(results['country']==i[0])&(results['admin1']==i[1])&(results['admin2']==i[2])]])
+        results=pd.concat([cresults,a1results,a2results])
+        results=results.drop_duplicates()
+    elif len(p)>3:
+        admin2=p[1]
+        admin1=p[2]
+        country=p[3]
+        cchoice=countriesdata[(countriesdata['name'].str.casefold()==country)|(countriesdata['country'].str.casefold()==country)]
+        a1choice=admin1data[(admin1data['name'].str.casefold()==admin1)|(admin1data['admin1'].str.casefold()==admin1)]
+        a2choice=admin2data[(admin2data['name'].str.casefold()==admin2)|(admin2data['admin2'].str.casefold()==admin2)]
         cchoice=set(cchoice['country'])
         a1choice=set(zip(a1choice['country'],a1choice['admin1']))
         a2choice=set(zip(a2choice['country'],a2choice['admin1'],a2choice['admin2']))
@@ -260,7 +295,7 @@ class Paginator(discord.ui.View):
         for i in self.children:
             i.disabled=True
         new=discord.Embed(title=self.title, color=discord.Colour.from_rgb(0,255,0),description='\n'.join(self.blist[self.page*25-25:self.page*25]))
-        await self.message.edit(embed=new,view=None)
+        await self.message.edit(embed=new,view=self)
     async def updateembed(self,interaction:discord.Interaction):
         if self.lens==1:
             for i in self.children:
@@ -283,9 +318,8 @@ class Paginator(discord.ui.View):
                 i.disabled=False
             self.children[2].label="%s/%s"%(self.page,self.lens)
         new=discord.Embed(title=self.title, color=discord.Colour.from_rgb(0,255,0),description='\n'.join(self.blist[self.page*25-25:self.page*25]))
-        view=Paginator(self.page,self.blist,self.title,self.lens,self.author)
-        await interaction.response.edit_message(embed=new,view=view)
-        view.message=await interaction.original_response()
+        await interaction.response.edit_message(embed=new,view=self)
+        self.message=await interaction.original_response()
         
     @discord.ui.button(label='⏮', style=discord.ButtonStyle.primary)
     async def front(self, interaction, button):
@@ -308,6 +342,49 @@ class Paginator(discord.ui.View):
         await self.updateembed(interaction)
     async def interaction_check(self, interaction: discord.Interaction):
         return interaction.user.id == self.author
+
+class Confirmation(discord.ui.View):
+    def __init__(self,serverid):
+        super().__init__(timeout=60)
+        self.guild=serverid
+        self.to=True
+    async def on_timeout(self):
+        self.children[0].disabled=True
+        self.children[1].disabled=True
+        if self.to:
+            await self.message.edit(embed=discord.Embed(color=discord.Colour.from_rgb(255,0,0),description='Interaction timed out. Server stats have not been reset.'),view=self)
+    @discord.ui.button(label='YES', style=discord.ButtonStyle.green)
+    async def yes(self, interaction, button):
+        self.children[0].disabled=True
+        self.children[1].disabled=True
+        self.to=False
+        cur.execute('''delete from chain_info where server_id=?''',data=(interaction.guild_id,))
+        cur.execute('''select user_id,correct,incorrect,score from server_user_info where server_id=?''',data=(interaction.guild_id,))
+        for i in cur.fetchall():
+            cur.execute('''select correct,incorrect,score from global_user_info where user_id=?''',data=(i[0],))
+            j=cur.fetchone()
+            print(i,j)
+            if (i[1]-j[0]==0) and (i[2]-j[1]==0) and (i[3]-j[2]==0):
+                cur.execute('''delete from global_user_info where user_id=?''',data=(i[0],))
+            else:
+                cur.execute('''select last_active from server_user_info where user_id=? and server_id!=? order by last_active desc''',data=(i[0],interaction.guild_id))
+                la=cur.fetchone()[0]
+                cur.execute('''update global_user_info 
+                                set correct = ?,incorrect = ?,score = ?,last_active = ? where user_id = ?''', data=(i[1]-j[0],i[2]-j[1],i[3]-j[2],la,i[0]))
+        cur.execute('''delete from server_user_info where server_id=?''',data=(interaction.guild_id,))
+        cur.execute('''delete from react_info where server_id=?''',data=(interaction.guild_id,))
+        cur.execute('''delete from repeat_info where server_id=?''',data=(interaction.guild_id,))
+        cur.execute('''update server_info set round_number=?,current_letter=?,last_user=?,max_chain=?,last_best=? where server_id=?''',data=(0,'-',None,0,None,interaction.guild_id))
+        conn.commit()
+        await interaction.response.edit_message(embed=discord.Embed(color=discord.Colour.from_rgb(0,255,0),description='Server stats have been reset.'),view=self)
+        self.message = await interaction.original_response()
+    @discord.ui.button(label='NO', style=discord.ButtonStyle.red)
+    async def no(self, interaction, button):
+        self.children[0].disabled=True
+        self.children[1].disabled=True
+        self.to=False
+        await interaction.response.edit_message(embed=discord.Embed(color=discord.Colour.from_rgb(255,0,0),description='Server stats have not been reset.'),view=self)
+        self.message = await interaction.original_response()
 
 @client.event
 async def on_ready():
@@ -410,23 +487,26 @@ async def prefix(interaction: discord.Interaction, prefix: Optional[app_commands
 async def choosecity(interaction: discord.Interaction, option:Literal["on","off"]):
     await interaction.response.defer()
     guildid=interaction.guild_id
-    cur.execute('''select chain_end,min_pop,round_number from server_info
+    cur.execute('''select chain_end,min_pop,round_number,choose_city from server_info
                 where server_id = ?''', data=(interaction.guild_id,))
     c=cur.fetchone()
     if c[0]:
         if option=='on':
-            poss=allnames[allnames['population']>=c[1]]
-            newid=int(random.choice(poss.index))
-            entr=citydata[(citydata['geonameid']==newid) & (citydata['default']==1)]
-            nname=poss.at[newid,'name']
-            n=(nname,iso2[entr['country'].iloc[0]],entr['country'].iloc[0],admin1data[(admin1data['country']==entr['country'].iloc[0])&(admin1data['admin1']==entr['admin1'].iloc[0])&(admin1data['default']==1)]['name'].iloc[0],(entr['alt-country'].iloc[0],))
-            cur.execute('''update server_info
-                        set choose_city = ?,
-                            current_letter = ?
-                        where server_id = ?''', data=(True,entr['last letter'].iloc[0],guildid))
-            cur.execute('''insert into chain_info(server_id,city_id,round_number,count,name,admin1,country,country_code,alt_country,time_placed,valid)
-                        values (?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,newid,c[2]+1,1,n[0],n[3],n[1],n[2],n[4][0] if n[4] else None,int(interaction.created_at.timestamp()),True))
-            await interaction.followup.send('Choose_city set to **ON**. Next city is **%s.**'%nname)
+            if c[3]:
+                await interaction.followup.send('Choose_city is already **on**.')
+            else:
+                poss=allnames[allnames['population']>=c[1]]
+                newid=int(random.choice(poss.index))
+                entr=citydata[(citydata['geonameid']==newid) & (citydata['default']==1)]
+                nname=poss.at[newid,'name']
+                n=(nname,iso2[entr['country'].iloc[0]],entr['country'].iloc[0],admin1data[(admin1data['country']==entr['country'].iloc[0])&(admin1data['admin1']==entr['admin1'].iloc[0])&(admin1data['default']==1)]['name'].iloc[0],(entr['alt-country'].iloc[0],))
+                cur.execute('''update server_info
+                            set choose_city = ?,
+                                current_letter = ?
+                            where server_id = ?''', data=(True,entr['last letter'].iloc[0],guildid))
+                cur.execute('''insert into chain_info(server_id,city_id,round_number,count,name,admin1,country,country_code,alt_country,time_placed,valid)
+                            values (?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,newid,c[2]+1,1,n[0],n[3],n[1],n[2],n[4][0] if n[4] else None,int(interaction.created_at.timestamp()),True))
+                await interaction.followup.send('Choose_city set to **ON**. Next city is **%s.**'%nname)
         else:
             cur.execute('''update server_info
                         set choose_city = ?,
@@ -821,6 +901,7 @@ async def on_message(message:discord.Message):
 stats = app_commands.Group(name='stats',description="description")
 @app_commands.rename(se='show-everyone')
 @stats.command(description="Displays server statistics.")
+@app_commands.describe(se='Yes to show everyone stats, no otherwise')
 async def server(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
     eph=True if se=='no' else False
     await interaction.response.defer(ephemeral=eph)
@@ -838,7 +919,7 @@ async def server(interaction: discord.Interaction,se:Optional[Literal['yes','no'
 
 @stats.command(description="Displays user statistics.")
 @app_commands.rename(se='show-everyone')
-@app_commands.describe(member="The user to get statistics for.")
+@app_commands.describe(member="The user to get statistics for.",se='Yes to show everyone stats, no otherwise')
 async def user(interaction: discord.Interaction, member:Optional[discord.Member]=None,se:Optional[Literal['yes','no']]='no'):
     eph=True if se=='no' else False
     await interaction.response.defer(ephemeral=eph)
@@ -867,7 +948,7 @@ async def user(interaction: discord.Interaction, member:Optional[discord.Member]
 
 @stats.command(description="Displays list of cities that cannot be repeated.")
 @app_commands.rename(se='show-everyone')
-@app_commands.describe(order='The order in which the cities are presented, sequential or alphabetical')
+@app_commands.describe(order='The order in which the cities are presented, sequential or alphabetical',se='Yes to show everyone stats, no otherwise')
 async def cities(interaction: discord.Interaction,order:Literal['sequential','alphabetical'],se:Optional[Literal['yes','no']]='no'):
     eph=True if se=='no' else False
     await interaction.response.defer(ephemeral=eph)
@@ -919,7 +1000,7 @@ async def cities(interaction: discord.Interaction,order:Literal['sequential','al
 
 @stats.command(name='cities-all',description="Displays list of all cities having been said, regardless of whether they have been repeated.")
 @app_commands.rename(se='show-everyone')
-@app_commands.describe(order='The order in which the cities are presented, sequential or alphabetical')
+@app_commands.describe(order='The order in which the cities are presented, sequential or alphabetical',se='Yes to show everyone stats, no otherwise')
 async def allcities(interaction: discord.Interaction,order:Literal['sequential','alphabetical'],se:Optional[Literal['yes','no']]='no'):
     eph=True if se=='no' else False
     await interaction.response.defer(ephemeral=eph)
@@ -967,10 +1048,10 @@ async def allcities(interaction: discord.Interaction,order:Literal['sequential',
             embed=discord.Embed(title="All Cities - Alphabetical Order", color=discord.Colour.from_rgb(0,255,0),description='```null```')
         await interaction.followup.send(embed=embed,ephemeral=eph)
 
-@stats.command(description="Displays all cities said for one round.")
+@stats.command(name='round',description="Displays all cities said for one round.")
 @app_commands.rename(se='show-everyone')
-@app_commands.describe(round_num='Round to retrieve information from')
-async def round(interaction: discord.Interaction,round_num:app_commands.Range[int,1,None],se:Optional[Literal['yes','no']]='no'):
+@app_commands.describe(round_num='Round to retrieve information from',se='Yes to show everyone stats, no otherwise')
+async def roundinfo(interaction: discord.Interaction,round_num:app_commands.Range[int,1,None],se:Optional[Literal['yes','no']]='no'):
     eph=True if se=='no' else False
     await interaction.response.defer(ephemeral=eph)
     guildid=interaction.guild_id
@@ -1022,6 +1103,7 @@ async def round(interaction: discord.Interaction,round_num:app_commands.Range[in
 
 @stats.command(description="Displays server leaderboard.")
 @app_commands.rename(se='show-everyone')
+@app_commands.describe(se='Yes to show everyone stats, no otherwise')
 async def slb(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
     eph=True if se=='no' else False
     await interaction.response.defer(ephemeral=eph)
@@ -1036,6 +1118,7 @@ async def slb(interaction: discord.Interaction,se:Optional[Literal['yes','no']]=
 
 @stats.command(description="Displays global leaderboard.")
 @app_commands.rename(se='show-everyone')
+@app_commands.describe(se='Yes to show everyone stats, no otherwise')
 async def lb(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
     eph=True if se=='no' else False
     await interaction.response.defer(ephemeral=eph)
@@ -1050,6 +1133,7 @@ async def lb(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='
 
 @stats.command(description="Displays all cities and their reactions.")
 @app_commands.rename(se='show-everyone')
+@app_commands.describe(se='Yes to show everyone stats, no otherwise')
 async def react(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
     eph=True if se=='no' else False
     await interaction.response.defer(ephemeral=eph)
@@ -1082,6 +1166,7 @@ async def react(interaction: discord.Interaction,se:Optional[Literal['yes','no']
 
 @stats.command(description="Displays all cities that can be repeated.")
 @app_commands.rename(se='show-everyone')
+@app_commands.describe(se='Yes to show everyone stats, no otherwise')
 async def repeat(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
     eph=True if se=='no' else False
     await interaction.response.defer(ephemeral=eph)
@@ -1114,6 +1199,7 @@ async def repeat(interaction: discord.Interaction,se:Optional[Literal['yes','no'
 
 @stats.command(name='popular-cities',description="Displays most popular cities and countries added to chain.")
 @app_commands.rename(se='show-everyone')
+@app_commands.describe(se='Yes to show everyone stats, no otherwise')
 async def popular(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
     eph=True if se=='no' else False
     await interaction.response.defer(ephemeral=eph)
@@ -1158,6 +1244,7 @@ async def popular(interaction: discord.Interaction,se:Optional[Literal['yes','no
 
 @stats.command(name='best-rounds',description="Displays longest chains in server.")
 @app_commands.rename(se='show-everyone')
+@app_commands.describe(se='Yes to show everyone stats, no otherwise')
 async def bestrds(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
     eph=True if se=='no' else False
     await interaction.response.defer(ephemeral=eph)
@@ -1221,7 +1308,7 @@ async def bestrds(interaction: discord.Interaction,se:Optional[Literal['yes','no
     await interaction.followup.send(embed=embed,ephemeral=eph)
 
 @tree.command(name='city-info',description='Gets information for a given city.')
-@app_commands.describe(city="The city to get information for",province="State, province, etc that the city is located in",country="Country the city is located in")
+@app_commands.describe(city="The city to get information for",province="State, province, etc that the city is located in",country="Country the city is located in",se='Yes to show everyone stats, no otherwise')
 @app_commands.rename(province='administrative-division',se='show-everyone')
 @app_commands.autocomplete(country=countrycomplete)
 async def cityinfo(interaction: discord.Interaction, city:str, province:Optional[str]=None, country:Optional[str]=None,se:Optional[Literal['yes','no']]='no'):
@@ -1256,7 +1343,7 @@ async def cityinfo(interaction: discord.Interaction, city:str, province:Optional
         await interaction.followup.send('City not recognized. Please try again. ',ephemeral=eph)
 
 @tree.command(name='alt-names',description='Gets alternate names for a given city.')
-@app_commands.describe(city="The city to get alternate names for",province="State, province, etc that the city is located in",country="Country the city is located in")
+@app_commands.describe(city="The city to get alternate names for",province="State, province, etc that the city is located in",country="Country the city is located in",se='Yes to show everyone stats, no otherwise')
 @app_commands.rename(province='administrative-division',se='show-everyone')
 @app_commands.autocomplete(country=countrycomplete)
 async def altnames(interaction: discord.Interaction, city:str, province:Optional[str]=None, country:Optional[str]=None,se:Optional[Literal['yes','no']]='no'):
@@ -1276,6 +1363,14 @@ async def altnames(interaction: discord.Interaction, city:str, province:Optional
         await interaction.followup.send(embed=embed,ephemeral=eph)
     else:
         await interaction.followup.send('City not recognized. Please try again. ',ephemeral=eph)
+
+@tree.command(name='delete-stats',description='Deletes server stats.')
+@app_commands.default_permissions(moderate_members=True)
+async def deletestats(interaction: discord.Interaction):
+    embed=discord.Embed(color=discord.Colour.from_rgb(255,0,0),title='Are you sure?',description='This action is irreversible.')
+    view=Confirmation(interaction.guild_id)
+    await interaction.response.send_message(embed=embed,view=view,ephemeral=True)
+    view.message=await interaction.original_response()
 
 @tree.command(description="Tests the client's latency. ")
 async def ping(interaction: discord.Interaction):
