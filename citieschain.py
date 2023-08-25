@@ -42,7 +42,6 @@ cur.execute('''create table if not exists server_info(
             max_chain int default 0, 
             last_best int,
             prefix varchar(10) default '!',
-            processing bool default false,
             primary key(server_id))''')
 
 cur.execute('''create table if not exists react_info(
@@ -631,6 +630,23 @@ async def repeat(interaction: discord.Interaction, city:str, province:Optional[s
     else:
         await interaction.followup.send('Command can only be used after the chain has ended.')
 
+
+from threading import Thread
+class ThreadWithReturnValue(Thread):
+    
+    def __init__(self, group=None, target=None, name=None,
+                 args=(), kwargs={}, Verbose=None):
+        Thread.__init__(self, group, target, name, args, kwargs)
+        self._return = None
+
+    def run(self):
+        if self._target is not None:
+            self._return = self._target(*self._args,
+                                                **self._kwargs)
+    def join(self, *args):
+        Thread.join(self, *args)
+        return self._return
+
 @client.event
 async def on_message(message:discord.Message):
     authorid=message.author.id
@@ -658,11 +674,6 @@ async def on_message(message:discord.Message):
                 if cur.rowcount==0:
                     cur.execute('''insert into global_user_info(user_id) values (?)''',data=(authorid,))
                 cur.execute('''insert into server_user_info(user_id,server_id) values (?,?)''',data=(authorid,guildid))
-            processing=cur.fetchone()[0]
-
-            if not processing:
-                cur.execute('''update server_info set processing=? where server_id = ?''',data=(True,guildid))
-                conn.commit()
             if sinfo[5]:
                 cur.execute('''update server_info set chain_end = ?, round_number = ? where server_id = ?''',data=(False,sinfo[0]+1,guildid))
             cur.execute('''select
@@ -682,19 +693,12 @@ async def on_message(message:discord.Message):
             sinfo=cur.fetchone()
             cur.execute('''select city_id from chain_info where server_id = ? and round_number = ? order by count asc''',data=(guildid,sinfo[0]))
             citieslist=[i for (i,) in cur]
-            cur.execute('''select processing from server_info where server_id = ?''',data=(guildid,))
             
-
-            res=search_cities_chain(message.content[len(sinfo[10]):])
+            thread=ThreadWithReturnValue(target=search_cities_chain,args=(message.content[len(sinfo[10]):],))
+            # res=search_cities_chain(message.content[len(sinfo[10]):])
+            thread.start()
+            res=thread.join()
             if res:
-
-                while processing:
-                    cur.execute('''select processing from server_info where server_id = ?''',data=(guildid,))
-                    processing=cur.fetchone()[0]
-                if not processing:
-                    cur.execute('''update server_info set processing=? where server_id = ?''',data=(True,guildid))
-                    conn.commit()
-                    
                 cur.execute('''select
                         round_number,
                         min_repeat,
@@ -740,6 +744,7 @@ async def on_message(message:discord.Message):
                 #         else:
                 #             loctuple=(res[2]+' (%s)'%name,country)
                 # print(message.guild.name,message.author.name,loctuple,res[1]['population'])
+
                 if (sinfo[7]=='-' or sinfo[7]==letters[0]):
                     if sinfo[2]<=res[1]['population']:
                         cur.execute('''select city_id from repeat_info where server_id = ?''', data=(guildid,))
@@ -909,7 +914,6 @@ async def on_message(message:discord.Message):
                                 where server_id = ?''', data=(True,entr['last letter'].iloc[0],guildid))
                     cur.execute('''insert into chain_info(server_id,city_id,round_number,count,name,admin1,country,country_code,alt_country,time_placed,valid)
                                 values (?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,int(newid),sinfo[0]+1,1,n[0],n[3],n[1],n[2],n[4][0] if n[4] else None,int(message.created_at.timestamp()),True))
-        cur.execute('''update server_info set processing=? where server_id = ?''',data=(False,guildid))
         conn.commit()
 
 stats = app_commands.Group(name='stats',description="description")
