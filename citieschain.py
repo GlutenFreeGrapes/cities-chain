@@ -110,6 +110,7 @@ ccodes={'country code'}
 anames={'admin1 names','admin2 names'}
 cnames={'country names',"alternate countries",'alternate country names'}
 def search_cities(city,province,country):
+    s=('name','decoded','punct space','punct empty')
     city=re.sub(',$','',city.casefold().strip())
     if city[-1]==',':
         city=city[:-1]
@@ -117,29 +118,14 @@ def search_cities(city,province,country):
     res2=citydata[(citydata['decoded'].str.casefold()==city)]
     res3=citydata[(citydata['punct space'].str.casefold()==city)]
     res4=citydata[(citydata['punct empty'].str.casefold()==city)]
-    results=res1[res1['default']==1]
-    s='name'
-    if results.shape[0]==0:
-        results=res2[res2['default']==1]
-        s='decoded'
-        if results.shape[0]==0:
-            results=res3[res3['default']==1]
-            s='punct space'
-            if results.shape[0]==0:
-                results=res4[res4['default']==1]
-                s='punct empty'
-                if results.shape[0]==0:
-                    results=res1[res1['default']==0]
-                    s='name'
-                    if results.shape[0]==0:
-                        results=res2[res2['default']==0]
-                        s='decoded'
-                        if results.shape[0]==0:
-                            results=res3[res3['default']==0]
-                            s='punct space'
-                            if results.shape[0]==0:
-                                results=res4[res4['default']==0]
-                                s='punct empty'
+
+    res1=res1.assign(match=0)
+    res2=res2.assign(match=1)
+    res3=res3.assign(match=2)
+    res4=res4.assign(match=3)
+
+    results=pd.concat([res1,res2,res3,res4])
+    results=results.drop_duplicates(subset=('geonameid','name'))
     if province:
         p=province.casefold().strip()
         a1choice=admin1data[(admin1data['name'].str.casefold()==p)|(admin1data['admin1'].str.casefold()==p)]
@@ -162,12 +148,13 @@ def search_cities(city,province,country):
     if len(results)==0:
         return None
     else:
-        r=results.sort_values('population',ascending=0).head(1).iloc[0]
-        return (int(r['geonameid']),r,r[s])
+        r=results.sort_values(['default','match','population'],ascending=[0,1,0]).head(1).iloc[0]
+        return (int(r['geonameid']),r,r[s[r['match']]])
 
 codes={'country code','admin1 code','admin2 code'}
 names={'country names','admin1 names','admin2 names',"alternate countries",'alternate country names'}
 def search_cities_chain(query):
+    s=('name','decoded','punct space','punct empty')
     q=re.sub(',$','',query.casefold().strip())
     if q[-1]==',':
         q=q[:-1]
@@ -177,29 +164,15 @@ def search_cities_chain(query):
     res2=citydata[(citydata['decoded'].str.casefold()==city)]
     res3=citydata[(citydata['punct space'].str.casefold()==city)]
     res4=citydata[(citydata['punct empty'].str.casefold()==city)]
-    results=res1[res1['default']==1]
-    s='name'
-    if results.shape[0]==0:
-        results=res2[res2['default']==1]
-        s='decoded'
-        if results.shape[0]==0:
-            results=res3[res3['default']==1]
-            s='punct space'
-            if results.shape[0]==0:
-                results=res4[res4['default']==1]
-                s='punct empty'
-                if results.shape[0]==0:
-                    results=res1[res1['default']==0]
-                    s='name'
-                    if results.shape[0]==0:
-                        results=res2[res2['default']==0]
-                        s='decoded'
-                        if results.shape[0]==0:
-                            results=res3[res3['default']==0]
-                            s='punct space'
-                            if results.shape[0]==0:
-                                results=res4[res4['default']==0]
-                                s='punct empty'
+
+    res1=res1.assign(match=0)
+    res2=res2.assign(match=1)
+    res3=res3.assign(match=2)
+    res4=res4.assign(match=3)
+
+    results=pd.concat([res1,res2,res3,res4])
+    results=results.drop_duplicates(subset=('geonameid','name'))
+
     if len(p)==2:
         otherdivision=p[1]
         cchoice=countriesdata[(countriesdata['name'].str.casefold()==otherdivision)|(countriesdata['country'].str.casefold()==otherdivision)]
@@ -260,8 +233,9 @@ def search_cities_chain(query):
     if results.shape[0]==0:
         return None
     else:
-        r=results.sort_values('population',ascending=0).head(1).iloc[0]
-        return (int(r['geonameid']),r,r[s])
+        r=results.sort_values(['default','match','population'],ascending=[0,1,0]).head(1).iloc[0]
+        return (int(r['geonameid']),r,r[s[r['match']]])
+    
 
 class Paginator(discord.ui.View):
     def __init__(self,page,blist,title,lens,user):
