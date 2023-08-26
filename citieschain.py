@@ -148,7 +148,7 @@ def search_cities(city,province,country):
     if len(results)==0:
         return None
     else:
-        r=results.sort_values(['default','match','population'],ascending=[0,1,0]).head(1).iloc[0]
+        r=results.sort_values(['default','population','match'],ascending=[0,0,1]).head(1).iloc[0]
         return (int(r['geonameid']),r,r[s[r['match']]])
 
 codes={'country code','admin1 code','admin2 code'}
@@ -233,7 +233,7 @@ def search_cities_chain(query):
     if results.shape[0]==0:
         return None
     else:
-        r=results.sort_values(['default','match','population'],ascending=[0,1,0]).head(1).iloc[0]
+        r=results.sort_values(['default','population','match'],ascending=[0,0,1]).head(1).iloc[0]
         return (int(r['geonameid']),r,r[s[r['match']]])
     
 
