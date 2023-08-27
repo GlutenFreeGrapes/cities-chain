@@ -689,7 +689,9 @@ async def on_message(message:discord.Message):
                     where server_id = ?''',data=(guildid,))
                 sinfo=cur.fetchone()
                 j=citydata[(citydata['geonameid']==res[0])&(citydata['default']==1)].iloc[0]
-                name,adm1,country,altcountry=j['name'],admin1data[(admin1data['country']==j['country'])&(admin1data['admin1']==j['admin1'])&(admin1data['default']==1)]['name'].iloc[0],j['country'],j['alt-country']
+                name,adm1,country,altcountry=j['name'],j['admin1'],j['country'],j['alt-country']
+                if adm1:
+                    adm1=admin1data[(admin1data['country']==country)&(admin1data['admin1']==adm1)&(admin1data['default']==1)]['name'].iloc[0]
                 if not ((res[2].replace(' ','').isalpha() and res[2].isascii()) or res[1]['default']==1):
                     n=(res[2]+' ('+name+')',(iso2[country],country),adm1,(altcountry,))
                 else:
