@@ -347,7 +347,7 @@ class Confirmation(discord.ui.View):
         cur.execute('''delete from server_user_info where server_id=?''',data=(interaction.guild_id,))
         cur.execute('''delete from react_info where server_id=?''',data=(interaction.guild_id,))
         cur.execute('''delete from repeat_info where server_id=?''',data=(interaction.guild_id,))
-        cur.execute('''update server_info set round_number=?,current_letter=?,last_user=?,max_chain=?,last_best=? where server_id=?''',data=(0,'-',None,0,None,interaction.guild_id))
+        cur.execute('''update server_info set round_number=?,current_letter=?,last_user=?,max_chain=?,last_best=?,chain_end=? where server_id=?''',data=(0,'-',None,0,None,True,interaction.guild_id))
         conn.commit()
         await interaction.response.edit_message(embed=discord.Embed(color=discord.Colour.from_rgb(0,255,0),description='Server stats have been reset.'),view=self)
         self.message = await interaction.original_response()
