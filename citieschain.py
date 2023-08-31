@@ -23,7 +23,7 @@ conn = mariadb.connect(
     database=None)
 cur = conn.cursor() 
 
-cur.execute('drop database ' + env["DB_NAME"])
+# cur.execute('drop database ' + env["DB_NAME"])
 
 cur.execute('create database if not exists ' + env["DB_NAME"])
 cur.execute('use ' + env["DB_NAME"])
