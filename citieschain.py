@@ -23,7 +23,7 @@ conn = mariadb.connect(
     database=None)
 cur = conn.cursor() 
 
-# cur.execute('drop database ' + env["DB_NAME"])
+cur.execute('drop database ' + env["DB_NAME"])
 
 cur.execute('create database if not exists ' + env["DB_NAME"])
 cur.execute('use ' + env["DB_NAME"])
@@ -91,7 +91,7 @@ cur.execute('''create table if not exists chain_info(
             alt_country varchar(100),
             time_placed int,
             valid bool,
-            primary key(server_id,user_id,city_id,round_number,count,time_placed),
+            primary key(server_id,city_id,round_number,count,time_placed),
             foreign key(server_id)
                 references server_info(server_id))''')
 
@@ -99,16 +99,13 @@ client = discord.Client(intents=intents)
 tree=app_commands.tree.CommandTree(client)
 
 allnames=citydata[citydata['default']==1]
-allnames=allnames.set_index('geonameid')[['name','population']]
+allnames=allnames.set_index('geonameid')
 
 allcountries=['Afghanistan', 'Aland Islands', 'Albania', 'Algeria', 'American Samoa', 'Andorra', 'Angola', 'Anguilla', 'Antarctica', 'Antigua and Barbuda', 'Argentina', 'Armenia', 'Aruba', 'Australia', 'Austria', 'Azerbaijan', 'Bahamas', 'Bahrain', 'Bangladesh', 'Barbados', 'Belarus', 'Belgium', 'Belize', 'Benin', 'Bermuda', 'Bhutan', 'Bolivia', 'Bonaire, Saint Eustatius and Saba ', 'Bosnia and Herzegovina', 'Botswana', 'Bouvet Island', 'Brazil', 'British Indian Ocean Territory', 'British Virgin Islands', 'Brunei', 'Bulgaria', 'Burkina Faso', 'Burundi', 'Cabo Verde', 'Cambodia', 'Cameroon', 'Canada', 'Cayman Islands', 'Central African Republic', 'Chad', 'Chile', 'China', 'Christmas Island', 'Cocos Islands', 'Colombia', 'Comoros', 'Cook Islands', 'Costa Rica', 'Croatia', 'Cuba', 'Curacao', 'Cyprus', 'Czechia', 'Democratic Republic of the Congo', 'Denmark', 'Djibouti', 'Dominica', 'Dominican Republic', 'Ecuador', 'Egypt', 'El Salvador', 'Equatorial Guinea', 'Eritrea', 'Estonia', 'Eswatini', 'Ethiopia', 'Falkland Islands', 'Faroe Islands', 'Fiji', 'Finland', 'France', 'French Guiana', 'French Polynesia', 'French Southern Territories', 'Gabon', 'Gambia', 'Georgia', 'Germany', 'Ghana', 'Gibraltar', 'Greece', 'Greenland', 'Grenada', 'Guadeloupe', 'Guam', 'Guatemala', 'Guernsey', 'Guinea', 'Guinea-Bissau', 'Guyana', 'Haiti', 'Heard Island and McDonald Islands', 'Honduras', 'Hong Kong', 'Hungary', 'Iceland', 'India', 'Indonesia', 'Iran', 'Iraq', 'Ireland', 'Isle of Man', 'Israel', 'Italy', 'Ivory Coast', 'Jamaica', 'Japan', 'Jersey', 'Jordan', 'Kazakhstan', 'Kenya', 'Kiribati', 'Kosovo', 'Kuwait', 'Kyrgyzstan', 'Laos', 'Latvia', 'Lebanon', 'Lesotho', 'Liberia', 'Libya', 'Liechtenstein', 'Lithuania', 'Luxembourg', 'Macao', 'Madagascar', 'Malawi', 'Malaysia', 'Maldives', 'Mali', 'Malta', 'Marshall Islands', 'Martinique', 'Mauritania', 'Mauritius', 'Mayotte', 'Mexico', 'Micronesia', 'Moldova', 'Monaco', 'Mongolia', 'Montenegro', 'Montserrat', 'Morocco', 'Mozambique', 'Myanmar', 'Namibia', 'Nauru', 'Nepal', 'Netherlands', 'Netherlands Antilles', 'New Caledonia', 'New Zealand', 'Nicaragua', 'Niger', 'Nigeria', 'Niue', 'Norfolk Island', 'North Korea', 'North Macedonia', 'Northern Mariana Islands', 'Norway', 'Oman', 'Pakistan', 'Palau', 'Palestinian Territory', 'Panama', 'Papua New Guinea', 'Paraguay', 'Peru', 'Philippines', 'Pitcairn', 'Poland', 'Portugal', 'Puerto Rico', 'Qatar', 'Republic of the Congo', 'Reunion', 'Romania', 'Russia', 'Rwanda', 'Saint Barthelemy', 'Saint Helena', 'Saint Kitts and Nevis', 'Saint Lucia', 'Saint Martin', 'Saint Pierre and Miquelon', 'Saint Vincent and the Grenadines', 'Samoa', 'San Marino', 'Sao Tome and Principe', 'Saudi Arabia', 'Senegal', 'Serbia', 'Serbia and Montenegro', 'Seychelles', 'Sierra Leone', 'Singapore', 'Sint Maarten', 'Slovakia', 'Slovenia', 'Solomon Islands', 'Somalia', 'South Africa', 'South Georgia and the South Sandwich Islands', 'South Korea', 'South Sudan', 'Spain', 'Sri Lanka', 'Sudan', 'Suriname', 'Svalbard and Jan Mayen', 'Sweden', 'Switzerland', 'Syria', 'Taiwan', 'Tajikistan', 'Tanzania', 'Thailand', 'Timor Leste', 'Togo', 'Tokelau', 'Tonga', 'Trinidad and Tobago', 'Tunisia', 'Turkey', 'Turkmenistan', 'Turks and Caicos Islands', 'Tuvalu', 'U.S. Virgin Islands', 'Uganda', 'Ukraine', 'United Arab Emirates', 'United Kingdom', 'United States', 'United States Minor Outlying Islands', 'Uruguay', 'Uzbekistan', 'Vanuatu', 'Vatican', 'Venezuela', 'Vietnam', 'Wallis and Futuna', 'Western Sahara', 'Yemen', 'Zambia', 'Zimbabwe']
 iso2={'AD': 'Andorra', 'AE': 'United Arab Emirates', 'AF': 'Afghanistan', 'AG': 'Antigua and Barbuda', 'AI': 'Anguilla', 'AL': 'Albania', 'AM': 'Armenia', 'AO': 'Angola', 'AQ': 'Antarctica', 'AR': 'Argentina', 'AS': 'American Samoa', 'AT': 'Austria', 'AU': 'Australia', 'AW': 'Aruba', 'AX': 'Aland Islands', 'AZ': 'Azerbaijan', 'BA': 'Bosnia and Herzegovina', 'BB': 'Barbados', 'BD': 'Bangladesh', 'BE': 'Belgium', 'BF': 'Burkina Faso', 'BG': 'Bulgaria', 'BH': 'Bahrain', 'BI': 'Burundi', 'BJ': 'Benin', 'BL': 'Saint Barthelemy', 'BM': 'Bermuda', 'BN': 'Brunei', 'BO': 'Bolivia', 'BQ': 'Bonaire, Saint Eustatius and Saba ', 'BR': 'Brazil', 'BS': 'Bahamas', 'BT': 'Bhutan', 'BV': 'Bouvet Island', 'BW': 'Botswana', 'BY': 'Belarus', 'BZ': 'Belize', 'CA': 'Canada', 'CC': 'Cocos Islands', 'CD': 'Democratic Republic of the Congo', 'CF': 'Central African Republic', 'CG': 'Republic of the Congo', 'CH': 'Switzerland', 'CI': 'Ivory Coast', 'CK': 'Cook Islands', 'CL': 'Chile', 'CM': 'Cameroon', 'CN': 'China', 'CO': 'Colombia', 'CR': 'Costa Rica', 'CU': 'Cuba', 'CV': 'Cabo Verde', 'CW': 'Curacao', 'CX': 'Christmas Island', 'CY': 'Cyprus', 'CZ': 'Czechia', 'DE': 'Germany', 'DJ': 'Djibouti', 'DK': 'Denmark', 'DM': 'Dominica', 'DO': 'Dominican Republic', 'DZ': 'Algeria', 'EC': 'Ecuador', 'EE': 'Estonia', 'EG': 'Egypt', 'EH': 'Western Sahara', 'ER': 'Eritrea', 'ES': 'Spain', 'ET': 'Ethiopia', 'FI': 'Finland', 'FJ': 'Fiji', 'FK': 'Falkland Islands', 'FM': 'Micronesia', 'FO': 'Faroe Islands', 'FR': 'France', 'GA': 'Gabon', 'GB': 'United Kingdom', 'GD': 'Grenada', 'GE': 'Georgia', 'GF': 'French Guiana', 'GG': 'Guernsey', 'GH': 'Ghana', 'GI': 'Gibraltar', 'GL': 'Greenland', 'GM': 'Gambia', 'GN': 'Guinea', 'GP': 'Guadeloupe', 'GQ': 'Equatorial Guinea', 'GR': 'Greece', 'GS': 'South Georgia and the South Sandwich Islands', 'GT': 'Guatemala', 'GU': 'Guam', 'GW': 'Guinea-Bissau', 'GY': 'Guyana', 'HK': 'Hong Kong', 'HM': 'Heard Island and McDonald Islands', 'HN': 'Honduras', 'HR': 'Croatia', 'HT': 'Haiti', 'HU': 'Hungary', 'ID': 'Indonesia', 'IE': 'Ireland', 'IL': 'Israel', 'IM': 'Isle of Man', 'IN': 'India', 'IO': 'British Indian Ocean Territory', 'IQ': 'Iraq', 'IR': 'Iran', 'IS': 'Iceland', 'IT': 'Italy', 'JE': 'Jersey', 'JM': 'Jamaica', 'JO': 'Jordan', 'JP': 'Japan', 'KE': 'Kenya', 'KG': 'Kyrgyzstan', 'KH': 'Cambodia', 'KI': 'Kiribati', 'KM': 'Comoros', 'KN': 'Saint Kitts and Nevis', 'KP': 'North Korea', 'KR': 'South Korea', 'XK': 'Kosovo', 'KW': 'Kuwait', 'KY': 'Cayman Islands', 'KZ': 'Kazakhstan', 'LA': 'Laos', 'LB': 'Lebanon', 'LC': 'Saint Lucia', 'LI': 'Liechtenstein', 'LK': 'Sri Lanka', 'LR': 'Liberia', 'LS': 'Lesotho', 'LT': 'Lithuania', 'LU': 'Luxembourg', 'LV': 'Latvia', 'LY': 'Libya', 'MA': 'Morocco', 'MC': 'Monaco', 'MD': 'Moldova', 'ME': 'Montenegro', 'MF': 'Saint Martin', 'MG': 'Madagascar', 'MH': 'Marshall Islands', 'MK': 'North Macedonia', 'ML': 'Mali', 'MM': 'Myanmar', 'MN': 'Mongolia', 'MO': 'Macao', 'MP': 'Northern Mariana Islands', 'MQ': 'Martinique', 'MR': 'Mauritania', 'MS': 'Montserrat', 'MT': 'Malta', 'MU': 'Mauritius', 'MV': 'Maldives', 'MW': 'Malawi', 'MX': 'Mexico', 'MY': 'Malaysia', 'MZ': 'Mozambique', 'NA': 'Namibia', 'NC': 'New Caledonia', 'NE': 'Niger', 'NF': 'Norfolk Island', 'NG': 'Nigeria', 'NI': 'Nicaragua', 'NL': 'Netherlands', 'NO': 'Norway', 'NP': 'Nepal', 'NR': 'Nauru', 'NU': 'Niue', 'NZ': 'New Zealand', 'OM': 'Oman', 'PA': 'Panama', 'PE': 'Peru', 'PF': 'French Polynesia', 'PG': 'Papua New Guinea', 'PH': 'Philippines', 'PK': 'Pakistan', 'PL': 'Poland', 'PM': 'Saint Pierre and Miquelon', 'PN': 'Pitcairn', 'PR': 'Puerto Rico', 'PS': 'Palestinian Territory', 'PT': 'Portugal', 'PW': 'Palau', 'PY': 'Paraguay', 'QA': 'Qatar', 'RE': 'Reunion', 'RO': 'Romania', 'RS': 'Serbia', 'RU': 'Russia', 'RW': 'Rwanda', 'SA': 'Saudi Arabia', 'SB': 'Solomon Islands', 'SC': 'Seychelles', 'SD': 'Sudan', 'SS': 'South Sudan', 'SE': 'Sweden', 'SG': 'Singapore', 'SH': 'Saint Helena', 'SI': 'Slovenia', 'SJ': 'Svalbard and Jan Mayen', 'SK': 'Slovakia', 'SL': 'Sierra Leone', 'SM': 'San Marino', 'SN': 'Senegal', 'SO': 'Somalia', 'SR': 'Suriname', 'ST': 'Sao Tome and Principe', 'SV': 'El Salvador', 'SX': 'Sint Maarten', 'SY': 'Syria', 'SZ': 'Eswatini', 'TC': 'Turks and Caicos Islands', 'TD': 'Chad', 'TF': 'French Southern Territories', 'TG': 'Togo', 'TH': 'Thailand', 'TJ': 'Tajikistan', 'TK': 'Tokelau', 'TL': 'Timor Leste', 'TM': 'Turkmenistan', 'TN': 'Tunisia', 'TO': 'Tonga', 'TR': 'Turkey', 'TT': 'Trinidad and Tobago', 'TV': 'Tuvalu', 'TW': 'Taiwan', 'TZ': 'Tanzania', 'UA': 'Ukraine', 'UG': 'Uganda', 'UM': 'United States Minor Outlying Islands', 'US': 'United States', 'UY': 'Uruguay', 'UZ': 'Uzbekistan', 'VA': 'Vatican', 'VC': 'Saint Vincent and the Grenadines', 'VE': 'Venezuela', 'VG': 'British Virgin Islands', 'VI': 'U.S. Virgin Islands', 'VN': 'Vietnam', 'VU': 'Vanuatu', 'WF': 'Wallis and Futuna', 'WS': 'Samoa', 'YE': 'Yemen', 'YT': 'Mayotte', 'ZA': 'South Africa', 'ZM': 'Zambia', 'ZW': 'Zimbabwe', 'CS': 'Serbia and Montenegro', 'AN': 'Netherlands Antilles'}
 iso3={'AND': 'Andorra', 'ARE': 'United Arab Emirates', 'AFG': 'Afghanistan', 'ATG': 'Antigua and Barbuda', 'AIA': 'Anguilla', 'ALB': 'Albania', 'ARM': 'Armenia', 'AGO': 'Angola', 'ATA': 'Antarctica', 'ARG': 'Argentina', 'ASM': 'American Samoa', 'AUT': 'Austria', 'AUS': 'Australia', 'ABW': 'Aruba', 'ALA': 'Aland Islands', 'AZE': 'Azerbaijan', 'BIH': 'Bosnia and Herzegovina', 'BRB': 'Barbados', 'BGD': 'Bangladesh', 'BEL': 'Belgium', 'BFA': 'Burkina Faso', 'BGR': 'Bulgaria', 'BHR': 'Bahrain', 'BDI': 'Burundi', 'BEN': 'Benin', 'BLM': 'Saint Barthelemy', 'BMU': 'Bermuda', 'BRN': 'Brunei', 'BOL': 'Bolivia', 'BES': 'Bonaire, Saint Eustatius and Saba ', 'BRA': 'Brazil', 'BHS': 'Bahamas', 'BTN': 'Bhutan', 'BVT': 'Bouvet Island', 'BWA': 'Botswana', 'BLR': 'Belarus', 'BLZ': 'Belize', 'CAN': 'Canada', 'CCK': 'Cocos Islands', 'COD': 'Democratic Republic of the Congo', 'CAF': 'Central African Republic', 'COG': 'Republic of the Congo', 'CHE': 'Switzerland', 'CIV': 'Ivory Coast', 'COK': 'Cook Islands', 'CHL': 'Chile', 'CMR': 'Cameroon', 'CHN': 'China', 'COL': 'Colombia', 'CRI': 'Costa Rica', 'CUB': 'Cuba', 'CPV': 'Cabo Verde', 'CUW': 'Curacao', 'CXR': 'Christmas Island', 'CYP': 'Cyprus', 'CZE': 'Czechia', 'DEU': 'Germany', 'DJI': 'Djibouti', 'DNK': 'Denmark', 'DMA': 'Dominica', 'DOM': 'Dominican Republic', 'DZA': 'Algeria', 'ECU': 'Ecuador', 'EST': 'Estonia', 'EGY': 'Egypt', 'ESH': 'Western Sahara', 'ERI': 'Eritrea', 'ESP': 'Spain', 'ETH': 'Ethiopia', 'FIN': 'Finland', 'FJI': 'Fiji', 'FLK': 'Falkland Islands', 'FSM': 'Micronesia', 'FRO': 'Faroe Islands', 'FRA': 'France', 'GAB': 'Gabon', 'GBR': 'United Kingdom', 'GRD': 'Grenada', 'GEO': 'Georgia', 'GUF': 'French Guiana', 'GGY': 'Guernsey', 'GHA': 'Ghana', 'GIB': 'Gibraltar', 'GRL': 'Greenland', 'GMB': 'Gambia', 'GIN': 'Guinea', 'GLP': 'Guadeloupe', 'GNQ': 'Equatorial Guinea', 'GRC': 'Greece', 'SGS': 'South Georgia and the South Sandwich Islands', 'GTM': 'Guatemala', 'GUM': 'Guam', 'GNB': 'Guinea-Bissau', 'GUY': 'Guyana', 'HKG': 'Hong Kong', 'HMD': 'Heard Island and McDonald Islands', 'HND': 'Honduras', 'HRV': 'Croatia', 'HTI': 'Haiti', 'HUN': 'Hungary', 'IDN': 'Indonesia', 'IRL': 'Ireland', 'ISR': 'Israel', 'IMN': 'Isle of Man', 'IND': 'India', 'IOT': 'British Indian Ocean Territory', 'IRQ': 'Iraq', 'IRN': 'Iran', 'ISL': 'Iceland', 'ITA': 'Italy', 'JEY': 'Jersey', 'JAM': 'Jamaica', 'JOR': 'Jordan', 'JPN': 'Japan', 'KEN': 'Kenya', 'KGZ': 'Kyrgyzstan', 'KHM': 'Cambodia', 'KIR': 'Kiribati', 'COM': 'Comoros', 'KNA': 'Saint Kitts and Nevis', 'PRK': 'North Korea', 'KOR': 'South Korea', 'XKX': 'Kosovo', 'KWT': 'Kuwait', 'CYM': 'Cayman Islands', 'KAZ': 'Kazakhstan', 'LAO': 'Laos', 'LBN': 'Lebanon', 'LCA': 'Saint Lucia', 'LIE': 'Liechtenstein', 'LKA': 'Sri Lanka', 'LBR': 'Liberia', 'LSO': 'Lesotho', 'LTU': 'Lithuania', 'LUX': 'Luxembourg', 'LVA': 'Latvia', 'LBY': 'Libya', 'MAR': 'Morocco', 'MCO': 'Monaco', 'MDA': 'Moldova', 'MNE': 'Montenegro', 'MAF': 'Saint Martin', 'MDG': 'Madagascar', 'MHL': 'Marshall Islands', 'MKD': 'North Macedonia', 'MLI': 'Mali', 'MMR': 'Myanmar', 'MNG': 'Mongolia', 'MAC': 'Macao', 'MNP': 'Northern Mariana Islands', 'MTQ': 'Martinique', 'MRT': 'Mauritania', 'MSR': 'Montserrat', 'MLT': 'Malta', 'MUS': 'Mauritius', 'MDV': 'Maldives', 'MWI': 'Malawi', 'MEX': 'Mexico', 'MYS': 'Malaysia', 'MOZ': 'Mozambique', 'NAM': 'Namibia', 'NCL': 'New Caledonia', 'NER': 'Niger', 'NFK': 'Norfolk Island', 'NGA': 'Nigeria', 'NIC': 'Nicaragua', 'NLD': 'Netherlands', 'NOR': 'Norway', 'NPL': 'Nepal', 'NRU': 'Nauru', 'NIU': 'Niue', 'NZL': 'New Zealand', 'OMN': 'Oman', 'PAN': 'Panama', 'PER': 'Peru', 'PYF': 'French Polynesia', 'PNG': 'Papua New Guinea', 'PHL': 'Philippines', 'PAK': 'Pakistan', 'POL': 'Poland', 'SPM': 'Saint Pierre and Miquelon', 'PCN': 'Pitcairn', 'PRI': 'Puerto Rico', 'PSE': 'Palestinian Territory', 'PRT': 'Portugal', 'PLW': 'Palau', 'PRY': 'Paraguay', 'QAT': 'Qatar', 'REU': 'Reunion', 'ROU': 'Romania', 'SRB': 'Serbia', 'RUS': 'Russia', 'RWA': 'Rwanda', 'SAU': 'Saudi Arabia', 'SLB': 'Solomon Islands', 'SYC': 'Seychelles', 'SDN': 'Sudan', 'SSD': 'South Sudan', 'SWE': 'Sweden', 'SGP': 'Singapore', 'SHN': 'Saint Helena', 'SVN': 'Slovenia', 'SJM': 'Svalbard and Jan Mayen', 'SVK': 'Slovakia', 'SLE': 'Sierra Leone', 'SMR': 'San Marino', 'SEN': 'Senegal', 'SOM': 'Somalia', 'SUR': 'Suriname', 'STP': 'Sao Tome and Principe', 'SLV': 'El Salvador', 'SXM': 'Sint Maarten', 'SYR': 'Syria', 'SWZ': 'Eswatini', 'TCA': 'Turks and Caicos Islands', 'TCD': 'Chad', 'ATF': 'French Southern Territories', 'TGO': 'Togo', 'THA': 'Thailand', 'TJK': 'Tajikistan', 'TKL': 'Tokelau', 'TLS': 'Timor Leste', 'TKM': 'Turkmenistan', 'TUN': 'Tunisia', 'TON': 'Tonga', 'TUR': 'Turkey', 'TTO': 'Trinidad and Tobago', 'TUV': 'Tuvalu', 'TWN': 'Taiwan', 'TZA': 'Tanzania', 'UKR': 'Ukraine', 'UGA': 'Uganda', 'UMI': 'United States Minor Outlying Islands', 'USA': 'United States', 'URY': 'Uruguay', 'UZB': 'Uzbekistan', 'VAT': 'Vatican', 'VCT': 'Saint Vincent and the Grenadines', 'VEN': 'Venezuela', 'VGB': 'British Virgin Islands', 'VIR': 'U.S. Virgin Islands', 'VNM': 'Vietnam', 'VUT': 'Vanuatu', 'WLF': 'Wallis and Futuna', 'WSM': 'Samoa', 'YEM': 'Yemen', 'MYT': 'Mayotte', 'ZAF': 'South Africa', 'ZMB': 'Zambia', 'ZWE': 'Zimbabwe', 'SCG': 'Serbia and Montenegro', 'ANT': 'Netherlands Antilles'}
 regionalindicators={'a':'🇦','b':'🇧','c':'🇨','d':'🇩','e':'🇪','f':'🇫','g':'🇬','h':'🇭','i':'🇮','j':'🇯','k':'🇰','l':'🇱','m':'🇲','n':'🇳','o':'🇴','p':'🇵','q':'🇶','r':'🇷','s':'🇸','t':'🇹','u':'🇺','v':'🇻','w':'🇼','x':'🇽','y':'🇾','z':'🇿'}
-acodes={'admin1 code','admin2 code'}
-ccodes={'country code'}
-anames={'admin1 names','admin2 names'}
-cnames={'country names',"alternate countries",'alternate country names'}
+
 def search_cities(city,province,country):
     s=('name','decoded','punct space','punct empty')
     city=re.sub(',$','',city.casefold().strip())
@@ -469,16 +466,16 @@ async def choosecity(interaction: discord.Interaction, option:Literal["on","off"
             else:
                 poss=allnames[allnames['population']>=c[1]]
                 newid=int(random.choice(poss.index))
-                entr=citydata[(citydata['geonameid']==newid) & (citydata['default']==1)].iloc[0]
+                entr=allnames.loc[(newid)]
                 nname=poss.at[newid,'name']
                 n=(nname,iso2[entr['country']],entr['country'],admin1data[(admin1data['country']==entr['country'])&(admin1data['admin1']==entr['admin1'])&(admin1data['default']==1)]['name'].iloc[0] if entr['admin1'] else None,(entr['alt-country'],))
                 cur.execute('''update server_info
                             set choose_city = ?,
                                 current_letter = ?
                             where server_id = ?''', data=(True,entr['last letter'],guildid))
-                cur.execute('''insert into chain_info(server_id,user_id,city_id,round_number,count,name,admin1,country,country_code,alt_country,time_placed,valid)
-                            values (?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,-1,newid,c[2]+1,1,n[0],n[3],n[1],n[2],n[4][0] if n[4] else None,int(interaction.created_at.timestamp()),True))
-                await interaction.followup.send('Choose_city set to **ON**. Next city is **%s.**'%nname)
+                cur.execute('''insert into chain_info(server_id,city_id,round_number,count,name,admin1,country,country_code,alt_country,time_placed,valid)
+                            values (?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,newid,c[2]+1,1,n[0],n[3],n[1],n[2],n[4][0] if n[4] else None,int(interaction.created_at.timestamp()),True))
+                await interaction.followup.send('Choose_city set to **ON**. Next city is `%s.`'%nname)
         else:
             cur.execute('''update server_info
                         set choose_city = ?,
@@ -606,7 +603,6 @@ async def repeat(interaction: discord.Interaction, city:str, province:Optional[s
 loop = asyncio.get_event_loop()
 @client.event
 async def on_message(message:discord.Message):
-    # await chain(message)
     t=asyncio.create_task(chain(message))
     await asyncio.wait((t,))
 
@@ -672,7 +668,7 @@ async def chain(message:discord.Message):
                     from server_info
                     where server_id = ?''',data=(guildid,))
                 sinfo=cur.fetchone()
-                j=citydata[(citydata['geonameid']==res[0])&(citydata['default']==1)].iloc[0]
+                j=allnames.loc[(res[0])]
                 name,adm1,country,altcountry=j['name'],j['admin1'],j['country'],j['alt-country']
                 if adm1:
                     adm1=admin1data[(admin1data['country']==country)&(admin1data['admin1']==adm1)&(admin1data['default']==1)]['name'].iloc[0]
@@ -734,7 +730,6 @@ async def fail(message:discord.Message,reason,sinfo,citieslist,res,n,cityfound):
     cur.execute('''select incorrect,score from global_user_info where user_id=?''',data=(authorid,))
     uinfo=cur.fetchone()
     cur.execute('''update global_user_info set incorrect = ?, score = ?, last_active = ? where user_id = ?''',data=(uinfo[0]+1,uinfo[1]-1,int(message.created_at.timestamp()),authorid))
-    # print(message.guild.name,message.author.name,message.content[len(sinfo[10]):])
     if sinfo[3]:
         poss=allnames[allnames['population']>=sinfo[2]]
         newid=int(random.choice(poss.index))
@@ -747,15 +742,15 @@ async def fail(message:discord.Message,reason,sinfo,citieslist,res,n,cityfound):
         cur.execute('''insert into chain_info(server_id,user_id,round_number,count,name,time_placed,valid) values (?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,message.content[len(sinfo[10]):],int(message.created_at.timestamp()),False))
     cur.execute('''update server_info set chain_end = ?, current_letter = ?, last_user = ? where server_id = ?''',data=(True,'-',None,guildid))
     if sinfo[3]:
-        entr=citydata[(citydata['geonameid']==newid) & (citydata['default']==1)].iloc[0]
+        entr=allnames.loc[(newid)]
         nname=poss.at[newid,'name']
         n=(nname,iso2[entr['country']],entr['country'],admin1data[(admin1data['country']==entr['country'])&(admin1data['admin1']==entr['admin1'])&(admin1data['default']==1)]['name'].iloc[0] if entr['admin1'] else None,(entr['alt-country'],))
         cur.execute('''update server_info
                     set choose_city = ?,
                         current_letter = ?
                     where server_id = ?''', data=(True,entr['last letter'],guildid))
-        cur.execute('''insert into chain_info(server_id,user_id,city_id,round_number,count,name,admin1,country,country_code,alt_country,time_placed,valid)
-                    values (?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,-1,int(newid),sinfo[0]+1,1,n[0],n[3],n[1],n[2],n[4][0] if n[4] else None,int(message.created_at.timestamp()),True))
+        cur.execute('''insert into chain_info(server_id,city_id,round_number,count,name,admin1,country,country_code,alt_country,time_placed,valid)
+                    values (?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,int(newid),sinfo[0]+1,1,n[0],n[3],n[1],n[2],n[4][0] if n[4] else None,int(message.created_at.timestamp()),True))
     conn.commit()
 
 stats = app_commands.Group(name='stats',description="description")
@@ -1002,7 +997,7 @@ async def react(interaction: discord.Interaction,se:Optional[Literal['yes','no']
     if cur.rowcount>0:
         fmt=[]
         for (i,r) in cur:
-            j=citydata[(citydata['geonameid']==i)&(citydata['default']==1)].iloc[0]
+            j=allnames.loc[(i)]
             k,l,m,n=j['name'],admin1data[(admin1data['country']==j['country'])&(admin1data['admin1']==j['admin1'])&(admin1data['default']==1)]['name'].iloc[0] if j['admin1'] else None,j['country'],j['alt-country']
             if l:
                 if n:
@@ -1035,7 +1030,7 @@ async def repeat(interaction: discord.Interaction,se:Optional[Literal['yes','no'
     if cur.rowcount>0:
         fmt=[]
         for (i,) in cur:
-            j=citydata[(citydata['geonameid']==i)&(citydata['default']==1)].iloc[0]
+            j=allnames.loc[(i)]
             k,l,m,n=j['name'],admin1data[(admin1data['country']==j['country'])&(admin1data['admin1']==j['admin1'])&(admin1data['default']==1)]['name'].iloc[0] if j['admin1'] else None,j['country'],j['alt-country']
             if l:
                 if n:
@@ -1072,7 +1067,7 @@ async def popular(interaction: discord.Interaction,se:Optional[Literal['yes','no
         for i in cities:
             cur.execute('''select count(*) from chain_info where server_id = ? and city_id = ? and valid = 1 and user_id is not null''',data=(interaction.guild_id,i[0]))
             c=cur.fetchone()[0]
-            j=citydata[(citydata['geonameid']==i[0])&(citydata['default']==1)].iloc[0]
+            j=allnames.loc[(i[0])]
             k,l,m,n=j['name'],i[1],i[2],i[3]
             if m not in countries:
                 countries[m]=c
@@ -1139,7 +1134,7 @@ async def bestrds(interaction: discord.Interaction,se:Optional[Literal['yes','no
                 b2=cur.fetchone()
                 b=[]
                 for j in (b1,b2):
-                    o=citydata[(citydata['geonameid']==j[0])&(citydata['default']==1)].iloc[0]
+                    o=allnames.loc[(j[0])]
                     k,l,m,n=o['name'],j[2],j[3],j[4]
                     
                     if j[1]==k:
@@ -1169,7 +1164,7 @@ async def bestrds(interaction: discord.Interaction,se:Optional[Literal['yes','no
             elif maxc==1:
                 cur.execute('''select city_id,name,admin1,country,alt_country from chain_info where server_id = ? and round_number = ? and count = ?''',data=(interaction.guild_id,i[1],1))
                 j=cur.fetchone()
-                o=citydata[(citydata['geonameid']==j[0])&(citydata['default']==1)].iloc[0]
+                o=allnames.loc[(j[0])]
                 k,l,m,n=o['name'],j[2],j[3],j[4]
                 if j[1]==k:
                     if l:
@@ -1217,7 +1212,7 @@ async def cityinfo(interaction: discord.Interaction, city:str, province:Optional
     res=search_cities(city,province,country)
     if res:
         aname=citydata[(citydata['geonameid']==res[0])]
-        default=aname[(aname['default']==1)].iloc[0]
+        default=aname[aname['default']==1].iloc[0]
         dname=default['name']
         embed=discord.Embed(title='Information - %s'%dname,color=discord.Colour.from_rgb(0,255,0))
         embed.add_field(name='Geonames ID',value=res[0],inline=True)
