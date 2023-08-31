@@ -91,7 +91,7 @@ cur.execute('''create table if not exists chain_info(
             alt_country varchar(100),
             time_placed int,
             valid bool,
-            primary key(server_id,city_id,round_number,count),
+            primary key(server_id,user_id,city_id,round_number,count,time_placed),
             foreign key(server_id)
                 references server_info(server_id))''')
 
@@ -236,7 +236,6 @@ def search_cities_chain(query):
         r=results.sort_values(['default','population','match'],ascending=[0,0,1]).head(1).iloc[0]
         return (int(r['geonameid']),r,r[s[r['match']]])
     
-
 class Paginator(discord.ui.View):
     def __init__(self,page,blist,title,lens,user):
         super().__init__(timeout=180)
@@ -470,15 +469,15 @@ async def choosecity(interaction: discord.Interaction, option:Literal["on","off"
             else:
                 poss=allnames[allnames['population']>=c[1]]
                 newid=int(random.choice(poss.index))
-                entr=citydata[(citydata['geonameid']==newid) & (citydata['default']==1)]
+                entr=citydata[(citydata['geonameid']==newid) & (citydata['default']==1)].iloc[0]
                 nname=poss.at[newid,'name']
-                n=(nname,iso2[entr['country'].iloc[0]],entr['country'].iloc[0],admin1data[(admin1data['country']==entr['country'].iloc[0])&(admin1data['admin1']==entr['admin1'].iloc[0])&(admin1data['default']==1)]['name'].iloc[0],(entr['alt-country'].iloc[0],))
+                n=(nname,iso2[entr['country']],entr['country'],admin1data[(admin1data['country']==entr['country'])&(admin1data['admin1']==entr['admin1'])&(admin1data['default']==1)]['name'].iloc[0] if entr['admin1'] else None,(entr['alt-country'],))
                 cur.execute('''update server_info
                             set choose_city = ?,
                                 current_letter = ?
-                            where server_id = ?''', data=(True,entr['last letter'].iloc[0],guildid))
-                cur.execute('''insert into chain_info(server_id,city_id,round_number,count,name,admin1,country,country_code,alt_country,time_placed,valid)
-                            values (?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,newid,c[2]+1,1,n[0],n[3],n[1],n[2],n[4][0] if n[4] else None,int(interaction.created_at.timestamp()),True))
+                            where server_id = ?''', data=(True,entr['last letter'],guildid))
+                cur.execute('''insert into chain_info(server_id,user_id,city_id,round_number,count,name,admin1,country,country_code,alt_country,time_placed,valid)
+                            values (?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,-1,newid,c[2]+1,1,n[0],n[3],n[1],n[2],n[4][0] if n[4] else None,int(interaction.created_at.timestamp()),True))
                 await interaction.followup.send('Choose_city set to **ON**. Next city is **%s.**'%nname)
         else:
             cur.execute('''update server_info
@@ -604,25 +603,14 @@ async def repeat(interaction: discord.Interaction, city:str, province:Optional[s
     else:
         await interaction.followup.send('Command can only be used after the chain has ended.')
 
-
-from threading import Thread
-class ThreadWithReturnValue(Thread):
-    
-    def __init__(self, group=None, target=None, name=None,
-                 args=(), kwargs={}, Verbose=None):
-        Thread.__init__(self, group, target, name, args, kwargs)
-        self._return = None
-
-    def run(self):
-        if self._target is not None:
-            self._return = self._target(*self._args,
-                                                **self._kwargs)
-    def join(self, *args):
-        Thread.join(self, *args)
-        return self._return
-
+loop = asyncio.get_event_loop()
 @client.event
 async def on_message(message:discord.Message):
+    # await chain(message)
+    t=asyncio.create_task(chain(message))
+    await asyncio.wait((t,))
+
+async def chain(message:discord.Message):
     authorid=message.author.id
     if authorid!=client.user.id:
         guildid=message.guild.id
@@ -667,11 +655,7 @@ async def on_message(message:discord.Message):
             sinfo=cur.fetchone()
             cur.execute('''select city_id from chain_info where server_id = ? and round_number = ? order by count asc''',data=(guildid,sinfo[0]))
             citieslist=[i for (i,) in cur]
-            
-            thread=ThreadWithReturnValue(target=search_cities_chain,args=(message.content[len(sinfo[10]):],))
-            # res=search_cities_chain(message.content[len(sinfo[10]):])
-            thread.start()
-            res=thread.join()
+            res=search_cities_chain(message.content[len(sinfo[10]):])
             if res:
                 cur.execute('''select
                         round_number,
@@ -697,30 +681,6 @@ async def on_message(message:discord.Message):
                 else:
                     n=(res[2],(iso2[country],country),adm1,(altcountry,))
                 letters=(res[1]['first letter'],res[1]['last letter'])
-                # if res[1]['default']==1:
-                #     if adm1:
-                #         if altcountry:
-                #             loctuple=(res[2],adm1,country+'/'+altcountry)
-                #         else:
-                #             loctuple=(res[2],adm1,country)
-                #     else:
-                #         if altcountry:
-                #             loctuple=(res[2],country+'/'+altcountry)
-                #         else:
-                #             loctuple=(res[2],country)
-                # else:
-                #     if adm1:
-                #         if altcountry:
-                #             loctuple=(res[2]+' (%s)'%name,adm1,country+'/'+altcountry)
-                #         else:
-                #             loctuple=(res[2]+' (%s)'%name,adm1,country)
-                #     else:
-                #         if altcountry:
-                #             loctuple=(res[2]+' (%s)'%name,country+'/'+altcountry)
-                #         else:
-                #             loctuple=(res[2]+' (%s)'%name,country)
-                # print(message.guild.name,message.author.name,loctuple,res[1]['population'])
-
                 if (sinfo[7]=='-' or sinfo[7]==letters[0]):
                     if sinfo[2]<=res[1]['population']:
                         cur.execute('''select city_id from repeat_info where server_id = ?''', data=(guildid,))
@@ -730,8 +690,6 @@ async def on_message(message:discord.Message):
                             repeatset=set()
                         if ((sinfo[4] and res[0] not in set(citieslist[:sinfo[1]])) or (not sinfo[4] and res[0] not in set(citieslist)) or (res[0] in repeatset)):
                             if sinfo[8]!=message.author.id:
-                                
-
                                 cur.execute('''select correct,score from server_user_info where server_id = ? and user_id = ?''',data=(guildid,authorid))
                                 uinfo=cur.fetchone()
                                 cur.execute('''update server_user_info set correct = ?, score = ?, last_active = ? where server_id = ? and user_id = ?''',data=(uinfo[0]+1,uinfo[1]+1,int(message.created_at.timestamp()),guildid,authorid))
@@ -740,7 +698,6 @@ async def on_message(message:discord.Message):
                                 cur.execute('''update global_user_info set correct = ?, score = ?, last_active = ? where user_id = ?''',data=(uinfo[0]+1,uinfo[1]+1,int(message.created_at.timestamp()),authorid))
                                 cur.execute('''update server_info set last_user = ?, current_letter = ? where server_id = ?''',data=(authorid,letters[1],guildid))
                                 cur.execute('''insert into chain_info(server_id,user_id,round_number,count,city_id,name,admin1,country,country_code,alt_country,time_placed,valid) values (?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,res[0],n[0],n[2],n[1][0],n[1][1],n[3][0] if n[3] else None,int(message.created_at.timestamp()),True))
-
                                 if sinfo[9]<(len(citieslist)+1):
                                     cur.execute('''update server_info set max_chain = ?,last_best = ? where server_id = ?''',data=(len(citieslist)+1,int(message.created_at.timestamp()),guildid))
                                     await message.add_reaction('\N{BALLOT BOX WITH CHECK}')
@@ -753,144 +710,53 @@ async def on_message(message:discord.Message):
                                 if not ((res[2].replace(' ','').isalpha() and res[2].isascii())):
                                     await message.add_reaction(regionalindicators[letters[1]])
                             else:
-                                await message.add_reaction('\N{CROSS MARK}')
-                                cur.execute('''select incorrect,score from server_user_info where server_id = ? and user_id = ?''',data=(guildid,authorid))
-                                uinfo=cur.fetchone()
-                                cur.execute('''update server_user_info set incorrect = ?, score = ?, last_active = ? where server_id = ? and user_id = ?''',data=(uinfo[0]+1,uinfo[1]-1,int(message.created_at.timestamp()),guildid,authorid))
-                                cur.execute('''select incorrect,score from global_user_info where user_id=?''',data=(authorid,))
-                                uinfo=cur.fetchone()
-                                cur.execute('''update global_user_info set incorrect = ?, score = ?, last_active = ? where user_id = ?''',data=(uinfo[0]+1,uinfo[1]-1,int(message.created_at.timestamp()),authorid))
-                                if sinfo[3]:
-                                    poss=allnames[allnames['population']>=sinfo[2]]
-                                    newid=int(random.choice(poss.index))
-                                    await message.channel.send('<@%s> RUINED IT AT **%s**!! Next city is **%s.** **No going twice.**'%(message.author.id,f"{len(citieslist):,}",poss.at[newid,'name']))
-                                else:
-                                    await message.channel.send('<@%s> RUINED IT AT **%s**!! **No going twice.**'%(message.author.id,f"{len(citieslist):,}"))
-                                cur.execute('''insert into chain_info(server_id,user_id,round_number,count,city_id,name,admin1,country,country_code,alt_country,time_placed,valid) values (?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,res[0],n[0],n[2],n[1][0],n[1][1],n[3][0] if n[3] else None,int(message.created_at.timestamp()),False))
-                                cur.execute('''update server_info set chain_end = ?, current_letter = ?, last_user = ? where server_id = ?''',data=(True,'-',None,guildid))
-                                if sinfo[3]:
-                                    entr=citydata[(citydata['geonameid']==newid) & (citydata['default']==1)]
-                                    nname=poss.at[newid,'name']
-                                    n=(nname,iso2[entr['country'].iloc[0]],entr['country'].iloc[0],admin1data[(admin1data['country']==entr['country'].iloc[0])&(admin1data['admin1']==entr['admin1'].iloc[0])&(admin1data['default']==1)]['name'].iloc[0],(entr['alt-country'].iloc[0],))
-                                    cur.execute('''update server_info
-                                                set choose_city = ?,
-                                                    current_letter = ?
-                                                where server_id = ?''', data=(True,entr['last letter'].iloc[0],guildid))
-                                    cur.execute('''insert into chain_info(server_id,city_id,round_number,count,name,admin1,country,country_code,alt_country,time_placed,valid)
-                                                values (?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,int(newid),sinfo[0]+1,1,n[0],n[3],n[1],n[2],n[4][0] if n[4] else None,int(message.created_at.timestamp()),True))
-
+                                await fail(message,"**No going twice.**",sinfo,citieslist,res,n,True)
                         else:
-                            await message.add_reaction('\N{CROSS MARK}')
-                            cur.execute('''select incorrect,score from server_user_info where server_id = ? and user_id = ?''',data=(guildid,authorid))
-                            uinfo=cur.fetchone()
-                            cur.execute('''update server_user_info set incorrect = ?, score = ?, last_active = ? where server_id = ? and user_id = ?''',data=(uinfo[0]+1,uinfo[1]-1,int(message.created_at.timestamp()),guildid,authorid))
-                            cur.execute('''select incorrect,score from global_user_info where user_id=?''',data=(authorid,))
-                            uinfo=cur.fetchone()
-                            cur.execute('''update global_user_info set incorrect = ?, score = ?, last_active = ? where user_id = ?''',data=(uinfo[0]+1,uinfo[1]-1,int(message.created_at.timestamp()),authorid))
                             if sinfo[3]:
-                                poss=allnames[allnames['population']>=sinfo[2]]
-                                newid=int(random.choice(poss.index))
-                                if sinfo[4]:
-                                    await message.channel.send('<@%s> RUINED IT AT **%s**!! Next city is **%s.** **No repeats within `%s` cities.**'%(message.author.id,f"{len(citieslist):,}",poss.at[newid,'name'],f"{sinfo[1]:,}"))
-                                else:
-                                    await message.channel.send('<@%s> RUINED IT AT **%s**!! Next city is **%s.** **No repeats.**'%(message.author.id,f"{len(citieslist):,}",poss.at[newid,'name']))
+                                await fail(message,"**No repeats.**",sinfo,citieslist,res,n,True)
                             else:
-                                if sinfo[4]:
-                                    await message.channel.send('<@%s> RUINED IT AT **%s**!! **No repeats within `%s` cities.**'%(message.author.id,f"{len(citieslist):,}",f"{sinfo[1]:,}"))
-                                else:
-                                    await message.channel.send('<@%s> RUINED IT AT **%s**!! **No repeats.**'%(message.author.id,f"{len(citieslist):,}"))
-                            cur.execute('''insert into chain_info(server_id,user_id,round_number,count,city_id,name,admin1,country,country_code,alt_country,time_placed,valid) values (?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,res[0],n[0],n[2],n[1][0],n[1][1],n[3][0] if n[3] else None,int(message.created_at.timestamp()),False))
-                            cur.execute('''update server_info set chain_end = ?, current_letter = ?, last_user = ? where server_id = ?''',data=(True,'-',None,guildid))
-                            if sinfo[3]:
-                                entr=citydata[(citydata['geonameid']==newid) & (citydata['default']==1)]
-                                nname=poss.at[newid,'name']
-                                n=(nname,iso2[entr['country'].iloc[0]],entr['country'].iloc[0],admin1data[(admin1data['country']==entr['country'].iloc[0])&(admin1data['admin1']==entr['admin1'].iloc[0])&(admin1data['default']==1)]['name'].iloc[0],(entr['alt-country'].iloc[0],))
-                                cur.execute('''update server_info
-                                            set choose_city = ?,
-                                                current_letter = ?
-                                            where server_id = ?''', data=(True,entr['last letter'].iloc[0],guildid))
-                                cur.execute('''insert into chain_info(server_id,city_id,round_number,count,name,admin1,country,country_code,alt_country,time_placed,valid)
-                                            values (?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,int(newid),sinfo[0]+1,1,n[0],n[3],n[1],n[2],n[4][0] if n[4] else None,int(message.created_at.timestamp()),True))
+                                await fail(message,"**No repeats within `%s` cities.**"%f"{sinfo[1]:,}",sinfo,citieslist,res,n,True)
                     else:
-                        await message.add_reaction('\N{CROSS MARK}')
-                        cur.execute('''select incorrect,score from server_user_info where server_id = ? and user_id = ?''',data=(guildid,authorid))
-                        uinfo=cur.fetchone()
-                        cur.execute('''update server_user_info set incorrect = ?, score = ?, last_active = ? where server_id = ? and user_id = ?''',data=(uinfo[0]+1,uinfo[1]-1,int(message.created_at.timestamp()),guildid,authorid))
-                        cur.execute('''select incorrect,score from global_user_info where user_id=?''',data=(authorid,))
-                        uinfo=cur.fetchone()
-                        cur.execute('''update global_user_info set incorrect = ?, score = ?, last_active = ? where user_id = ?''',data=(uinfo[0]+1,uinfo[1]-1,int(message.created_at.timestamp()),authorid))
-                        if sinfo[3]:
-                            poss=allnames[allnames['population']>=sinfo[2]]
-                            newid=int(random.choice(poss.index))
-                            await message.channel.send('<@%s> RUINED IT AT **%s**!! Next city is **%s.** **City must have a population of at least `%s`.**'%(message.author.id,f"{len(citieslist):,}",poss.at[newid,'name'],f"{sinfo[2]:,}"))
-                        else:
-                            await message.channel.send('<@%s> RUINED IT AT **%s**!! **City must have a population of at least `%s`.**'%(message.author.id,f"{len(citieslist):,}",f"{sinfo[2]:,}"))
-                        cur.execute('''insert into chain_info(server_id,user_id,round_number,count,city_id,name,admin1,country,country_code,alt_country,time_placed,valid) values (?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,res[0],n[0],n[2],n[1][0],n[1][1],n[3][0] if n[3] else None,int(message.created_at.timestamp()),False))
-                        cur.execute('''update server_info set chain_end = ?, current_letter = ?, last_user = ? where server_id = ?''',data=(True,'-',None,guildid))
-                        if sinfo[3]:
-                            entr=citydata[(citydata['geonameid']==newid) & (citydata['default']==1)]
-                            nname=poss.at[newid,'name']
-                            n=(nname,iso2[entr['country'].iloc[0]],entr['country'].iloc[0],admin1data[(admin1data['country']==entr['country'].iloc[0])&(admin1data['admin1']==entr['admin1'].iloc[0])&(admin1data['default']==1)]['name'].iloc[0],(entr['alt-country'].iloc[0],))
-                            cur.execute('''update server_info
-                                        set choose_city = ?,
-                                            current_letter = ?
-                                        where server_id = ?''', data=(True,entr['last letter'].iloc[0],guildid))
-                            cur.execute('''insert into chain_info(server_id,city_id,round_number,count,name,admin1,country,country_code,alt_country,time_placed,valid)
-                                        values (?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,int(newid),sinfo[0]+1,1,n[0],n[3],n[1],n[2],n[4][0] if n[4] else None,int(message.created_at.timestamp()),True))
+                        await fail(message,"**City must have a population of at least `%s`.**"%f"{sinfo[2]:,}",sinfo,citieslist,res,n,True)
                 else:
-                    await message.add_reaction('\N{CROSS MARK}')
-                    cur.execute('''select incorrect,score from server_user_info where server_id = ? and user_id = ?''',data=(guildid,authorid))
-                    uinfo=cur.fetchone()
-                    cur.execute('''update server_user_info set incorrect = ?, score = ?, last_active = ? where server_id = ? and user_id = ?''',data=(uinfo[0]+1,uinfo[1]-1,int(message.created_at.timestamp()),guildid,authorid))
-                    cur.execute('''select incorrect,score from global_user_info where user_id=?''',data=(authorid,))
-                    uinfo=cur.fetchone()
-                    cur.execute('''update global_user_info set incorrect = ?, score = ?, last_active = ? where user_id = ?''',data=(uinfo[0]+1,uinfo[1]-1,int(message.created_at.timestamp()),authorid))
-                    if sinfo[3]:
-                        poss=allnames[allnames['population']>=sinfo[2]]
-                        newid=int(random.choice(poss.index))
-                        await message.channel.send('<@%s> RUINED IT AT **%s**!! Next city is **%s.** **Wrong letter.**'%(message.author.id,f"{len(citieslist):,}",poss.at[newid,'name']))
-                    else:
-                        await message.channel.send('<@%s> RUINED IT AT **%s**!! **Wrong letter.**'%(message.author.id,f"{len(citieslist):,}"))
-                    cur.execute('''insert into chain_info(server_id,user_id,round_number,count,city_id,name,admin1,country,country_code,alt_country,time_placed,valid) values (?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,res[0],n[0],n[2],n[1][0],n[1][1],n[3][0] if n[3] else None,int(message.created_at.timestamp()),False))
-                    cur.execute('''update server_info set chain_end = ?, current_letter = ?, last_user = ? where server_id = ?''',data=(True,'-',None,guildid))
-                    if sinfo[3]:
-                        entr=citydata[(citydata['geonameid']==newid) & (citydata['default']==1)]
-                        nname=poss.at[newid,'name']
-                        n=(nname,iso2[entr['country'].iloc[0]],entr['country'].iloc[0],admin1data[(admin1data['country']==entr['country'].iloc[0])&(admin1data['admin1']==entr['admin1'].iloc[0])&(admin1data['default']==1)]['name'].iloc[0],(entr['alt-country'].iloc[0],))
-                        cur.execute('''update server_info
-                                    set choose_city = ?,
-                                        current_letter = ?
-                                    where server_id = ?''', data=(True,entr['last letter'].iloc[0],guildid))
-                        cur.execute('''insert into chain_info(server_id,city_id,round_number,count,name,admin1,country,country_code,alt_country,time_placed,valid)
-                                    values (?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,int(newid),sinfo[0]+1,1,n[0],n[3],n[1],n[2],n[4][0] if n[4] else None,int(message.created_at.timestamp()),True))
+                    await fail(message,"**Wrong letter.**",sinfo,citieslist,res,n,True)
             else:
-                await message.add_reaction('\N{CROSS MARK}')
-                cur.execute('''select incorrect,score from server_user_info where server_id = ? and user_id = ?''',data=(guildid,authorid))
-                uinfo=cur.fetchone()
-                cur.execute('''update server_user_info set incorrect = ?, score = ?, last_active = ? where server_id = ? and user_id = ?''',data=(uinfo[0]+1,uinfo[1]-1,int(message.created_at.timestamp()),guildid,authorid))
-                cur.execute('''select incorrect,score from global_user_info where user_id=?''',data=(authorid,))
-                uinfo=cur.fetchone()
-                cur.execute('''update global_user_info set incorrect = ?, score = ?, last_active = ? where user_id = ?''',data=(uinfo[0]+1,uinfo[1]-1,int(message.created_at.timestamp()),authorid))
-                # print(message.guild.name,message.author.name,message.content[len(sinfo[10]):])
-                if sinfo[3]:
-                    poss=allnames[allnames['population']>=sinfo[2]]
-                    newid=int(random.choice(poss.index))
-                    await message.channel.send('<@%s> RUINED IT AT **%s**!! Next city is **%s.** **City not recognized.**'%(message.author.id,f"{len(citieslist):,}",poss.at[newid,'name']))
-                else:
-                    await message.channel.send('<@%s> RUINED IT AT **%s**!! **City not recognized.**'%(message.author.id,f"{len(citieslist):,}"))
-                cur.execute('''insert into chain_info(server_id,user_id,round_number,count,name,time_placed,valid) values (?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,message.content[len(sinfo[10]):],int(message.created_at.timestamp()),False))
-                cur.execute('''update server_info set chain_end = ?, current_letter = ?, last_user = ? where server_id = ?''',data=(True,'-',None,guildid))
-                if sinfo[3]:
-                    entr=citydata[(citydata['geonameid']==newid) & (citydata['default']==1)]
-                    nname=poss.at[newid,'name']
-                    n=(nname,iso2[entr['country'].iloc[0]],entr['country'].iloc[0],admin1data[(admin1data['country']==entr['country'].iloc[0])&(admin1data['admin1']==entr['admin1'].iloc[0])&(admin1data['default']==1)]['name'].iloc[0],(entr['alt-country'].iloc[0],))
-                    cur.execute('''update server_info
-                                set choose_city = ?,
-                                    current_letter = ?
-                                where server_id = ?''', data=(True,entr['last letter'].iloc[0],guildid))
-                    cur.execute('''insert into chain_info(server_id,city_id,round_number,count,name,admin1,country,country_code,alt_country,time_placed,valid)
-                                values (?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,int(newid),sinfo[0]+1,1,n[0],n[3],n[1],n[2],n[4][0] if n[4] else None,int(message.created_at.timestamp()),True))
-        conn.commit()
+                await fail(message,"**City not recognized.**",sinfo,citieslist,None,None,False)
+            conn.commit()
+
+async def fail(message:discord.Message,reason,sinfo,citieslist,res,n,cityfound):
+    guildid=message.guild.id
+    authorid=message.author.id
+    await message.add_reaction('\N{CROSS MARK}')
+    cur.execute('''select incorrect,score from server_user_info where server_id = ? and user_id = ?''',data=(guildid,authorid))
+    uinfo=cur.fetchone()
+    cur.execute('''update server_user_info set incorrect = ?, score = ?, last_active = ? where server_id = ? and user_id = ?''',data=(uinfo[0]+1,uinfo[1]-1,int(message.created_at.timestamp()),guildid,authorid))
+    cur.execute('''select incorrect,score from global_user_info where user_id=?''',data=(authorid,))
+    uinfo=cur.fetchone()
+    cur.execute('''update global_user_info set incorrect = ?, score = ?, last_active = ? where user_id = ?''',data=(uinfo[0]+1,uinfo[1]-1,int(message.created_at.timestamp()),authorid))
+    # print(message.guild.name,message.author.name,message.content[len(sinfo[10]):])
+    if sinfo[3]:
+        poss=allnames[allnames['population']>=sinfo[2]]
+        newid=int(random.choice(poss.index))
+        await message.channel.send('<@%s> RUINED IT AT **%s**!! Next city is `%s`. %s'%(authorid,f"{len(citieslist):,}",poss.at[newid,'name'],reason))
+    else:
+        await message.channel.send('<@%s> RUINED IT AT **%s**!! %s'%(authorid,f"{len(citieslist):,}",reason))
+    if cityfound:
+        cur.execute('''insert into chain_info(server_id,user_id,round_number,count,city_id,name,admin1,country,country_code,alt_country,time_placed,valid) values (?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,res[0],n[0],n[2],n[1][0],n[1][1],n[3][0] if n[3] else None,int(message.created_at.timestamp()),False))
+    else:
+        cur.execute('''insert into chain_info(server_id,user_id,round_number,count,name,time_placed,valid) values (?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,message.content[len(sinfo[10]):],int(message.created_at.timestamp()),False))
+    cur.execute('''update server_info set chain_end = ?, current_letter = ?, last_user = ? where server_id = ?''',data=(True,'-',None,guildid))
+    if sinfo[3]:
+        entr=citydata[(citydata['geonameid']==newid) & (citydata['default']==1)].iloc[0]
+        nname=poss.at[newid,'name']
+        n=(nname,iso2[entr['country']],entr['country'],admin1data[(admin1data['country']==entr['country'])&(admin1data['admin1']==entr['admin1'])&(admin1data['default']==1)]['name'].iloc[0] if entr['admin1'] else None,(entr['alt-country'],))
+        cur.execute('''update server_info
+                    set choose_city = ?,
+                        current_letter = ?
+                    where server_id = ?''', data=(True,entr['last letter'],guildid))
+        cur.execute('''insert into chain_info(server_id,user_id,city_id,round_number,count,name,admin1,country,country_code,alt_country,time_placed,valid)
+                    values (?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,-1,int(newid),sinfo[0]+1,1,n[0],n[3],n[1],n[2],n[4][0] if n[4] else None,int(message.created_at.timestamp()),True))
+    conn.commit()
 
 stats = app_commands.Group(name='stats',description="description")
 @app_commands.rename(se='show-everyone')
@@ -1137,7 +1003,7 @@ async def react(interaction: discord.Interaction,se:Optional[Literal['yes','no']
         fmt=[]
         for (i,r) in cur:
             j=citydata[(citydata['geonameid']==i)&(citydata['default']==1)].iloc[0]
-            k,l,m,n=j['name'],admin1data[(admin1data['country']==j['country'])&(admin1data['admin1']==j['admin1'])&(admin1data['default']==1)]['name'].iloc[0],j['country'],j['alt-country']
+            k,l,m,n=j['name'],admin1data[(admin1data['country']==j['country'])&(admin1data['admin1']==j['admin1'])&(admin1data['default']==1)]['name'].iloc[0] if j['admin1'] else None,j['country'],j['alt-country']
             if l:
                 if n:
                     loctuple=(k,l,m+'/'+n)
@@ -1170,7 +1036,7 @@ async def repeat(interaction: discord.Interaction,se:Optional[Literal['yes','no'
         fmt=[]
         for (i,) in cur:
             j=citydata[(citydata['geonameid']==i)&(citydata['default']==1)].iloc[0]
-            k,l,m,n=j['name'],admin1data[(admin1data['country']==j['country'])&(admin1data['admin1']==j['admin1'])&(admin1data['default']==1)]['name'].iloc[0],j['country'],j['alt-country']
+            k,l,m,n=j['name'],admin1data[(admin1data['country']==j['country'])&(admin1data['admin1']==j['admin1'])&(admin1data['default']==1)]['name'].iloc[0] if j['admin1'] else None,j['country'],j['alt-country']
             if l:
                 if n:
                     loctuple=(k,l,m+'/'+n)
@@ -1197,27 +1063,36 @@ async def repeat(interaction: discord.Interaction,se:Optional[Literal['yes','no'
 async def popular(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
     eph=True if se=='no' else False
     await interaction.response.defer(ephemeral=eph)
-    cur.execute('''select distinct city_id from chain_info where server_id = ? and city_id >= 0 and valid = 1''',data=(interaction.guild_id,))
-    cities=[i[0] for i in cur]
-    cur.execute('''select distinct country_code from chain_info where server_id = ? and country_code is not null and valid = 1''',data=(interaction.guild_id,))
-    countries=[i[0] for i in cur]
-    cur.execute('''select distinct alt_country from chain_info where server_id = ? and alt_country is not null and valid = 1''',data=(interaction.guild_id,))
-    countries.extend([i[0] for i in cur])
+    cur.execute('''select distinct city_id,admin1,country_code,alt_country from chain_info where server_id = ? and city_id >= 0 and valid = 1 and user_id is not null''',data=(interaction.guild_id,))
+    cities=[i for i in cur]
     embed=discord.Embed(title="Popular Cities/Countries - `%s`"%interaction.guild.name,color=discord.Colour.from_rgb(0,255,0))
     if len(cities)>0:
         fmt=[]
+        countries={}
         for i in cities:
-            cur.execute('''select count(*) from chain_info where server_id = ? and city_id = ? and valid = 1''',data=(interaction.guild_id,i))
+            cur.execute('''select count(*) from chain_info where server_id = ? and city_id = ? and valid = 1 and user_id is not null''',data=(interaction.guild_id,i[0]))
             c=cur.fetchone()[0]
-            j=citydata[(citydata['geonameid']==i)&(citydata['default']==1)].iloc[0]
-            k,l,m,n=j['name'],admin1data[(admin1data['country']==j['country'])&(admin1data['admin1']==j['admin1'])&(admin1data['default']==1)]['name'].iloc[0],j['country'],j['alt-country']
+            j=citydata[(citydata['geonameid']==i[0])&(citydata['default']==1)].iloc[0]
+            k,l,m,n=j['name'],i[1],i[2],i[3]
+            if m not in countries:
+                countries[m]=c
+            else:
+                countries[m]+=c
             if l:
                 if n:
+                    if n not in countries:
+                        countries[n]=c
+                    else:
+                        countries[n]+=c
                     loctuple=(k,l,m+'/'+n)
                 else:
                     loctuple=(k,l,m)
             else:
                 if n:
+                    if n not in countries:
+                        countries[n]=c
+                    else:
+                        countries[n]+=c
                     loctuple=(k,m+'/'+n)
                 else:
                     loctuple=(k,m)
@@ -1226,9 +1101,7 @@ async def popular(interaction: discord.Interaction,se:Optional[Literal['yes','no
         embed.add_field(name='Cities',value='\n'.join(['%s. %s - **%s**' %(n+1,i[1],f"{i[0]:,}") for (n,i) in enumerate(fmt)]))
         fmt=[]
         for i in countries:
-            cur.execute('''select count(*) from chain_info where server_id = ? and (country_code = ? or alt_country = ? and valid = 1)''',data=(interaction.guild_id,i,i))
-            c=cur.fetchone()[0]
-            fmt.append((c,iso2[i]))
+            fmt.append((countries[i],iso2[i]))
         fmt=sorted(fmt,key = lambda x:(-x[0],x[1]))[:10]
         embed.add_field(name='Countries',value='\n'.join(['%s. %s - **%s**' %(n+1,i[1],f"{i[0]:,}") for (n,i) in enumerate(fmt)]))
     else:
@@ -1242,25 +1115,32 @@ async def popular(interaction: discord.Interaction,se:Optional[Literal['yes','no
 async def bestrds(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
     eph=True if se=='no' else False
     await interaction.response.defer(ephemeral=eph)
-    cur.execute('''select round_number from server_info where server_id = ?''',data=(interaction.guild_id,))
-    rounds=range(1,cur.fetchone()[0]+1)
+    cur.execute('''select round_number,chain_end from server_info where server_id = ?''',data=(interaction.guild_id,))
+    bb=cur.fetchone()
+    rounds=range(1,bb[0]+1)
     embed=discord.Embed(title="Best Rounds - `%s`"%interaction.guild.name,color=discord.Colour.from_rgb(0,255,0))
     if len(rounds)>0:
         fmt=[]
-        for i in rounds:
-            cur.execute('''select count(*) from chain_info where server_id = ? and round_number = ? and valid = ?''',data=(interaction.guild_id,i,True))
-            maxc=cur.fetchone()[0]
-            if maxc>0:
-                cur.execute('''select distinct user_id from chain_info where server_id = ? and round_number = ?  and valid = ? and user_id is not null''',data=(interaction.guild_id,i,True))
-                part=cur.rowcount
-                cur.execute('''select city_id,name from chain_info where server_id = ? and round_number = ? and count = ?''',data=(interaction.guild_id,i,1))
+        maxrounds=[]
+        if not bb[1]:
+            cur.execute('''select count(*) from chain_info where server_id = ? and round_number = ?''',data=(interaction.guild_id,bb[0]))
+            maxrounds.append((cur.fetchone()[0],bb[0]))
+        cur.execute('''select distinct count,round_number from chain_info where server_id = ? and valid = ?''',data=(interaction.guild_id,False))
+        maxrounds.extend([(i-1,j) for (i,j) in cur.fetchall()])
+        maxrounds=sorted(maxrounds,reverse=1)[:5]
+        for i in maxrounds:
+            maxc=i[0]
+            cur.execute('''select distinct user_id from chain_info where server_id = ? and round_number = ?  and valid = ? and user_id is not null''',data=(interaction.guild_id,i[1],True))
+            part=cur.rowcount
+            if maxc>1:
+                cur.execute('''select city_id,name,admin1,country,alt_country from chain_info where server_id = ? and round_number = ? and count = ?''',data=(interaction.guild_id,i[1],1))
                 b1=cur.fetchone()
-                cur.execute('''select city_id,name from chain_info where server_id = ? and round_number = ? and count = ?''',data=(interaction.guild_id,i,maxc))
+                cur.execute('''select city_id,name,admin1,country,alt_country from chain_info where server_id = ? and round_number = ? and count = ?''',data=(interaction.guild_id,i[1],maxc))
                 b2=cur.fetchone()
                 b=[]
                 for j in (b1,b2):
                     o=citydata[(citydata['geonameid']==j[0])&(citydata['default']==1)].iloc[0]
-                    k,l,m,n=o['name'],admin1data[(admin1data['country']==o['country'])&(admin1data['admin1']==o['admin1'])&(admin1data['default']==1)]['name'].iloc[0],o['country'],o['alt-country']
+                    k,l,m,n=o['name'],j[2],j[3],j[4]
                     
                     if j[1]==k:
                         if l:
@@ -1285,11 +1165,37 @@ async def bestrds(interaction: discord.Interaction,se:Optional[Literal['yes','no
                             else:
                                 loctuple=(j[1]+' (%s)'%k,m)
                     b.append(', '.join(loctuple))
-                fmt.append((maxc,i,part,tuple(b)))
+                fmt.append((maxc,i[1],part,tuple(b)))
+            elif maxc==1:
+                cur.execute('''select city_id,name,admin1,country,alt_country from chain_info where server_id = ? and round_number = ? and count = ?''',data=(interaction.guild_id,i[1],1))
+                j=cur.fetchone()
+                o=citydata[(citydata['geonameid']==j[0])&(citydata['default']==1)].iloc[0]
+                k,l,m,n=o['name'],j[2],j[3],j[4]
+                if j[1]==k:
+                    if l:
+                        if n:
+                            loctuple=(j[1],l,m+'/'+n)
+                        else:
+                            loctuple=(j[1],l,m)
+                    else:
+                        if n:
+                            loctuple=(j[1],m+'/'+n)
+                        else:
+                            loctuple=(j[1],m)
+                else:
+                    if l:
+                        if n:
+                            loctuple=(j[1]+' (%s)'%k,l,m+'/'+n)
+                        else:
+                            loctuple=(j[1]+' (%s)'%k,l,m)
+                    else:
+                        if n:
+                            loctuple=(j[1]+' (%s)'%k,m+'/'+n)
+                        else:
+                            loctuple=(j[1]+' (%s)'%k,m)
+                fmt.append((maxc,i[1],part,(', '.join(loctuple),)))
             else:
-                fmt.append((0,i,1,("None","None")))
-
-        fmt=sorted(fmt,reverse=1)[:5]
+                fmt.append((0,i[1],1,("None","None")))
         for i in fmt:
             if i[0]>1:
                 embed.add_field(name='%s - %s'%i[3],value='Length: %s\nRound: %s\nParticipants: %s'%(f'{i[0]:,}',f'{i[1]:,}',f'{i[2]:,}'))
