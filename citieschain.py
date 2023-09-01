@@ -475,7 +475,7 @@ async def choosecity(interaction: discord.Interaction, option:Literal["on","off"
                             where server_id = ?''', data=(True,entr['last letter'],guildid))
                 cur.execute('''insert into chain_info(server_id,city_id,round_number,count,name,admin1,country,country_code,alt_country,time_placed,valid)
                             values (?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,newid,c[2]+1,1,n[0],n[3],n[1],n[2],n[4][0] if n[4] else None,int(interaction.created_at.timestamp()),True))
-                await interaction.followup.send('Choose_city set to **ON**. Next city is `%s.`'%nname)
+                await interaction.followup.send('Choose_city set to **ON**. Next city is `%s`.'%nname)
         else:
             cur.execute('''update server_info
                         set choose_city = ?,
@@ -600,11 +600,9 @@ async def repeat(interaction: discord.Interaction, city:str, province:Optional[s
     else:
         await interaction.followup.send('Command can only be used after the chain has ended.')
 
-loop = asyncio.get_event_loop()
 @client.event
 async def on_message(message:discord.Message):
-    t=asyncio.create_task(chain(message))
-    await asyncio.wait((t,))
+    await chain(message)
 
 async def chain(message:discord.Message):
     authorid=message.author.id
@@ -708,7 +706,7 @@ async def chain(message:discord.Message):
                             else:
                                 await fail(message,"**No going twice.**",sinfo,citieslist,res,n,True)
                         else:
-                            if sinfo[3]:
+                            if sinfo[4]:
                                 await fail(message,"**No repeats.**",sinfo,citieslist,res,n,True)
                             else:
                                 await fail(message,"**No repeats within `%s` cities.**"%f"{sinfo[1]:,}",sinfo,citieslist,res,n,True)
