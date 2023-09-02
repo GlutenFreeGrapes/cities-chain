@@ -345,7 +345,7 @@ class Confirmation(discord.ui.View):
         cur.execute('''delete from repeat_info where server_id=?''',data=(interaction.guild_id,))
         cur.execute('''update server_info set round_number=?,current_letter=?,last_user=?,max_chain=?,last_best=?,chain_end=? where server_id=?''',data=(0,'-',None,0,None,True,interaction.guild_id))
         conn.commit()
-        await interaction.response.edit_message(embed=discord.Embed(color=discord.Colour.from_rgb(0,255,0),description='Server stats have been reset.'),view=self)
+        await interaction.response.edit_message(embed=discord.Embed(color=discord.Colour.from_rgb(0,255,0),description='Server stats have been reset. Choose any city to continue.'),view=self)
         self.message = await interaction.original_response()
     @discord.ui.button(label='NO', style=discord.ButtonStyle.red)
     async def no(self, interaction, button):
@@ -1117,16 +1117,16 @@ async def bestrds(interaction: discord.Interaction,se:Optional[Literal['yes','no
         maxrounds=[]
         if not bb[1]:
             cur.execute('''select count(*) from chain_info where server_id = ? and round_number = ?''',data=(interaction.guild_id,bb[0]))
-            maxrounds.append((cur.fetchone()[0],bb[0]))
-        cur.execute('''select distinct count,round_number from chain_info where server_id = ? and valid = ?''',data=(interaction.guild_id,False))
-        maxrounds.extend([(i-1,j) for (i,j) in cur.fetchall()])
+            maxrounds.append((cur.fetchone()[0],bb[0],"**Ongoing**"))
+        cur.execute('''select distinct count,round_number,time_placed from chain_info where server_id = ? and valid = ?''',data=(interaction.guild_id,False))
+        maxrounds.extend([(i-1,j,k) for (i,j,k) in cur.fetchall()])
         maxrounds=sorted(maxrounds,reverse=1)[:5]
         for i in maxrounds:
             maxc=i[0]
             cur.execute('''select distinct user_id from chain_info where server_id = ? and round_number = ?  and valid = ? and user_id is not null''',data=(interaction.guild_id,i[1],True))
             part=cur.rowcount
             if maxc>1:
-                cur.execute('''select city_id,name,admin1,country,alt_country from chain_info where server_id = ? and round_number = ? and count = ?''',data=(interaction.guild_id,i[1],1))
+                cur.execute('''select city_id,name,admin1,country,alt_country,time_placed from chain_info where server_id = ? and round_number = ? and count = ?''',data=(interaction.guild_id,i[1],1))
                 b1=cur.fetchone()
                 cur.execute('''select city_id,name,admin1,country,alt_country from chain_info where server_id = ? and round_number = ? and count = ?''',data=(interaction.guild_id,i[1],maxc))
                 b2=cur.fetchone()
@@ -1158,9 +1158,9 @@ async def bestrds(interaction: discord.Interaction,se:Optional[Literal['yes','no
                             else:
                                 loctuple=(j[1]+' (%s)'%k,m)
                     b.append(', '.join(loctuple))
-                fmt.append((maxc,i[1],part,tuple(b)))
+                fmt.append((maxc,i[1],part,tuple(b),("<t:%s:f>"%b1[5],i[2] if type(i[2])==str else "<t:%s:f>"%i[2])))
             elif maxc==1:
-                cur.execute('''select city_id,name,admin1,country,alt_country from chain_info where server_id = ? and round_number = ? and count = ?''',data=(interaction.guild_id,i[1],1))
+                cur.execute('''select city_id,name,admin1,country,alt_country,time_placed from chain_info where server_id = ? and round_number = ? and count = ?''',data=(interaction.guild_id,i[1],1))
                 j=cur.fetchone()
                 o=allnames.loc[(j[0])]
                 k,l,m,n=o['name'],j[2],j[3],j[4]
@@ -1186,16 +1186,16 @@ async def bestrds(interaction: discord.Interaction,se:Optional[Literal['yes','no
                             loctuple=(j[1]+' (%s)'%k,m+'/'+n)
                         else:
                             loctuple=(j[1]+' (%s)'%k,m)
-                fmt.append((maxc,i[1],part,(', '.join(loctuple),)))
+                fmt.append((maxc,i[1],part,(', '.join(loctuple),),("<t:%s:f>"%j[5],i[2] if type(i[2])==str else "<t:%s:f>"%i[2])))
             else:
-                fmt.append((0,i[1],1,("None","None")))
+                fmt.append((0,i[1],1,("None","None"),(i[2] if type(i[2])==str else "<t:%s:f>"%i[2],i[2] if type(i[2])==str else "<t:%s:f>"%i[2])))
         for i in fmt:
             if i[0]>1:
-                embed.add_field(name='%s - %s'%i[3],value='Length: %s\nRound: %s\nParticipants: %s'%(f'{i[0]:,}',f'{i[1]:,}',f'{i[2]:,}'))
+                embed.add_field(name='%s - %s'%i[3],value='Length: %s\nRound: %s\nParticipants: %s\nStarted: %s\nEnded: %s'%(f'{i[0]:,}',f'{i[1]:,}',f'{i[2]:,}',i[4][0],i[4][1]))
             elif i[0]==1:
-                embed.add_field(name='%s'%i[3][0],value='Length: %s\nRound: %s\nParticipants: %s'%(f'{i[0]:,}',f'{i[1]:,}',f'{i[2]:,}'))
+                embed.add_field(name='%s'%i[3][0],value='Length: %s\nRound: %s\nParticipants: %s\nStarted: %s\nEnded: %s'%(f'{i[0]:,}',f'{i[1]:,}',f'{i[2]:,}',i[4][0],i[4][1]))
             else:
-                embed.add_field(name='None',value='Length: %s\nRound: %s\nParticipants: %s'%(f'{i[0]:,}',f'{i[1]:,}',f'{i[2]:,}'))
+                embed.add_field(name='None',value='Length: %s\nRound: %s\nParticipants: %s\nStarted: %s\nEnded: %s'%(f'{i[0]:,}',f'{i[1]:,}',f'{i[2]:,}',i[4][0],i[4][1]))
     else:
         embed.add_field(name='',value='```null```')
     await interaction.followup.send(embed=embed,ephemeral=eph)
