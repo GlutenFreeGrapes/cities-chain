@@ -697,7 +697,9 @@ async def chain(message:discord.Message):
                                     await message.add_reaction('\N{BALLOT BOX WITH CHECK}')
                                 else:
                                     await message.add_reaction('\N{WHITE HEAVY CHECK MARK}')
-                                
+                                await message.add_reaction(regionalindicators[country[0].lower()]+regionalindicators[country[1].lower()])
+                                if altcountry:
+                                    await message.add_reaction(regionalindicators[altcountry[0].lower()]+regionalindicators[altcountry[1].lower()])
                                 cur.execute('''select reaction from react_info where server_id = ? and city_id = ?''', data=(guildid,res[0]))
                                 if cur.rowcount>0:
                                     await message.add_reaction(cur.fetchone()[0])
