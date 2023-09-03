@@ -707,9 +707,9 @@ async def chain(message:discord.Message):
                                 await fail(message,"**No going twice.**",sinfo,citieslist,res,n,True)
                         else:
                             if sinfo[4]:
-                                await fail(message,"**No repeats.**",sinfo,citieslist,res,n,True)
-                            else:
                                 await fail(message,"**No repeats within `%s` cities.**"%f"{sinfo[1]:,}",sinfo,citieslist,res,n,True)
+                            else:
+                                await fail(message,"**No repeats.**",sinfo,citieslist,res,n,True)
                     else:
                         await fail(message,"**City must have a population of at least `%s`.**"%f"{sinfo[2]:,}",sinfo,citieslist,res,n,True)
                 else:
