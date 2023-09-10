@@ -679,7 +679,7 @@ async def chain(message:discord.Message):
                     if sinfo[2]<=res[1]['population']:
                         cur.execute('''select city_id from repeat_info where server_id = ?''', data=(guildid,))
                         if cur.rowcount>0:
-                            repeatset=set(cur.fetchall())
+                            repeatset={b[0] for b in cur.fetchall()}
                         else:
                             repeatset=set()
                         if ((sinfo[4] and res[0] not in set(citieslist[:sinfo[1]])) or (not sinfo[4] and res[0] not in set(citieslist)) or (res[0] in repeatset)):
