@@ -145,7 +145,7 @@ def search_cities(city,province,country):
     if len(results)==0:
         return None
     else:
-        r=results.sort_values(['population','match'],ascending=[0,1]).head(1).iloc[0]
+        r=results.sort_values(['default','population','match'],ascending=[0,0,1]).head(1).iloc[0]
         return (int(r['geonameid']),r,r[s[r['match']]])
 
 codes={'country code','admin1 code','admin2 code'}
@@ -169,7 +169,8 @@ def search_cities_chain(query):
 
     results=pd.concat([res1,res2,res3,res4])
     results=results.drop_duplicates(subset=('geonameid','name'))
-
+    if results.shape[0]==0:
+        return None
     if len(p)==2:
         otherdivision=p[1]
         cchoice=countriesdata[(countriesdata['name'].str.casefold()==otherdivision)|(countriesdata['country'].str.casefold()==otherdivision)]
@@ -191,46 +192,40 @@ def search_cities_chain(query):
     elif len(p)==3:
         otherdivision=p[1]
         country=p[2]
-        cchoice=countriesdata[(countriesdata['name'].str.casefold()==country)|(countriesdata['country'].str.casefold()==country)]
-        a1choice=admin1data[(admin1data['name'].str.casefold()==otherdivision)|(admin1data['admin1'].str.casefold()==otherdivision)]
-        a2choice=admin2data[(admin2data['name'].str.casefold()==otherdivision)|(admin2data['admin2'].str.casefold()==otherdivision)]
-        cchoice=set(cchoice['country'])
+        cchoice=countriesdata[((countriesdata['name'].str.casefold()==country)|(countriesdata['country'].str.casefold()==country))]
+        c=set(cchoice['country'])
+        a1choice=admin1data[((admin1data['name'].str.casefold()==otherdivision)|(admin1data['admin1'].str.casefold()==otherdivision))&(admin1data['country'].isin(c))]
+        a2choice=admin2data[((admin2data['name'].str.casefold()==otherdivision)|(admin2data['admin2'].str.casefold()==otherdivision))&(admin2data['country'].isin(c))]
         a1choice=set(zip(a1choice['country'],a1choice['admin1']))
         a2choice=set(zip(a2choice['country'],a2choice['admin1'],a2choice['admin2']))
-        cresults=results[results['country'].isin(cchoice)|results['alt-country'].isin(cchoice)]
         rcol=results.columns
         a1results=pd.DataFrame(columns=rcol)
         for i in a1choice:
-            a1results=pd.concat([a1results,results[(results['country']==i[0])&(results['admin1']==i[1])]])
+            a1results=pd.concat([a1results,results[((results['country']==i[0]))&(results['admin1']==i[1])]])
         a2results=pd.DataFrame(columns=rcol)
         for i in a2choice:
-            a2results=pd.concat([a2results,results[(results['country']==i[0])&(results['admin1']==i[1])&(results['admin2']==i[2])]])
-        results=pd.concat([cresults,a1results,a2results])
+            a2results=pd.concat([a2results,results[((results['country']==i[0]))&(results['admin1']==i[1])&(results['admin2']==i[2])]])
+        results=pd.concat([a1results,a2results])
         results=results.drop_duplicates()
     elif len(p)>3:
         admin2=p[1]
         admin1=p[2]
         country=p[3]
         cchoice=countriesdata[(countriesdata['name'].str.casefold()==country)|(countriesdata['country'].str.casefold()==country)]
-        a1choice=admin1data[(admin1data['name'].str.casefold()==admin1)|(admin1data['admin1'].str.casefold()==admin1)]
-        a2choice=admin2data[(admin2data['name'].str.casefold()==admin2)|(admin2data['admin2'].str.casefold()==admin2)]
-        cchoice=set(cchoice['country'])
-        a1choice=set(zip(a1choice['country'],a1choice['admin1']))
+        c=set(cchoice['country'])
+        a1choice=admin1data[(admin1data['name'].str.casefold()==admin1)|(admin1data['admin1'].str.casefold()==admin1)&(admin1data['country'].isin(c))]
+        a1=set(a1choice['admin1'])
+        a2choice=admin2data[(admin2data['name'].str.casefold()==admin2)|(admin2data['admin2'].str.casefold()==admin2)&(admin2data['country'].isin(c))&(admin2data['admin1'].isin(a1))]
         a2choice=set(zip(a2choice['country'],a2choice['admin1'],a2choice['admin2']))
-        cresults=results[results['country'].isin(cchoice)|results['alt-country'].isin(cchoice)]
         rcol=results.columns
-        a1results=pd.DataFrame(columns=rcol)
-        for i in a1choice:
-            a1results=pd.concat([a1results,results[(results['country']==i[0])&(results['admin1']==i[1])]])
         a2results=pd.DataFrame(columns=rcol)
         for i in a2choice:
             a2results=pd.concat([a2results,results[(results['country']==i[0])&(results['admin1']==i[1])&(results['admin2']==i[2])]])
-        results=pd.concat([cresults,a1results,a2results])
-        results=results.drop_duplicates()
+        results=a2results.drop_duplicates()
     if results.shape[0]==0:
         return None
     else:
-        r=results.sort_values(['population','match'],ascending=[0,1]).head(1).iloc[0]
+        r=results.sort_values(['default','population','match'],ascending=[0,0,1]).head(1).iloc[0]
         return (int(r['geonameid']),r,r[s[r['match']]])
     
 class Paginator(discord.ui.View):
