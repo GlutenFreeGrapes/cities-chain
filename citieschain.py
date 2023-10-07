@@ -1206,11 +1206,14 @@ async def cityinfo(interaction: discord.Interaction, city:str, province:Optional
     await interaction.response.defer(ephemeral=eph)
     res=search_cities(city,province,country)
     if res:
+        cur.execute("select count(*) from chain_info where server_id=? and city_id=? and valid=?",data=(interaction.guild_id,res[0],True))
+        count=cur.fetchone()[0]
         aname=citydata[(citydata['geonameid']==res[0])]
         default=aname[aname['default']==1].iloc[0]
         dname=default['name']
         embed=discord.Embed(title='Information - %s'%dname,color=discord.Colour.from_rgb(0,255,0))
         embed.add_field(name='Geonames ID',value=res[0],inline=True)
+        embed.add_field(name='Count',value=count,inline=True)
         embed.add_field(name='Name',value=dname,inline=True)
         alts=aname[(aname['default']==0)]['name']
         if alts.shape[0]!=0:
