@@ -1276,4 +1276,4 @@ tree.add_command(add)
 tree.add_command(remove)
 tree.add_command(stats)
 
-client.run(env["DISCORD_TOKEN"])
+client.run(env["DISCORD_TOKEN"],reconnect=True)
