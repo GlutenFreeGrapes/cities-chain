@@ -8,6 +8,7 @@ load_dotenv()
 
 intents = discord.Intents.default()
 intents.message_content = True
+intents.members = True
 
 citydata,countriesdata,admin1data,admin2data=pd.read_csv('cities.txt',sep='\t',keep_default_na=False,na_values='',dtype={'admin1':str,'admin2':str,'alt-country':str}),pd.read_csv('countries.txt',sep='\t',keep_default_na=False,na_values=''),pd.read_csv('admin1.txt',sep='\t',keep_default_na=False,na_values='',dtype={'admin1':str}),pd.read_csv('admin2.txt',sep='\t',keep_default_na=False,na_values='',dtype={'admin1':str,'admin2':str,})
 citydata=citydata.fillna(np.nan).replace([np.nan], [None])
@@ -94,6 +95,11 @@ cur.execute('''create table if not exists chain_info(
             primary key(server_id,city_id,round_number,count,time_placed),
             foreign key(server_id)
                 references server_info(server_id))''')
+
+cur.execute('''create table if not exists bans(
+            user_id bigint,
+            banned bool,
+            primary key(user_id))''')
 
 client = discord.Client(intents=intents)
 tree=app_commands.tree.CommandTree(client)
@@ -366,14 +372,23 @@ async def on_ready():
 async def on_guild_join(guild):
     cur.execute('''insert into server_info(server_id) VALUES (?)''',data=(guild.id,))
 
+def check_me(interaction: discord.Interaction) -> bool:
+    return interaction.user.id == 675520542463492148
+
 modperms=discord.Permissions(moderate_members=True)
 
 assign = app_commands.Group(name="set", description="Set different things for the chain.",default_permissions=modperms)
 
 @assign.command(description="Sets the channel for the bot to monitor for cities chain.")
+@app_commands.check(check_me)
 @app_commands.describe(channel="The channel where the cities chain will happen")
 async def channel(interaction: discord.Interaction, channel: discord.TextChannel|discord.Thread):
     await interaction.response.defer()
+    cur.execute('select user_id from bans where banned=?',data=(True,))
+    bans={i[0] for i in cur}
+    if interaction.user.id in bans:
+        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
+        return
     cur.execute('''update server_info
         set channel_id = ?
         where server_id = ?''', data=(channel.id,interaction.guild_id))
@@ -381,9 +396,15 @@ async def channel(interaction: discord.Interaction, channel: discord.TextChannel
     await interaction.followup.send('Channel set to <#%s>.'%channel.id)
 
 @assign.command(description="Sets the gap between when a city can be repeated in the chain.")
+@app_commands.check(check_me)
 @app_commands.describe(num="The minimum number of cities before they can repeat again, set to -1 to disallow any repeats")
 async def repeat(interaction: discord.Interaction, num: app_commands.Range[int,-1,None]):
     await interaction.response.defer()
+    cur.execute('select user_id from bans where banned=?',data=(True,))
+    bans={i[0] for i in cur}
+    if interaction.user.id in bans:
+        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
+        return
     cur.execute('''select chain_end from server_info
                 where server_id = ?''', data=(interaction.guild_id,))
     c=cur.fetchone()[0]  
@@ -412,9 +433,15 @@ async def repeat(interaction: discord.Interaction, num: app_commands.Range[int,-
         await interaction.followup.send('Command can only be used after the chain has ended.')
 
 @assign.command(description="Sets the minimum population of cities in the chain.")
+@app_commands.check(check_me)
 @app_commands.describe(population="The minimum population of cities in the chain")
 async def population(interaction: discord.Interaction, population: app_commands.Range[int,1,None]):
     await interaction.response.defer()
+    cur.execute('select user_id from bans where banned=?',data=(True,))
+    bans={i[0] for i in cur}
+    if interaction.user.id in bans:
+        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
+        return
     cur.execute('''select chain_end from server_info
                 where server_id = ?''', data=(interaction.guild_id,))
     c=cur.fetchone()[0] 
@@ -428,9 +455,15 @@ async def population(interaction: discord.Interaction, population: app_commands.
         await interaction.followup.send('Command can only be used after the chain has ended.')
 
 @assign.command(description="Sets the prefix to listen to.")
+@app_commands.check(check_me)
 @app_commands.describe(prefix="Prefix that all cities to be chained must begin with")
 async def prefix(interaction: discord.Interaction, prefix: Optional[app_commands.Range[str,0,10]]=''):
     await interaction.response.defer()
+    cur.execute('select user_id from bans where banned=?',data=(True,))
+    bans={i[0] for i in cur}
+    if interaction.user.id in bans:
+        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
+        return
     cur.execute('''select chain_end from server_info
                 where server_id = ?''', data=(interaction.guild_id,))
     c=cur.fetchone()[0] 
@@ -447,9 +480,15 @@ async def prefix(interaction: discord.Interaction, prefix: Optional[app_commands
         await interaction.followup.send('Command can only be used after the chain has ended.')
 
 @assign.command(name='choose-city',description="Toggles if bot can choose starting city for the next chain.")
+@app_commands.check(check_me)
 @app_commands.describe(option="on to let the bot choose the next city, off otherwise")
 async def choosecity(interaction: discord.Interaction, option:Literal["on","off"]):
     await interaction.response.defer()
+    cur.execute('select user_id from bans where banned=?',data=(True,))
+    bans={i[0] for i in cur}
+    if interaction.user.id in bans:
+        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
+        return
     guildid=interaction.guild_id
     cur.execute('''select chain_end,min_pop,round_number,choose_city from server_info
                 where server_id = ?''', data=(interaction.guild_id,))
@@ -493,11 +532,17 @@ async def countrycomplete(interaction: discord.Interaction, search: str):
 
 add = app_commands.Group(name='add', description="Adds reactions/repeats for the chain.",default_permissions=modperms)
 @add.command(description="Adds reaction for a city. When cityed, react to client's message with emoji to react to city with.")
+@app_commands.check(check_me)
 @app_commands.describe(city="The city that the client will react to",province="State, province, etc that the city is located in",country="Country the city is located in")
 @app_commands.rename(province='administrative-division')
 @app_commands.autocomplete(country=countrycomplete)
 async def react(interaction: discord.Interaction, city:str, province:Optional[str]=None, country:Optional[str]=None):
     await interaction.response.defer()
+    cur.execute('select user_id from bans where banned=?',data=(True,))
+    bans={i[0] for i in cur}
+    if interaction.user.id in bans:
+        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
+        return
     res=search_cities(city,province,country)
     if res:
         await interaction.followup.send('What reaction do you want for **%s**? React to this message with the emoji. '%res[2])
@@ -529,11 +574,17 @@ async def react(interaction: discord.Interaction, city:str, province:Optional[st
         await interaction.followup.send('City not recognized. Please try again. ')
 
 @add.command(description="Adds repeating exception for a city.")
+@app_commands.check(check_me)
 @app_commands.describe(city="The city that the client will allow repeats for",province="State, province, etc that the city is located in",country="Country the city is located in")
 @app_commands.rename(province='administrative-division')
 @app_commands.autocomplete(country=countrycomplete)
 async def repeat(interaction: discord.Interaction, city:str, province:Optional[str]=None, country:Optional[str]=None):
     await interaction.response.defer()
+    cur.execute('select user_id from bans where banned=?',data=(True,))
+    bans={i[0] for i in cur}
+    if interaction.user.id in bans:
+        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
+        return
     cur.execute('''select chain_end,min_pop,round_number from server_info
                 where server_id = ?''', data=(interaction.guild_id,))
     c=cur.fetchone()[0]  
@@ -556,11 +607,17 @@ async def repeat(interaction: discord.Interaction, city:str, province:Optional[s
 
 remove = app_commands.Group(name='remove', description="Removes reactions/repeats for the chain.",default_permissions=modperms)
 @remove.command(description="Removes reaction for a city.")
+@app_commands.check(check_me)
 @app_commands.describe(city="The city that the client will not react to",province="State, province, etc that the city is located in",country="Country the city is located in")
 @app_commands.rename(province='administrative-division')
 @app_commands.autocomplete(country=countrycomplete)
 async def react(interaction: discord.Interaction, city:str, province:Optional[str]=None, country:Optional[str]=None):
     await interaction.response.defer()
+    cur.execute('select user_id from bans where banned=?',data=(True,))
+    bans={i[0] for i in cur}
+    if interaction.user.id in bans:
+        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
+        return
     res=search_cities(city,province,country)
     if res:
         try:
@@ -573,11 +630,17 @@ async def react(interaction: discord.Interaction, city:str, province:Optional[st
         await interaction.followup.send('City not recognized. Please try again. ')
 
 @remove.command(description="Removes repeating exception for a city.")
+@app_commands.check(check_me)
 @app_commands.describe(city="The city that the client will disallow repeats for",province="State, province, etc that the city is located in",country="Country the city is located in")
 @app_commands.rename(province='administrative-division')
 @app_commands.autocomplete(country=countrycomplete)
 async def repeat(interaction: discord.Interaction, city:str, province:Optional[str]=None, country:Optional[str]=None):
     await interaction.response.defer()
+    cur.execute('select user_id from bans where banned=?',data=(True,))
+    bans={i[0] for i in cur}
+    if interaction.user.id in bans:
+        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
+        return
     cur.execute('''select chain_end from server_info
                 where server_id = ?''', data=(interaction.guild_id,))
     c=cur.fetchone()[0]  
@@ -619,6 +682,12 @@ async def chain(message:discord.Message):
                     where server_id = ?''',data=(guildid,))
         sinfo=cur.fetchone()
         if message.content.startswith(sinfo[10]) and message.content[len(sinfo[10]):].strip()!='' and message.channel.id==sinfo[6] and not message.author.bot:
+            cur.execute('select user_id from bans where banned=?',data=(True,))
+            bans={i[0] for i in cur}
+            if (authorid,) in bans:
+                await message.reply(":no_pedestrians: You are blocked from using this bot. ")
+                # await message.channel.send(":no_pedestrians: You are blocked from using this bot. ",reference=message)
+                return
             cur.execute('''select * from server_user_info where user_id = ? and server_id = ?''',data=(authorid,message.guild.id))
             if cur.rowcount==0:
                 cur.execute('''select * from global_user_info where user_id = ?''',data=(authorid,))
@@ -1197,6 +1266,28 @@ async def bestrds(interaction: discord.Interaction,se:Optional[Literal['yes','no
         embed.add_field(name='',value='```null```')
     await interaction.followup.send(embed=embed,ephemeral=eph)
 
+@stats.command(name='banned-users',description="Point and laugh.")
+@app_commands.rename(se='show-everyone')
+@app_commands.describe(se='Yes to show everyone stats, no otherwise')
+async def banned(interaction:discord.Interaction,se:Optional[Literal['yes','no']]='no'):
+    eph=True if se=='no' else False
+    await interaction.response.defer(ephemeral=eph)
+    cur.execute('select user_id from bans where banned=?',data=(True,))
+    bans={i[0] for i in cur}
+    members={i.id for i in interaction.guild.members}
+    bans=bans.intersection(members)
+    embed=discord.Embed(title='Banned Users',color=discord.Colour.from_rgb(0,255,0))
+    cur.execute('''select city_id from repeat_info where server_id = ?''', data=(interaction.guild_id,))
+    if len(bans)>0:
+        fmt=[f"- <@{i}>" for i in bans]
+        embed.description='\n'.join(fmt[:25])
+        view=Paginator(1,fmt,"Banned Users",math.ceil(len(fmt)/25),interaction.user.id)
+        await interaction.followup.send(embed=embed,view=view,ephemeral=eph)
+        view.message=await interaction.original_response()
+    else:
+        embed.description="```null```"
+        await interaction.followup.send(embed=embed,ephemeral=eph)
+
 @tree.command(name='city-info',description='Gets information for a given city.')
 @app_commands.describe(city="The city to get information for",province="State, province, etc that the city is located in",country="Country the city is located in",se='Yes to show everyone stats, no otherwise')
 @app_commands.rename(province='administrative-division',se='show-everyone')
@@ -1259,6 +1350,7 @@ async def altnames(interaction: discord.Interaction, city:str, province:Optional
 
 @tree.command(name='delete-stats',description='Deletes server stats.')
 @app_commands.default_permissions(moderate_members=True)
+@app_commands.check(check_me)
 async def deletestats(interaction: discord.Interaction):
     embed=discord.Embed(color=discord.Colour.from_rgb(255,0,0),title='Are you sure?',description='This action is irreversible.')
     view=Confirmation(interaction.guild_id)
@@ -1267,13 +1359,42 @@ async def deletestats(interaction: discord.Interaction):
 
 @tree.command(description="Tests the client's latency. ")
 async def ping(interaction: discord.Interaction):
-    await interaction.response.defer()
-    latency = client.latency
-    await interaction.followup.send('Pong! %s ms'%(latency*1000))
+    await interaction.followup.send('Pong! `%s ms`'%(client.latency*1000))
+
+@tree.command(description="Bans a user. ")
+@app_commands.default_permissions(moderate_members=True)
+@app_commands.check(check_me)
+async def ban(interaction: discord.Interaction,member: discord.Member):
+    cur.execute('select user_id from bans where banned=?',data=(True,))
+    bans={i[0] for i in cur}
+    if interaction.user.id in bans:
+        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
+        return
+    if member.id in bans:
+        cur.execute('''insert into bans(user_id,banned) values (?,?)''',data=(member.id,True))
+    else:
+        cur.execute('''update bans set banned=? where user_id=?''',data=(True,member.id))
+    conn.commit()
+    await interaction.response.send_message(f"<@{member.id}> has been banned. ")
+
+@tree.command(description="Unbans a user. ")
+@app_commands.default_permissions(moderate_members=True)
+@app_commands.check(check_me)
+async def unban(interaction: discord.Interaction,member: discord.Member):
+    cur.execute('select user_id from bans where banned=?',data=(True,))
+    bans={i[0] for i in cur}
+    if interaction.user.id in bans:
+        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
+        return
+    cur.execute('''update bans set banned=? where user_id=?''',data=(False,member.id))
+    conn.commit()
+    await interaction.response.send_message(f"<@{member.id}> has been unbanned. ")
+
+
 
 tree.add_command(assign)
 tree.add_command(add)
 tree.add_command(remove)
 tree.add_command(stats)
 
-client.run(env["DISCORD_TOKEN"],reconnect=True)
+client.run(env["DISCORD_TOKEN"])
