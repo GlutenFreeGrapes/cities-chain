@@ -684,8 +684,10 @@ async def chain(message:discord.Message):
         if message.content.startswith(sinfo[10]) and message.content[len(sinfo[10]):].strip()!='' and message.channel.id==sinfo[6] and not message.author.bot:
             cur.execute('select user_id from bans where banned=?',data=(True,))
             bans={i[0] for i in cur}
-            if (authorid,) in bans:
-                await message.reply(":no_pedestrians: You are blocked from using this bot. ")
+            if authorid in bans:
+                message.add_reaction('\N{NO PEDESTRIANS}')
+                await (message.author.send("You are blocked from using this bot. "))
+                # await message.reply(":no_pedestrians: You are blocked from using this bot. ")
                 # await message.channel.send(":no_pedestrians: You are blocked from using this bot. ",reference=message)
                 return
             cur.execute('''select * from server_user_info where user_id = ? and server_id = ?''',data=(authorid,message.guild.id))
