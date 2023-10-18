@@ -372,15 +372,12 @@ async def on_ready():
 async def on_guild_join(guild):
     cur.execute('''insert into server_info(server_id) VALUES (?)''',data=(guild.id,))
 
-def check_me(interaction: discord.Interaction) -> bool:
-    return interaction.user.id == 675520542463492148
-
 modperms=discord.Permissions(moderate_members=True)
+discord.PermissionOverwrite()
 
 assign = app_commands.Group(name="set", description="Set different things for the chain.",default_permissions=modperms)
 
 @assign.command(description="Sets the channel for the bot to monitor for cities chain.")
-@app_commands.check(check_me)
 @app_commands.describe(channel="The channel where the cities chain will happen")
 async def channel(interaction: discord.Interaction, channel: discord.TextChannel|discord.Thread):
     await interaction.response.defer()
@@ -396,7 +393,6 @@ async def channel(interaction: discord.Interaction, channel: discord.TextChannel
     await interaction.followup.send('Channel set to <#%s>.'%channel.id)
 
 @assign.command(description="Sets the gap between when a city can be repeated in the chain.")
-@app_commands.check(check_me)
 @app_commands.describe(num="The minimum number of cities before they can repeat again, set to -1 to disallow any repeats")
 async def repeat(interaction: discord.Interaction, num: app_commands.Range[int,-1,None]):
     await interaction.response.defer()
@@ -433,7 +429,6 @@ async def repeat(interaction: discord.Interaction, num: app_commands.Range[int,-
         await interaction.followup.send('Command can only be used after the chain has ended.')
 
 @assign.command(description="Sets the minimum population of cities in the chain.")
-@app_commands.check(check_me)
 @app_commands.describe(population="The minimum population of cities in the chain")
 async def population(interaction: discord.Interaction, population: app_commands.Range[int,1,None]):
     await interaction.response.defer()
@@ -455,7 +450,6 @@ async def population(interaction: discord.Interaction, population: app_commands.
         await interaction.followup.send('Command can only be used after the chain has ended.')
 
 @assign.command(description="Sets the prefix to listen to.")
-@app_commands.check(check_me)
 @app_commands.describe(prefix="Prefix that all cities to be chained must begin with")
 async def prefix(interaction: discord.Interaction, prefix: Optional[app_commands.Range[str,0,10]]=''):
     await interaction.response.defer()
@@ -480,7 +474,6 @@ async def prefix(interaction: discord.Interaction, prefix: Optional[app_commands
         await interaction.followup.send('Command can only be used after the chain has ended.')
 
 @assign.command(name='choose-city',description="Toggles if bot can choose starting city for the next chain.")
-@app_commands.check(check_me)
 @app_commands.describe(option="on to let the bot choose the next city, off otherwise")
 async def choosecity(interaction: discord.Interaction, option:Literal["on","off"]):
     await interaction.response.defer()
@@ -532,7 +525,6 @@ async def countrycomplete(interaction: discord.Interaction, search: str):
 
 add = app_commands.Group(name='add', description="Adds reactions/repeats for the chain.",default_permissions=modperms)
 @add.command(description="Adds reaction for a city. When cityed, react to client's message with emoji to react to city with.")
-@app_commands.check(check_me)
 @app_commands.describe(city="The city that the client will react to",province="State, province, etc that the city is located in",country="Country the city is located in")
 @app_commands.rename(province='administrative-division')
 @app_commands.autocomplete(country=countrycomplete)
@@ -574,7 +566,6 @@ async def react(interaction: discord.Interaction, city:str, province:Optional[st
         await interaction.followup.send('City not recognized. Please try again. ')
 
 @add.command(description="Adds repeating exception for a city.")
-@app_commands.check(check_me)
 @app_commands.describe(city="The city that the client will allow repeats for",province="State, province, etc that the city is located in",country="Country the city is located in")
 @app_commands.rename(province='administrative-division')
 @app_commands.autocomplete(country=countrycomplete)
@@ -607,7 +598,6 @@ async def repeat(interaction: discord.Interaction, city:str, province:Optional[s
 
 remove = app_commands.Group(name='remove', description="Removes reactions/repeats for the chain.",default_permissions=modperms)
 @remove.command(description="Removes reaction for a city.")
-@app_commands.check(check_me)
 @app_commands.describe(city="The city that the client will not react to",province="State, province, etc that the city is located in",country="Country the city is located in")
 @app_commands.rename(province='administrative-division')
 @app_commands.autocomplete(country=countrycomplete)
@@ -630,7 +620,6 @@ async def react(interaction: discord.Interaction, city:str, province:Optional[st
         await interaction.followup.send('City not recognized. Please try again. ')
 
 @remove.command(description="Removes repeating exception for a city.")
-@app_commands.check(check_me)
 @app_commands.describe(city="The city that the client will disallow repeats for",province="State, province, etc that the city is located in",country="Country the city is located in")
 @app_commands.rename(province='administrative-division')
 @app_commands.autocomplete(country=countrycomplete)
@@ -799,7 +788,7 @@ async def fail(message:discord.Message,reason,sinfo,citieslist,res,n,cityfound):
     if sinfo[3]:
         poss=allnames[allnames['population']>=sinfo[2]]
         newid=int(random.choice(poss.index))
-        await message.channel.send('<@%s> RUINED IT AT **%s**!! Next city is `%s`. %s'%(authorid,f"{len(citieslist):,}",poss.at[newid,'name'],reason))
+        await message.channel.send('<@%s> RUINED IT AT **%s**!! Start again from `%s` (next letter %s). %s'%(authorid,f"{len(citieslist):,}",poss.at[newid,'name'],poss.at[newid,'last letter'],reason))
     else:
         await message.channel.send('<@%s> RUINED IT AT **%s**!! %s'%(authorid,f"{len(citieslist):,}",reason))
     if cityfound:
@@ -1352,7 +1341,6 @@ async def altnames(interaction: discord.Interaction, city:str, province:Optional
 
 @tree.command(name='delete-stats',description='Deletes server stats.')
 @app_commands.default_permissions(moderate_members=True)
-@app_commands.check(check_me)
 async def deletestats(interaction: discord.Interaction):
     embed=discord.Embed(color=discord.Colour.from_rgb(255,0,0),title='Are you sure?',description='This action is irreversible.')
     view=Confirmation(interaction.guild_id)
@@ -1365,7 +1353,6 @@ async def ping(interaction: discord.Interaction):
 
 @tree.command(description="Bans a user. ")
 @app_commands.default_permissions(moderate_members=True)
-@app_commands.check(check_me)
 async def ban(interaction: discord.Interaction,member: discord.Member):
     cur.execute('select user_id from bans where banned=?',data=(True,))
     bans={i[0] for i in cur}
@@ -1377,11 +1364,10 @@ async def ban(interaction: discord.Interaction,member: discord.Member):
     else:
         cur.execute('''update bans set banned=? where user_id=?''',data=(True,member.id))
     conn.commit()
-    await interaction.response.send_message(f"<@{member.id}> has been banned. ")
+    await interaction.response.send_message(f"<@{member.id}> has been blocked from using this bot. ")
 
 @tree.command(description="Unbans a user. ")
 @app_commands.default_permissions(moderate_members=True)
-@app_commands.check(check_me)
 async def unban(interaction: discord.Interaction,member: discord.Member):
     cur.execute('select user_id from bans where banned=?',data=(True,))
     bans={i[0] for i in cur}
@@ -1390,9 +1376,7 @@ async def unban(interaction: discord.Interaction,member: discord.Member):
         return
     cur.execute('''update bans set banned=? where user_id=?''',data=(False,member.id))
     conn.commit()
-    await interaction.response.send_message(f"<@{member.id}> has been unbanned. ")
-
-
+    await interaction.response.send_message(f"<@{member.id}> has been unblocked. ")
 
 tree.add_command(assign)
 tree.add_command(add)
