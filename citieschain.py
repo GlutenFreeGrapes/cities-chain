@@ -702,7 +702,7 @@ async def chain(message:discord.Message):
                     from server_info
                     where server_id = ?''',data=(guildid,))
             sinfo=cur.fetchone()
-            cur.execute('''select city_id from chain_info where server_id = ? and round_number = ? order by count asc''',data=(guildid,sinfo[0]))
+            cur.execute('''select city_id from chain_info where server_id = ? and round_number = ? order by count desc''',data=(guildid,sinfo[0]))
             citieslist=[i for (i,) in cur]
             res=search_cities_chain(message.content[len(sinfo[10]):])
             if res:
