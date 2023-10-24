@@ -1351,9 +1351,9 @@ async def deletestats(interaction: discord.Interaction):
 async def ping(interaction: discord.Interaction):
     await interaction.followup.send('Pong! `%s ms`'%(client.latency*1000))
 
-@tree.command(description="Bans a user. ")
+@tree.command(description="Blocks a user. ")
 @app_commands.default_permissions(moderate_members=True)
-async def ban(interaction: discord.Interaction,member: discord.Member):
+async def block(interaction: discord.Interaction,member: discord.Member):
     cur.execute('select user_id from bans where banned=?',data=(True,))
     bans={i[0] for i in cur}
     if interaction.user.id in bans:
@@ -1366,9 +1366,9 @@ async def ban(interaction: discord.Interaction,member: discord.Member):
     conn.commit()
     await interaction.response.send_message(f"<@{member.id}> has been blocked from using this bot. ")
 
-@tree.command(description="Unbans a user. ")
+@tree.command(description="Unblocks a user. ")
 @app_commands.default_permissions(moderate_members=True)
-async def unban(interaction: discord.Interaction,member: discord.Member):
+async def unblock(interaction: discord.Interaction,member: discord.Member):
     cur.execute('select user_id from bans where banned=?',data=(True,))
     bans={i[0] for i in cur}
     if interaction.user.id in bans:
