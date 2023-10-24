@@ -340,7 +340,7 @@ class Confirmation(discord.ui.View):
                 cur.execute('''select last_active from server_user_info where user_id=? and server_id!=? order by last_active desc''',data=(i[0],interaction.guild_id))
                 la=cur.fetchone()[0]
                 cur.execute('''update global_user_info 
-                                set correct = ?,incorrect = ?,score = ?,last_active = ? where user_id = ?''', data=(i[1]-j[0],i[2]-j[1],i[3]-j[2],la,i[0]))
+                                set correct = ?,incorrect = ?,score = ?,last_active = ? where user_id = ?''', data=(j[0]-i[1],j[1]-i[2],j[2]-i[3],la,i[0]))
         cur.execute('''delete from server_user_info where server_id=?''',data=(interaction.guild_id,))
         cur.execute('''delete from react_info where server_id=?''',data=(interaction.guild_id,))
         cur.execute('''delete from repeat_info where server_id=?''',data=(interaction.guild_id,))
@@ -675,7 +675,7 @@ async def chain(message:discord.Message):
             bans={i[0] for i in cur}
             if authorid in bans:
                 message.add_reaction('\N{NO PEDESTRIANS}')
-                await (message.author.send("You are blocked from using this bot. "))
+                # await (message.author.send("You are blocked from using this bot. "))
                 # await message.reply(":no_pedestrians: You are blocked from using this bot. ")
                 # await message.channel.send(":no_pedestrians: You are blocked from using this bot. ",reference=message)
                 return
@@ -1377,6 +1377,29 @@ async def unban(interaction: discord.Interaction,member: discord.Member):
     cur.execute('''update bans set banned=? where user_id=?''',data=(False,member.id))
     conn.commit()
     await interaction.response.send_message(f"<@{member.id}> has been unblocked. ")
+
+@tree.command(description="sync global and server user stats")
+@app_commands.default_permissions(moderate_members=True)
+async def temp(interaction: discord.Interaction):
+    cur.execute("""select distinct user_id from server_user_info""")
+    users={i for i in cur}
+    for i in users:
+        cur.execute("""select correct,incorrect,score,last_active from server_user_info where user_id=?""",data=i)
+        c,ic,s,la=0,0,0,0
+        for (j,k,l,m) in cur:
+            c+=j
+            ic+=k
+            s+=l
+            la=max(la,m)
+        cur.execute("""select * from global_user_info where user_id=?""",data=i)
+        if cur.rowcount>0:
+            cur.execute("""update global_user_info set correct=?,incorrect=?,score=?,last_active=? where user_id=?""",data=(c,ic,s,la,i[0]))
+        else:
+            cur.execute("""insert into global_user_info(user_id,correct,incorrect,score,last_active) values (?,?,?,?,?)""",data=(i[0],c,ic,s,la))
+    conn.commit()
+    await interaction.response.send_message("stats should sync now", ephemeral=1)
+
+
 
 tree.add_command(assign)
 tree.add_command(add)
