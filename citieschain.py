@@ -1378,26 +1378,26 @@ async def unban(interaction: discord.Interaction,member: discord.Member):
     conn.commit()
     await interaction.response.send_message(f"<@{member.id}> has been unblocked. ")
 
-@tree.command(description="sync global and server user stats")
-@app_commands.default_permissions(moderate_members=True)
-async def temp(interaction: discord.Interaction):
-    cur.execute("""select distinct user_id from server_user_info""")
-    users={i for i in cur}
-    for i in users:
-        cur.execute("""select correct,incorrect,score,last_active from server_user_info where user_id=?""",data=i)
-        c,ic,s,la=0,0,0,0
-        for (j,k,l,m) in cur:
-            c+=j
-            ic+=k
-            s+=l
-            la=max(la,m)
-        cur.execute("""select * from global_user_info where user_id=?""",data=i)
-        if cur.rowcount>0:
-            cur.execute("""update global_user_info set correct=?,incorrect=?,score=?,last_active=? where user_id=?""",data=(c,ic,s,la,i[0]))
-        else:
-            cur.execute("""insert into global_user_info(user_id,correct,incorrect,score,last_active) values (?,?,?,?,?)""",data=(i[0],c,ic,s,la))
-    conn.commit()
-    await interaction.response.send_message("stats should sync now", ephemeral=1)
+# @tree.command(description="sync global and server user stats")
+# @app_commands.default_permissions(moderate_members=True)
+# async def temp(interaction: discord.Interaction):
+#     cur.execute("""select distinct user_id from server_user_info""")
+#     users={i for i in cur}
+#     for i in users:
+#         cur.execute("""select correct,incorrect,score,last_active from server_user_info where user_id=?""",data=i)
+#         c,ic,s,la=0,0,0,0
+#         for (j,k,l,m) in cur:
+#             c+=j
+#             ic+=k
+#             s+=l
+#             la=max(la,m)
+#         cur.execute("""select * from global_user_info where user_id=?""",data=i)
+#         if cur.rowcount>0:
+#             cur.execute("""update global_user_info set correct=?,incorrect=?,score=?,last_active=? where user_id=?""",data=(c,ic,s,la,i[0]))
+#         else:
+#             cur.execute("""insert into global_user_info(user_id,correct,incorrect,score,last_active) values (?,?,?,?,?)""",data=(i[0],c,ic,s,la))
+#     conn.commit()
+#     await interaction.response.send_message("stats should sync now", ephemeral=1)
 
 
 
