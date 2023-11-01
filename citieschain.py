@@ -648,6 +648,18 @@ async def repeat(interaction: discord.Interaction, city:str, province:Optional[s
         await interaction.followup.send('Command can only be used after the chain has ended.')
 
 @client.event
+async def on_message_delete(message:discord.Message):
+    cur.execute('''select last_user, channel_id,current_letter from server_info where server_id=?''',data=(message.guild.id,))
+    minfo=cur.fetchone()
+    if ((message.author.id,message.channel.id)==minfo[:2]):
+        cur.execute('''select last_active from server_user_info where user_id=?''',data=(minfo[0],))
+        t = cur.fetchone()[0]
+        if int(message.created_at.timestamp())==t:
+            cur.execute('''select name from chain_info where time_placed=? and user_id=? and server_id=?''',data=(t,minfo[0],message.guild.id))
+            await message.channel.send("<@%s> has deleted their city of `%s`. The next letter is `%s`."%(minfo[0],cur.fetchone()[0],minfo[2]))
+
+
+@client.event
 async def on_message(message:discord.Message):
     await chain(message)
 
