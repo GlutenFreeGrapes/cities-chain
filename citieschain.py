@@ -649,10 +649,10 @@ async def repeat(interaction: discord.Interaction, city:str, province:Optional[s
 
 @client.event
 async def on_message_delete(message:discord.Message):
-    cur.execute('''select last_user, channel_id,current_letter from server_info where server_id=?''',data=(message.guild.id,))
+    cur.execute('''select last_user,channel_id,current_letter from server_info where server_id=?''',data=(message.guild.id,))
     minfo=cur.fetchone()
     if ((message.author.id,message.channel.id)==minfo[:2]):
-        cur.execute('''select last_active from server_user_info where user_id=?''',data=(minfo[0],))
+        cur.execute('''select last_active from server_user_info where user_id=? and server_id=?''',data=(minfo[0],message.guild.id))
         t = cur.fetchone()[0]
         if int(message.created_at.timestamp())==t:
             cur.execute('''select name from chain_info where time_placed=? and user_id=? and server_id=?''',data=(t,minfo[0],message.guild.id))
