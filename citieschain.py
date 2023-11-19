@@ -375,8 +375,50 @@ async def on_ready():
     print('------')
 
 @client.event
-async def on_guild_join(guild):
+async def on_guild_join(guild:discord.Guild):
     cur.execute('''insert into server_info(server_id) VALUES (?)''',data=(guild.id,))
+    embed=discord.Embed(color=discord.Colour.from_rgb(0,255,0),description=
+    """Use the **/set channel [channel]** command to set the channel the bot will listen to. **This must be done in order for the bot to work.**
+
+    You can also change some other settings around too:
+    `/set prefix ([prefix])`: sets prefix to use when listening for cities
+    `/set choose-city [option]`: if turned on, allows bot to choose the city that begins the next chain
+    `/set population`: sets minimum population for cities
+    `/set repeat [num]`: sets number of different cities that have to be said before a city can be repeated again. If set to -1, repeating is disallowed
+    
+    There are also a few other things that can be tweaked: 
+    `/add react [city] ([administrative-division][country])`: bot autoreacts an emoji when a given city is said
+    `/remove react [city] ([administrative-division][country])`: bot removes autoreact for given city
+
+    `/add repeat [city] ([administrative-division][country])`: bot will ignore no repeats rule for given city
+    `/remove repeat [city] ([administrative-division][country])`: bot removes repeating exception for given city
+    
+    For stats:
+    `/stats cities-all ([show-everyone])`: displays all cities in the chain
+    `/stats cities ([show-everyone])`: displays cities that cannot be repeated
+    `/stats server ([show-everyone])`: displays server stats
+    `/stats user ([member][show-everyone])`: displays user stats
+    `/stats slb ([show-everyone])`: displays server leaderboard
+    `/stats lb ([show-everyone])`: displays global leaderboard
+    `/stats best-rounds ([show-everyone])`: displays 5 longest chains
+    `/stats popular-cities ([show-everyone])`: displays 10 most popular cities and countries in the chain
+    `/stats round [round]([show-everyone])`: gets list of cities for a specific round
+    `/stats react ([show-everyone])`: gets all cities with reactions
+    `/stats repeat ([show-everyone])`: gets all cities that can be repeated anytime
+    `/stats blocked-users ([show-everyone])`: gets the list of users in the server blocked from using the bot
+    
+    There are a few other commands as well:
+    `/city-info [city] ([administrative-division][country])`: gets information about the given city
+    `/alt-names [city] ([administrative-division][country])`: gets the given city's alternate names
+    `delete-stats`: deletes stats for your server
+    `/ping`: shows bot latency
+    `/block [user]`: blocks a certain user if they are purposefully ruining the chain
+    `/unblock [user]`: unblocks a certain user
+    `/help`: lists commands and what they do""")
+    for channel in guild.text_channels:
+        if channel.permissions_for(guild.me).send_messages:
+            await channel.send(embed=embed)
+        break
 
 modperms=discord.Permissions(moderate_members=True)
 discord.PermissionOverwrite()
@@ -1282,10 +1324,10 @@ async def bestrds(interaction: discord.Interaction,se:Optional[Literal['yes','no
         embed.add_field(name='',value='```null```')
     await interaction.followup.send(embed=embed,ephemeral=eph)
 
-@stats.command(name='banned-users',description="Point and laugh.")
+@stats.command(name='blocked-users',description="Point and laugh.")
 @app_commands.rename(se='show-everyone')
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
-async def banned(interaction:discord.Interaction,se:Optional[Literal['yes','no']]='no'):
+async def blocked(interaction:discord.Interaction,se:Optional[Literal['yes','no']]='no'):
     eph=True if se=='no' else False
     await interaction.response.defer(ephemeral=eph)
     cur.execute('select user_id from bans where banned=?',data=(True,))
@@ -1402,6 +1444,50 @@ async def unblock(interaction: discord.Interaction,member: discord.Member):
     cur.execute('''update bans set banned=? where user_id=?''',data=(False,member.id))
     conn.commit()
     await interaction.response.send_message(f"<@{member.id}> has been unblocked. ")
+
+@tree.command(description="Lists all commands and what they do. ")
+async def help(interaction: discord.Interaction):
+    embed=discord.Embed(color=discord.Colour.from_rgb(0,255,0),description=
+    """Set commands:
+    `/set channel [channel]`: sets the channel the bot will listen to
+    `/set prefix ([prefix])`: sets prefix to use when listening for cities
+    `/set choose-city [option]`: if turned on, allows bot to choose the city that begins the next chain
+    `/set population`: sets minimum population for cities
+    `/set repeat [num]`: sets number of different cities that have to be said before a city can be repeated again. If set to -1, repeating is disallowed
+    
+    Reaction/Repeat commands: 
+    `/add react [city] ([administrative-division][country])`: bot autoreacts an emoji when a given city is said
+    `/remove react [city] ([administrative-division][country])`: bot removes autoreact for given city
+
+    `/add repeat [city] ([administrative-division][country])`: bot will ignore no repeats rule for given city
+    `/remove repeat [city] ([administrative-division][country])`: bot removes repeating exception for given city
+    
+    Stats commands:
+    `/stats cities-all ([show-everyone])`: displays all cities in the chain
+    `/stats cities ([show-everyone])`: displays cities that cannot be repeated
+    `/stats server ([show-everyone])`: displays server stats
+    `/stats user ([member][show-everyone])`: displays user stats
+    `/stats slb ([show-everyone])`: displays server leaderboard
+    `/stats lb ([show-everyone])`: displays global leaderboard
+    `/stats best-rounds ([show-everyone])`: displays 5 longest chains
+    `/stats popular-cities ([show-everyone])`: displays 10 most popular cities and countries in the chain
+    `/stats round [round]([show-everyone])`: gets list of cities for a specific round
+    `/stats react ([show-everyone])`: gets all cities with reactions
+    `/stats repeat ([show-everyone])`: gets all cities that can be repeated anytime
+    `/stats blocked-users ([show-everyone])`: gets the list of users in the server blocked from using the bot
+
+    Other commands:
+    `/city-info [city] ([administrative-division][country])`: gets information about the given city
+    `/alt-names [city] ([administrative-division][country])`: gets the given city's alternate names
+    `delete-stats`: deletes stats for your server
+    `/ping`: shows bot latency
+    `/block [user]`: blocks a certain user if they are purposefully ruining the chain
+    `/unblock [user]`: unblocks a certain user
+    `/help`: sends this message""")
+    await interaction.response.send_message(embed=embed)
+    
+
+
 
 # @tree.command(description="sync global and server user stats")
 # @app_commands.default_permissions(moderate_members=True)
