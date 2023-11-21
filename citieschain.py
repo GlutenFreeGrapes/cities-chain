@@ -409,7 +409,7 @@ async def on_guild_join(guild:discord.Guild):
     
     There are a few other commands as well:
     `/city-info [city] ([administrative-division][country])`: gets information about the given city
-    `/alt-names [city] ([administrative-division][country])`: gets the given city's alternate names
+    `/country-info [country]`: gets information about the given country
     `delete-stats`: deletes stats for your server
     `/ping`: shows bot latency
     `/block [user]`: blocks a certain user if they are purposefully ruining the chain
@@ -1518,7 +1518,7 @@ async def help(interaction: discord.Interaction):
 
     Other commands:
     `/city-info [city] ([administrative-division][country])`: gets information about the given city
-    `/alt-names [city] ([administrative-division][country])`: gets the given city's alternate names
+    /country-info [country]`: gets information about the given country
     `delete-stats`: deletes stats for your server
     `/ping`: shows bot latency
     `/block [user]`: blocks a certain user if they are purposefully ruining the chain
