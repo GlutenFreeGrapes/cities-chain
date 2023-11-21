@@ -1365,46 +1365,86 @@ async def cityinfo(interaction: discord.Interaction, city:str, province:Optional
         embed.add_field(name='Count',value=count,inline=True)
         embed.add_field(name='Name',value=dname,inline=True)
         alts=aname[(aname['default']==0)]['name']
+        secondEmbed=False
         if alts.shape[0]!=0:
             joinednames='`'+'`,`'.join(alts)+'`'
             if len(joinednames)<=1024:
                 embed.add_field(name='Alternate Names',value=joinednames,inline=False)
             else:
-                embed.add_field(name='Alternate Names',value='List of alternate names too long. Use `/alt-names [city]` to get list of alternate names.',inline=False)
+                secondEmbed=True
+                embed2=discord.Embed(title='Alternate Names - %s'%dname,color=discord.Colour.from_rgb(0,255,0),description=joinednames)
         else:
             embed.add_field(name='',value='',inline=False)
         if default['admin1']:
             embed.add_field(name='Administrative Division',value=admin1data[(admin1data['country']==default['country'])&(admin1data['admin1']==default['admin1'])&(admin1data['default']==1)]['name'].iloc[0],inline=True)
         if default['alt-country']:
-            embed.add_field(name='Countries',value=default['country']+' ('+iso2[default['country']]+')\n'+default['alt-country']+' ('+iso2[default['alt-country']]+')',inline=True)
+            embed.add_field(name='Countries',value=':flag_'+default['country'].lower()+': '+iso2[default['country']]+' ('+default['country']+')\n'+':flag_'+default['alt-country'].lower()+': '+iso2[default['alt-country']]+' ('+default['alt-country']+')',inline=True)
         else:
-            embed.add_field(name='Country',value=default['country']+' ('+iso2[default['country']]+')',inline=True)
+            embed.add_field(name='Country',value=':flag_'+default['country'].lower()+': '+iso2[default['country']]+' ('+default['country']+')',inline=True)
         embed.add_field(name='Population',value=f"{default['population']:,}",inline=True)
-        await interaction.followup.send(embed=embed,ephemeral=eph)
+        if secondEmbed:
+            await interaction.followup.send(embeds=[embed,embed2],ephemeral=eph)
+        else:
+            await interaction.followup.send(embed=embed,ephemeral=eph)
     else:
         await interaction.followup.send('City not recognized. Please try again. ',ephemeral=eph)
 
-@tree.command(name='alt-names',description='Gets alternate names for a given city.')
-@app_commands.describe(city="The city to get alternate names for",province="State, province, etc that the city is located in",country="Country the city is located in",se='Yes to show everyone stats, no otherwise')
-@app_commands.rename(province='administrative-division',se='show-everyone')
+@tree.command(name='country-info',description='Gets information for a given city.')
+@app_commands.describe(country="The country to get information for",se='Yes to show everyone stats, no otherwise')
+@app_commands.rename(se='show-everyone')
 @app_commands.autocomplete(country=countrycomplete)
-async def altnames(interaction: discord.Interaction, city:str, province:Optional[str]=None, country:Optional[str]=None,se:Optional[Literal['yes','no']]='no'):
+async def countryinfo(interaction: discord.Interaction, country:str,se:Optional[Literal['yes','no']]='no'):
     eph=True if se=='no' else False
     await interaction.response.defer(ephemeral=eph)
-    res=search_cities(city,province,country,0)
-    if res:
-        aname=citydata[(citydata['geonameid']==res[0])]
+    countrysearch=country.casefold().strip()
+    res=countriesdata[((countriesdata['name'].str.casefold()==countrysearch)|(countriesdata['country'].str.casefold()==countrysearch))].iloc[0]
+    if res.shape[0]!=0:
+        cur.execute("select count(*) from chain_info where server_id=? and country_code=? and valid=?",data=(interaction.guild_id,res['country'],True))
+        count=cur.fetchone()[0]
+        aname=countriesdata[(countriesdata['geonameid']==res['geonameid'])]
         default=aname[aname['default']==1].iloc[0]
         dname=default['name']
-        embed=discord.Embed(title='Alternate Names - %s'%dname,color=discord.Colour.from_rgb(0,255,0))
-        alts=aname[aname['default']==0]['name']
-        if alts.shape[0]>0:
-            embed.description='`'+'`,`'.join(alts)+'`'
+        embed=discord.Embed(title='Information - :flag_%s: %s (%s) - Count: %s'%(res['country'].lower(),dname,res['country'],count),color=discord.Colour.from_rgb(0,255,0))
+        alts=aname[(aname['default']==0)]['name']
+        if alts.shape[0]!=0:
+            joinednames='`'+'`,`'.join(alts)+'`'
+            if (len(joinednames)<4096):
+                embed.description=joinednames
+                await interaction.followup.send(embed=embed,ephemeral=eph)
+            else:
+                commaindex=joinednames[:4096].rfind(',')+1
+                embed.description=joinednames[:commaindex]
+                embed2=discord.Embed(color=discord.Colour.from_rgb(0,255,0))
+                embed2.description=joinednames[commaindex:]
+                await interaction.followup.send(embed=embed,ephemeral=eph)
+                await interaction.followup.send(embed=embed2,ephemeral=eph)
         else:
-            embed.description='There are no alternate names for this city.'
-        await interaction.followup.send(embed=embed,ephemeral=eph)
+            embed.description='There are no alternate names for this country.'
+            await interaction.followup.send(embed=embed,ephemeral=eph)
     else:
-        await interaction.followup.send('City not recognized. Please try again. ',ephemeral=eph)
+        await interaction.followup.send('Country not recognized. Please try again. ',ephemeral=eph)
+
+# @tree.command(name='alt-names',description='Gets alternate names for a given city.')
+# @app_commands.describe(city="The city to get alternate names for",province="State, province, etc that the city is located in",country="Country the city is located in",se='Yes to show everyone stats, no otherwise')
+# @app_commands.rename(province='administrative-division',se='show-everyone')
+# @app_commands.autocomplete(country=countrycomplete)
+# async def altnames(interaction: discord.Interaction, city:str, province:Optional[str]=None, country:Optional[str]=None,se:Optional[Literal['yes','no']]='no'):
+#     eph=True if se=='no' else False
+#     await interaction.response.defer(ephemeral=eph)
+#     res=search_cities(city,province,country,0)
+#     if res:
+#         aname=citydata[(citydata['geonameid']==res[0])]
+#         default=aname[aname['default']==1].iloc[0]
+#         dname=default['name']
+#         embed=discord.Embed(title='Alternate Names - %s'%dname,color=discord.Colour.from_rgb(0,255,0))
+#         alts=aname[aname['default']==0]['name']
+#         if alts.shape[0]>0:
+#             embed.description='`'+'`,`'.join(alts)+'`'
+#         else:
+#             embed.description='There are no alternate names for this city.'
+#         await interaction.followup.send(embed=embed,ephemeral=eph)
+#     else:
+#         await interaction.followup.send('City not recognized. Please try again. ',ephemeral=eph)
 
 @tree.command(name='delete-stats',description='Deletes server stats.')
 @app_commands.default_permissions(moderate_members=True)
