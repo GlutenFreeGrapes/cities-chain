@@ -1362,7 +1362,7 @@ async def cityinfo(interaction: discord.Interaction, city:str, province:Optional
         dname=default['name']
         embed=discord.Embed(title='Information - %s'%dname,color=discord.Colour.from_rgb(0,255,0))
         embed.add_field(name='Geonames ID',value=res[0],inline=True)
-        embed.add_field(name='Count',value=count,inline=True)
+        embed.add_field(name='Count',value=f"{count:,}",inline=True)
         embed.add_field(name='Name',value=dname,inline=True)
         alts=aname[(aname['default']==0)]['name']
         secondEmbed=False
@@ -1404,7 +1404,7 @@ async def countryinfo(interaction: discord.Interaction, country:str,se:Optional[
         aname=countriesdata[(countriesdata['geonameid']==res['geonameid'])]
         default=aname[aname['default']==1].iloc[0]
         dname=default['name']
-        embed=discord.Embed(title='Information - :flag_%s: %s (%s) - Count: %s'%(res['country'].lower(),dname,res['country'],count),color=discord.Colour.from_rgb(0,255,0))
+        embed=discord.Embed(title='Information - :flag_%s: %s (%s) - Count: %s'%(res['country'].lower(),dname,res['country'],f"{count:,}"),color=discord.Colour.from_rgb(0,255,0))
         alts=aname[(aname['default']==0)]['name']
         if alts.shape[0]!=0:
             joinednames='`'+'`,`'.join(alts)+'`'
