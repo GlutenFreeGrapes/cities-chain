@@ -152,7 +152,7 @@ def search_cities(city,province,country,checkApostrophe):
         if checkApostrophe:
             return None
         else:
-            return search_cities(city.replace("`","'").replace("’","'").replace("ʻ","'"),province,country,1)
+            return search_cities(city.replace("`","'").replace("’","'").replace("ʻ","'").replace("ʼ","'"),province,country,1)
     else:
         r=results.sort_values(['default','population','match'],ascending=[0,0,1]).head(1).iloc[0]
         return (int(r['geonameid']),r,r[s[r['match']]])
@@ -178,8 +178,6 @@ def search_cities_chain(query, checkApostrophe):
 
     results=pd.concat([res1,res2,res3,res4])
     results=results.drop_duplicates(subset=('geonameid','name'))
-    if results.shape[0]==0:
-        return None
     if len(p)==2:
         otherdivision=p[1]
         cchoice=countriesdata[(countriesdata['name'].str.casefold()==otherdivision)|(countriesdata['country'].str.casefold()==otherdivision)]
@@ -235,7 +233,7 @@ def search_cities_chain(query, checkApostrophe):
         if checkApostrophe:
             return None
         else:
-            return search_cities_chain(query.replace("`","'").replace("’","'").replace("ʻ","'"),1)
+            return search_cities_chain(query.replace("`","'").replace("’","'").replace("ʻ","'").replace("ʼ","'"),1)
     else:
         r=results.sort_values(['default','population','match'],ascending=[0,0,1]).head(1).iloc[0]
         return (int(r['geonameid']),r,r[s[r['match']]])
@@ -1518,7 +1516,7 @@ async def help(interaction: discord.Interaction):
 
     Other commands:
     `/city-info [city] ([administrative-division][country])`: gets information about the given city
-    /country-info [country]`: gets information about the given country
+    `/country-info [country]`: gets information about the given countryes
     `delete-stats`: deletes stats for your server
     `/ping`: shows bot latency
     `/block [user]`: blocks a certain user if they are purposefully ruining the chain
