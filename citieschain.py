@@ -378,20 +378,19 @@ async def on_guild_join(guild:discord.Guild):
     embed=discord.Embed(color=discord.Colour.from_rgb(0,255,0),description=
     """Use the **/set channel [channel]** command to set the channel the bot will listen to. **This must be done in order for the bot to work.**
 
-    You can also change some other settings around too:
+    **You can also change some other settings around too:**
     `/set prefix ([prefix])`: sets prefix to use when listening for cities
     `/set choose-city [option]`: if turned on, allows bot to choose the city that begins the next chain
     `/set population`: sets minimum population for cities
     `/set repeat [num]`: sets number of different cities that have to be said before a city can be repeated again. If set to -1, repeating is disallowed
     
-    There are also a few other things that can be tweaked: 
+    **There are also a few other things that can be tweaked: **
     `/add react [city] ([administrative-division][country])`: bot autoreacts an emoji when a given city is said
     `/remove react [city] ([administrative-division][country])`: bot removes autoreact for given city
-
     `/add repeat [city] ([administrative-division][country])`: bot will ignore no repeats rule for given city
     `/remove repeat [city] ([administrative-division][country])`: bot removes repeating exception for given city
     
-    For stats:
+    **For stats:**
     `/stats cities-all ([show-everyone])`: displays all cities in the chain
     `/stats cities ([show-everyone])`: displays cities that cannot be repeated
     `/stats server ([show-everyone])`: displays server stats
@@ -405,7 +404,7 @@ async def on_guild_join(guild:discord.Guild):
     `/stats repeat ([show-everyone])`: gets all cities that can be repeated anytime
     `/stats blocked-users ([show-everyone])`: gets the list of users in the server blocked from using the bot
     
-    There are a few other commands as well:
+    **There are a few other commands as well:**
     `/city-info [city] ([administrative-division][country])`: gets information about the given city
     `/country-info [country]`: gets information about the given country
     `delete-stats`: deletes stats for your server
@@ -430,7 +429,7 @@ async def channel(interaction: discord.Interaction, channel: discord.TextChannel
     cur.execute('select user_id from bans where banned=?',data=(True,))
     bans={i[0] for i in cur}
     if interaction.user.id in bans:
-        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
+        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ")
         return
     cur.execute('''update server_info
         set channel_id = ?
@@ -445,7 +444,7 @@ async def repeat(interaction: discord.Interaction, num: app_commands.Range[int,-
     cur.execute('select user_id from bans where banned=?',data=(True,))
     bans={i[0] for i in cur}
     if interaction.user.id in bans:
-        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
+        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ")
         return
     cur.execute('''select chain_end from server_info
                 where server_id = ?''', data=(interaction.guild_id,))
@@ -481,7 +480,7 @@ async def population(interaction: discord.Interaction, population: app_commands.
     cur.execute('select user_id from bans where banned=?',data=(True,))
     bans={i[0] for i in cur}
     if interaction.user.id in bans:
-        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
+        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ")
         return
     cur.execute('''select chain_end from server_info
                 where server_id = ?''', data=(interaction.guild_id,))
@@ -502,7 +501,7 @@ async def prefix(interaction: discord.Interaction, prefix: Optional[app_commands
     cur.execute('select user_id from bans where banned=?',data=(True,))
     bans={i[0] for i in cur}
     if interaction.user.id in bans:
-        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
+        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ")
         return
     cur.execute('''select chain_end from server_info
                 where server_id = ?''', data=(interaction.guild_id,))
@@ -526,7 +525,7 @@ async def choosecity(interaction: discord.Interaction, option:Literal["on","off"
     cur.execute('select user_id from bans where banned=?',data=(True,))
     bans={i[0] for i in cur}
     if interaction.user.id in bans:
-        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
+        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ")
         return
     guildid=interaction.guild_id
     cur.execute('''select chain_end,min_pop,round_number,choose_city from server_info
@@ -579,7 +578,7 @@ async def react(interaction: discord.Interaction, city:str, province:Optional[st
     cur.execute('select user_id from bans where banned=?',data=(True,))
     bans={i[0] for i in cur}
     if interaction.user.id in bans:
-        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
+        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ")
         return
     res=search_cities(city,province,country,0)
     if res:
@@ -620,7 +619,7 @@ async def repeat(interaction: discord.Interaction, city:str, province:Optional[s
     cur.execute('select user_id from bans where banned=?',data=(True,))
     bans={i[0] for i in cur}
     if interaction.user.id in bans:
-        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
+        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ")
         return
     cur.execute('''select chain_end,min_pop,round_number from server_info
                 where server_id = ?''', data=(interaction.guild_id,))
@@ -652,7 +651,7 @@ async def react(interaction: discord.Interaction, city:str, province:Optional[st
     cur.execute('select user_id from bans where banned=?',data=(True,))
     bans={i[0] for i in cur}
     if interaction.user.id in bans:
-        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
+        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ")
         return
     res=search_cities(city,province,country,0)
     if res:
@@ -674,7 +673,7 @@ async def repeat(interaction: discord.Interaction, city:str, province:Optional[s
     cur.execute('select user_id from bans where banned=?',data=(True,))
     bans={i[0] for i in cur}
     if interaction.user.id in bans:
-        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
+        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ")
         return
     cur.execute('''select chain_end from server_info
                 where server_id = ?''', data=(interaction.guild_id,))
@@ -1454,7 +1453,7 @@ async def deletestats(interaction: discord.Interaction):
 
 @tree.command(description="Tests the client's latency. ")
 async def ping(interaction: discord.Interaction):
-    await interaction.followup.send('Pong! `%s ms`'%(client.latency*1000))
+    await interaction.response.send_message('Pong! `%s ms`'%(client.latency*1000))
 
 @tree.command(description="Blocks a user. ")
 @app_commands.default_permissions(moderate_members=True)
@@ -1486,21 +1485,20 @@ async def unblock(interaction: discord.Interaction,member: discord.Member):
 @tree.command(description="Lists all commands and what they do. ")
 async def help(interaction: discord.Interaction):
     embed=discord.Embed(color=discord.Colour.from_rgb(0,255,0),description=
-    """Set commands:
+    """**Set commands:**
     `/set channel [channel]`: sets the channel the bot will listen to
     `/set prefix ([prefix])`: sets prefix to use when listening for cities
     `/set choose-city [option]`: if turned on, allows bot to choose the city that begins the next chain
     `/set population`: sets minimum population for cities
     `/set repeat [num]`: sets number of different cities that have to be said before a city can be repeated again. If set to -1, repeating is disallowed
     
-    Reaction/Repeat commands: 
+    **Reaction/Repeat commands:**
     `/add react [city] ([administrative-division][country])`: bot autoreacts an emoji when a given city is said
     `/remove react [city] ([administrative-division][country])`: bot removes autoreact for given city
-
     `/add repeat [city] ([administrative-division][country])`: bot will ignore no repeats rule for given city
     `/remove repeat [city] ([administrative-division][country])`: bot removes repeating exception for given city
     
-    Stats commands:
+    **Stats commands:**
     `/stats cities-all ([show-everyone])`: displays all cities in the chain
     `/stats cities ([show-everyone])`: displays cities that cannot be repeated
     `/stats server ([show-everyone])`: displays server stats
@@ -1514,7 +1512,7 @@ async def help(interaction: discord.Interaction):
     `/stats repeat ([show-everyone])`: gets all cities that can be repeated anytime
     `/stats blocked-users ([show-everyone])`: gets the list of users in the server blocked from using the bot
 
-    Other commands:
+    **Other commands:**
     `/city-info [city] ([administrative-division][country])`: gets information about the given city
     `/country-info [country]`: gets information about the given countryes
     `delete-stats`: deletes stats for your server
