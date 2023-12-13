@@ -24,8 +24,6 @@ conn = mariadb.connect(
     database=None)
 cur = conn.cursor() 
 
-# cur.execute('drop database ' + env["DB_NAME"])
-
 cur.execute('create database if not exists ' + env["DB_NAME"])
 cur.execute('use ' + env["DB_NAME"])
 
@@ -238,9 +236,41 @@ def search_cities_chain(query, checkApostrophe):
         r=results.sort_values(['default','population','match'],ascending=[0,0,1]).head(1).iloc[0]
         return (int(r['geonameid']),r,r[s[r['match']]])
     
+class Help(discord.ui.View):
+    def __init__(self,messages):
+        super().__init__()
+        self.children[0].disabled=True
+        self.messages=messages
+    async def updateembed(self,index,interaction):
+        await interaction.response.defer()
+        new=discord.Embed(color=discord.Colour.from_rgb(0,255,0),description=self.messages[index])
+        for i in self.children:
+            i.disabled=False
+        self.children[index].disabled=True
+        await interaction.message.edit(embed=new,view=self)
+        self.message=await interaction.original_response()
+
+    @discord.ui.button(label='SET', style=discord.ButtonStyle.primary)
+    async def setButton(self, interaction, button):
+        await self.updateembed(0,interaction)
+
+    @discord.ui.button(label='REACT/REPEAT', style=discord.ButtonStyle.primary)
+    async def reactRepeatButton(self, interaction, button):
+        await self.updateembed(1,interaction)
+
+    @discord.ui.button(label='STATS', style=discord.ButtonStyle.primary)
+    async def statsButton(self, interaction, button):
+        await self.updateembed(2,interaction)
+
+    @discord.ui.button(label='OTHER COMMANDS', style=discord.ButtonStyle.primary)
+    async def otherButton(self, interaction, button):
+        await self.updateembed(3,interaction)
+
+
+
 class Paginator(discord.ui.View):
     def __init__(self,page,blist,title,lens,user):
-        super().__init__(timeout=180)
+        super().__init__()
         self.page=page
         self.blist=blist
         self.title=title
@@ -266,11 +296,7 @@ class Paginator(discord.ui.View):
             for i in self.children:
                 i.disabled=False
             self.children[2].label="%s/%s"%(self.page,self.lens)
-    async def on_timeout(self):
-        for i in self.children:
-            i.disabled=True
-        new=discord.Embed(title=self.title, color=discord.Colour.from_rgb(0,255,0),description='\n'.join(self.blist[self.page*25-25:self.page*25]))
-        await self.message.edit(embed=new,view=self)
+
     async def updateembed(self,interaction:discord.Interaction):
         if self.lens==1:
             for i in self.children:
@@ -375,21 +401,22 @@ async def on_ready():
 @client.event
 async def on_guild_join(guild:discord.Guild):
     cur.execute('''insert into server_info(server_id) VALUES (?)''',data=(guild.id,))
-    embed=discord.Embed(color=discord.Colour.from_rgb(0,255,0),description=
-    """Use the **/set channel [channel]** command to set the channel the bot will listen to. **This must be done in order for the bot to work.**
+    messages=["""Use the **/set channel [channel]** command to set the channel the bot will listen to. **This must be done in order for the bot to work.**
 
     **You can also change some other settings around too:**
     `/set prefix ([prefix])`: sets prefix to use when listening for cities
     `/set choose-city [option]`: if turned on, allows bot to choose the city that begins the next chain
     `/set population`: sets minimum population for cities
     `/set repeat [num]`: sets number of different cities that have to be said before a city can be repeated again. If set to -1, repeating is disallowed
-    
+    """,
+    """
     **There are also a few other things that can be tweaked: **
     `/add react [city] ([administrative-division][country])`: bot autoreacts an emoji when a given city is said
     `/remove react [city] ([administrative-division][country])`: bot removes autoreact for given city
     `/add repeat [city] ([administrative-division][country])`: bot will ignore no repeats rule for given city
     `/remove repeat [city] ([administrative-division][country])`: bot removes repeating exception for given city
-    
+    """,
+    """
     **For stats:**
     `/stats cities-all ([show-everyone])`: displays all cities in the chain
     `/stats cities ([show-everyone])`: displays cities that cannot be repeated
@@ -403,7 +430,8 @@ async def on_guild_join(guild:discord.Guild):
     `/stats react ([show-everyone])`: gets all cities with reactions
     `/stats repeat ([show-everyone])`: gets all cities that can be repeated anytime
     `/stats blocked-users ([show-everyone])`: gets the list of users in the server blocked from using the bot
-    
+    """,
+    """
     **There are a few other commands as well:**
     `/city-info [city] ([administrative-division][country])`: gets information about the given city
     `/country-info [country]`: gets information about the given country
@@ -411,10 +439,12 @@ async def on_guild_join(guild:discord.Guild):
     `/ping`: shows bot latency
     `/block [user]`: blocks a certain user if they are purposefully ruining the chain
     `/unblock [user]`: unblocks a certain user
-    `/help`: lists commands and what they do""")
+    `/help`: lists commands and what they do"""]
+    embed=discord.Embed(color=discord.Colour.from_rgb(0,255,0),description=messages[0])
+    
     for channel in guild.text_channels:
         if channel.permissions_for(guild.me).send_messages:
-            await channel.send(embed=embed)
+            await channel.send(embed=embed,view=Help(messages))
         break
 
 modperms=discord.Permissions(moderate_members=True)
@@ -732,9 +762,6 @@ async def chain(message:discord.Message):
             bans={i[0] for i in cur}
             if authorid in bans:
                 message.add_reaction('\N{NO PEDESTRIANS}')
-                # await (message.author.send("You are blocked from using this bot. "))
-                # await message.reply(":no_pedestrians: You are blocked from using this bot. ")
-                # await message.channel.send(":no_pedestrians: You are blocked from using this bot. ",reference=message)
                 return
             cur.execute('''select * from server_user_info where user_id = ? and server_id = ?''',data=(authorid,message.guild.id))
             if cur.rowcount==0:
@@ -1421,28 +1448,6 @@ async def countryinfo(interaction: discord.Interaction, country:str,se:Optional[
     else:
         await interaction.followup.send('Country not recognized. Please try again. ',ephemeral=eph)
 
-# @tree.command(name='alt-names',description='Gets alternate names for a given city.')
-# @app_commands.describe(city="The city to get alternate names for",province="State, province, etc that the city is located in",country="Country the city is located in",se='Yes to show everyone stats, no otherwise')
-# @app_commands.rename(province='administrative-division',se='show-everyone')
-# @app_commands.autocomplete(country=countrycomplete)
-# async def altnames(interaction: discord.Interaction, city:str, province:Optional[str]=None, country:Optional[str]=None,se:Optional[Literal['yes','no']]='no'):
-#     eph=True if se=='no' else False
-#     await interaction.response.defer(ephemeral=eph)
-#     res=search_cities(city,province,country,0)
-#     if res:
-#         aname=citydata[(citydata['geonameid']==res[0])]
-#         default=aname[aname['default']==1].iloc[0]
-#         dname=default['name']
-#         embed=discord.Embed(title='Alternate Names - %s'%dname,color=discord.Colour.from_rgb(0,255,0))
-#         alts=aname[aname['default']==0]['name']
-#         if alts.shape[0]>0:
-#             embed.description='`'+'`,`'.join(alts)+'`'
-#         else:
-#             embed.description='There are no alternate names for this city.'
-#         await interaction.followup.send(embed=embed,ephemeral=eph)
-#     else:
-#         await interaction.followup.send('City not recognized. Please try again. ',ephemeral=eph)
-
 @tree.command(name='delete-stats',description='Deletes server stats.')
 @app_commands.default_permissions(moderate_members=True)
 async def deletestats(interaction: discord.Interaction):
@@ -1484,20 +1489,22 @@ async def unblock(interaction: discord.Interaction,member: discord.Member):
 
 @tree.command(description="Lists all commands and what they do. ")
 async def help(interaction: discord.Interaction):
-    embed=discord.Embed(color=discord.Colour.from_rgb(0,255,0),description=
-    """**Set commands:**
+    await interaction.response.defer()
+    messages=["""**Set commands:**
     `/set channel [channel]`: sets the channel the bot will listen to
     `/set prefix ([prefix])`: sets prefix to use when listening for cities
     `/set choose-city [option]`: if turned on, allows bot to choose the city that begins the next chain
     `/set population`: sets minimum population for cities
     `/set repeat [num]`: sets number of different cities that have to be said before a city can be repeated again. If set to -1, repeating is disallowed
-    
-    **Reaction/Repeat commands:**
+    """,
+    """
+    **Reaction/Repeat commands (requires mo):**
     `/add react [city] ([administrative-division][country])`: bot autoreacts an emoji when a given city is said
     `/remove react [city] ([administrative-division][country])`: bot removes autoreact for given city
     `/add repeat [city] ([administrative-division][country])`: bot will ignore no repeats rule for given city
     `/remove repeat [city] ([administrative-division][country])`: bot removes repeating exception for given city
-    
+    """,
+    """
     **Stats commands:**
     `/stats cities-all ([show-everyone])`: displays all cities in the chain
     `/stats cities ([show-everyone])`: displays cities that cannot be repeated
@@ -1511,7 +1518,8 @@ async def help(interaction: discord.Interaction):
     `/stats react ([show-everyone])`: gets all cities with reactions
     `/stats repeat ([show-everyone])`: gets all cities that can be repeated anytime
     `/stats blocked-users ([show-everyone])`: gets the list of users in the server blocked from using the bot
-
+    """,
+    """
     **Other commands:**
     `/city-info [city] ([administrative-division][country])`: gets information about the given city
     `/country-info [country]`: gets information about the given countryes
@@ -1519,34 +1527,9 @@ async def help(interaction: discord.Interaction):
     `/ping`: shows bot latency
     `/block [user]`: blocks a certain user if they are purposefully ruining the chain
     `/unblock [user]`: unblocks a certain user
-    `/help`: sends this message""")
-    await interaction.response.send_message(embed=embed)
-    
-
-
-
-# @tree.command(description="sync global and server user stats")
-# @app_commands.default_permissions(moderate_members=True)
-# async def temp(interaction: discord.Interaction):
-#     cur.execute("""select distinct user_id from server_user_info""")
-#     users={i for i in cur}
-#     for i in users:
-#         cur.execute("""select correct,incorrect,score,last_active from server_user_info where user_id=?""",data=i)
-#         c,ic,s,la=0,0,0,0
-#         for (j,k,l,m) in cur:
-#             c+=j
-#             ic+=k
-#             s+=l
-#             la=max(la,m)
-#         cur.execute("""select * from global_user_info where user_id=?""",data=i)
-#         if cur.rowcount>0:
-#             cur.execute("""update global_user_info set correct=?,incorrect=?,score=?,last_active=? where user_id=?""",data=(c,ic,s,la,i[0]))
-#         else:
-#             cur.execute("""insert into global_user_info(user_id,correct,incorrect,score,last_active) values (?,?,?,?,?)""",data=(i[0],c,ic,s,la))
-#     conn.commit()
-#     await interaction.response.send_message("stats should sync now", ephemeral=1)
-
-
+    `/help`: sends this message"""]
+    embed=discord.Embed(color=discord.Colour.from_rgb(0,255,0),description=messages[0])
+    await interaction.followup.send(embed=embed,view=Help(messages))
 
 tree.add_command(assign)
 tree.add_command(add)
