@@ -238,7 +238,7 @@ def search_cities_chain(query, checkApostrophe):
     
 class Help(discord.ui.View):
     def __init__(self,messages):
-        super().__init__()
+        super().__init__(timeout=None)
         self.children[0].disabled=True
         self.messages=messages
     async def updateembed(self,index,interaction):
@@ -270,7 +270,7 @@ class Help(discord.ui.View):
 
 class Paginator(discord.ui.View):
     def __init__(self,page,blist,title,lens,user):
-        super().__init__()
+        super().__init__(timeout=None)
         self.page=page
         self.blist=blist
         self.title=title
