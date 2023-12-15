@@ -1549,38 +1549,6 @@ async def help(interaction: discord.Interaction):
     embed=discord.Embed(color=discord.Colour.from_rgb(0,255,0),description=messages[0])
     await interaction.followup.send(embed=embed,view=Help(messages))
 
-#  TEMPORARY COMMAND, DELETE LATER
-@tree.command(name="sync-count")
-@app_commands.default_permissions(moderate_members=True)
-async def synccount(interaction:discord.Interaction):
-    await interaction.response.defer()
-    cur.execute('''select distinct server_id,city_id,country,country_code,alt_country from chain_info where valid=1 and user_id is not null''')
-    totalcities=cur.rowcount
-    citieslist=[i for i in cur]
-    for i in citieslist:
-        for j in citieslist:
-            if (i!=j) and (i[0]==j[0]) and (i[1]==j[1]):
-                print(i,j)
-    cur.execute('''truncate table count_info''')
-    conn.commit()
-    await interaction.followup.send(f'**0/{totalcities}** cities processed (**0%**)')
-    interaction.message=await interaction.original_response()
-    c=0.1
-    for n,i in enumerate(citieslist):
-        cur.execute('''select count(*) from chain_info where server_id = ? and city_id = ? and valid=1 and user_id is not null''', data=i[:2])
-        try:
-            j=allnames.loc[i[1]]
-        except Exception as e:
-            j={'name':'Weather Station','admin1':'03','country':'IT'}
-
-        cur.execute('''insert into count_info(server_id,city_id,name,admin1,country,country_code,alt_country,count) values (?,?,?,?,?,?,?,?)''',data=(i[0],i[1],j['name'],admin1data[(admin1data['country']==j['country'])&(admin1data['admin1']==j['admin1'])&(admin1data['default']==1)]['name'].iloc[0] if j['admin1'] else None,i[2],i[3],i[4],cur.fetchone()[0]))
-        if ((n+1)/totalcities)>c:
-            await interaction.message.edit(content=f'**{n+1}/{totalcities}** cities processed (**{int(100*(n+1)/totalcities)}%**)')
-            interaction.message=await interaction.original_response()
-            c+=max(.1,1/totalcities)
-    await interaction.message.edit(content=f'**{totalcities}/{totalcities}** cities processed (**100%**)')
-    conn.commit()
-
 tree.add_command(assign)
 tree.add_command(add)
 tree.add_command(remove)
