@@ -1223,7 +1223,7 @@ async def repeat(interaction: discord.Interaction,se:Optional[Literal['yes','no'
 async def popular(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
     eph=True if se=='no' else False
     await interaction.response.defer(ephemeral=eph)
-    cur.execute('''select distinct city_id,admin1,country_code,alt_country from count_info where server_id = ? order by count desc''',data=(interaction.guild_id,))
+    cur.execute('''select distinct city_id,country_code,alt_country from count_info where server_id = ? order by count desc''',data=(interaction.guild_id,))
     cities=[i for i in cur]
     embed=discord.Embed(title="Popular Cities/Countries - `%s`"%interaction.guild.name,color=discord.Colour.from_rgb(0,255,0))
     if len(cities)>0:
@@ -1232,7 +1232,7 @@ async def popular(interaction: discord.Interaction,se:Optional[Literal['yes','no
             cur.execute('''select count from count_info where server_id = ? and city_id = ?''',data=(interaction.guild_id,i[0]))
             c=cur.fetchone()[0]
             j=allnames.loc[(i[0])]
-            k,l,m,n=j['name'],i[1],i[2],i[3]
+            k,l,m,n=j['name'],admin1data[(admin1data['country']==j['country'])&(admin1data['admin1']==j['admin1'])&(admin1data['default']==1)]['name'].iloc[0] if j['admin1'] else None,i[1],i[2]
             if l:
                 if n:
                     loctuple=(k,l,m+'/'+n)
@@ -1554,16 +1554,26 @@ async def help(interaction: discord.Interaction):
 @app_commands.default_permissions(moderate_members=True)
 async def synccount(interaction:discord.Interaction):
     await interaction.response.defer()
-    cur.execute('''select distinct server_id,city_id,admin1,country,country_code,alt_country from chain_info where valid=1 and user_id is not null''')
+    cur.execute('''select distinct server_id,city_id,country,country_code,alt_country from chain_info where valid=1 and user_id is not null''')
     totalcities=cur.rowcount
     citieslist=[i for i in cur]
+    for i in citieslist:
+        for j in citieslist:
+            if (i!=j) and (i[0]==j[0]) and (i[1]==j[1]):
+                print(i,j)
     cur.execute('''truncate table count_info''')
+    conn.commit()
     await interaction.followup.send(f'**0/{totalcities}** cities processed (**0%**)')
     interaction.message=await interaction.original_response()
     c=0.1
     for n,i in enumerate(citieslist):
         cur.execute('''select count(*) from chain_info where server_id = ? and city_id = ? and valid=1 and user_id is not null''', data=i[:2])
-        cur.execute('''insert into count_info(server_id,city_id,name,admin1,country,country_code,alt_country,count) values (?,?,?,?,?,?,?,?)''',data=(i[0],i[1],allnames.loc[i[1]]['name'],i[2],i[3],i[4],i[5],cur.fetchone()[0]))
+        try:
+            j=allnames.loc[i[1]]
+        except Exception as e:
+            j={'name':'Weather Station','admin1':'03','country':'IT'}
+
+        cur.execute('''insert into count_info(server_id,city_id,name,admin1,country,country_code,alt_country,count) values (?,?,?,?,?,?,?,?)''',data=(i[0],i[1],j['name'],admin1data[(admin1data['country']==j['country'])&(admin1data['admin1']==j['admin1'])&(admin1data['default']==1)]['name'].iloc[0] if j['admin1'] else None,i[2],i[3],i[4],cur.fetchone()[0]))
         if ((n+1)/totalcities)>c:
             await interaction.message.edit(content=f'**{n+1}/{totalcities}** cities processed (**{int(100*(n+1)/totalcities)}%**)')
             interaction.message=await interaction.original_response()
