@@ -1549,6 +1549,17 @@ async def help(interaction: discord.Interaction):
     embed=discord.Embed(color=discord.Colour.from_rgb(0,255,0),description=messages[0])
     await interaction.followup.send(embed=embed,view=Help(messages))
 
+
+import traceback,datetime
+@client.event
+async def on_error(event, *args, **kwargs):
+    embed = discord.Embed(title=':x: Event Error', colour=0xe74c3c) #Red
+    embed.add_field(name='Event', value=event)
+    embed.description = '```\n%s\n```' % traceback.format_exc()
+    embed.timestamp = datetime.datetime.utcnow()
+    await discord.AppInfo.owner.send(embed=embed)
+
+
 tree.add_command(assign)
 tree.add_command(add)
 tree.add_command(remove)
