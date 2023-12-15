@@ -1560,11 +1560,14 @@ async def synccount(interaction:discord.Interaction):
     cur.execute('''truncate table count_info''')
     await interaction.followup.send(f'**0/{totalcities}** cities processed (**0%**)')
     interaction.message=await interaction.original_response()
+    c=0.1
     for n,i in enumerate(citieslist):
         cur.execute('''select count(*) from chain_info where server_id = ? and city_id = ? and valid=1 and user_id is not null''', data=i[:2])
         cur.execute('''insert into count_info(server_id,city_id,name,admin1,country,country_code,alt_country,count) values (?,?,?,?,?,?,?,?)''',data=(i[0],i[1],allnames.loc[i[1]]['name'],i[2],i[3],i[4],i[5],cur.fetchone()[0]))
-        await interaction.message.edit(content=f'**{n+1}/{totalcities}** cities processed (**{int(100*(n+1)/totalcities)}%**)')
-        interaction.message=await interaction.original_response()
+        if ((n+1)/totalcities)>c:
+            await interaction.message.edit(content=f'**{n+1}/{totalcities}** cities processed (**{int(100*(n+1)/totalcities)}%**)')
+            interaction.message=await interaction.original_response()
+            c+=max(.1,1/totalcities)
     await interaction.message.edit(content=f'**{totalcities}/{totalcities}** cities processed (**100%**)')
     conn.commit()
 
