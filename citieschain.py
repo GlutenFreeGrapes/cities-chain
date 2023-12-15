@@ -1247,9 +1247,9 @@ async def popular(interaction: discord.Interaction,se:Optional[Literal['yes','no
         fmt=sorted(fmt,key = lambda x:(-x[0],x[1]))
         embed.add_field(name='Cities',value='\n'.join(['%s. %s - **%s**' %(n+1,i[1],f"{i[0]:,}") for (n,i) in enumerate(fmt)]))
         fmt=[]
-        cur.execute('''select distinct country_code from count_info''')
+        cur.execute('''select distinct country_code from count_info where server_id = ?''',data=(interaction.guild_id,))
         countrylist = {i[0] for i in cur}
-        cur.execute('''select distinct alt_country from count_info where alt_country is not null''')
+        cur.execute('''select distinct alt_country from count_info where server_id = ? and alt_country is not null''',data=(interaction.guild_id,))
         countrylist.update({i[0] for i in cur})
         countries={}
         for i in countrylist:
