@@ -99,6 +99,18 @@ cur.execute('''create table if not exists bans(
             banned bool,
             primary key(user_id))''')
 
+cur.execute('''create table if not exists count_info(
+            server_id bigint,
+            city_id int,
+            name varchar(200),
+            admin1 varchar(200),
+            country varchar(100),
+            country_code char(2),
+            alt_country varchar(100),
+            count int,
+            primary key(server_id,city_id))
+            ''')
+
 client = discord.Client(intents=intents)
 tree=app_commands.tree.CommandTree(client)
 
@@ -360,6 +372,7 @@ class Confirmation(discord.ui.View):
         self.children[1].disabled=True
         self.to=False
         cur.execute('''delete from chain_info where server_id=?''',data=(interaction.guild_id,))
+        cur.execute('''delete from count_info where server_id=?''',data=(interaction.guild_id,))
         cur.execute('''select user_id,correct,incorrect,score from server_user_info where server_id=?''',data=(interaction.guild_id,))
         for i in cur.fetchall():
             cur.execute('''select correct,incorrect,score from global_user_info where user_id=?''',data=(i[0],))
@@ -831,6 +844,12 @@ async def chain(message:discord.Message):
                                 cur.execute('''update global_user_info set correct = ?, score = ?, last_active = ? where user_id = ?''',data=(uinfo[0]+1,uinfo[1]+1,int(message.created_at.timestamp()),authorid))
                                 cur.execute('''update server_info set last_user = ?, current_letter = ? where server_id = ?''',data=(authorid,letters[1],guildid))
                                 cur.execute('''insert into chain_info(server_id,user_id,round_number,count,city_id,name,admin1,country,country_code,alt_country,time_placed,valid) values (?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,res[0],n[0],n[2],n[1][0],n[1][1],n[3][0] if n[3] else None,int(message.created_at.timestamp()),True))
+                                cur.execute('''select count from count_info where server_id = ? and city_id = ?''',data=(guildid,res[0]))
+                                if cur.rowcount==0:
+                                    cur.execute('''insert into count_info(server_id,city_id,name,admin1,country,country_code,alt_country,count) values (?,?,?,?,?,?,?,?)''',data=(guildid,res[0],n[0],allnames.loc[n[0]]['name'],n[1][0],n[1][1],n[3][0] if n[3] else None,1))
+                                else:
+                                    citycount = cur.fetchone()[0]
+                                    cur.execute('''update count_info set count=? where server_id=? and city_id=?''',data=(citycount+1,guildid,res[0]))
                                 if sinfo[9]<(len(citieslist)+1):
                                     cur.execute('''update server_info set max_chain = ?,last_best = ? where server_id = ?''',data=(len(citieslist)+1,int(message.created_at.timestamp()),guildid))
                                     await message.add_reaction('\N{BALLOT BOX WITH CHECK}')
@@ -1204,45 +1223,41 @@ async def repeat(interaction: discord.Interaction,se:Optional[Literal['yes','no'
 async def popular(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
     eph=True if se=='no' else False
     await interaction.response.defer(ephemeral=eph)
-    cur.execute('''select distinct city_id,admin1,country_code,alt_country from chain_info where server_id = ? and city_id >= 0 and valid = 1 and user_id is not null''',data=(interaction.guild_id,))
+    cur.execute('''select distinct city_id,admin1,country_code,alt_country from count_info where server_id = ? order by count desc''',data=(interaction.guild_id,))
     cities=[i for i in cur]
     embed=discord.Embed(title="Popular Cities/Countries - `%s`"%interaction.guild.name,color=discord.Colour.from_rgb(0,255,0))
     if len(cities)>0:
         fmt=[]
-        countries={}
-        for i in cities:
-            cur.execute('''select count(*) from chain_info where server_id = ? and city_id = ? and valid = 1 and user_id is not null''',data=(interaction.guild_id,i[0]))
+        for i in cities[:10]:
+            cur.execute('''select count from count_info where server_id = ? and city_id = ?''',data=(interaction.guild_id,i[0]))
             c=cur.fetchone()[0]
             j=allnames.loc[(i[0])]
             k,l,m,n=j['name'],i[1],i[2],i[3]
-            if m not in countries:
-                countries[m]=c
-            else:
-                countries[m]+=c
             if l:
                 if n:
-                    if n not in countries:
-                        countries[n]=c
-                    else:
-                        countries[n]+=c
                     loctuple=(k,l,m+'/'+n)
                 else:
                     loctuple=(k,l,m)
             else:
                 if n:
-                    if n not in countries:
-                        countries[n]=c
-                    else:
-                        countries[n]+=c
                     loctuple=(k,m+'/'+n)
                 else:
                     loctuple=(k,m)
             fmt.append((c,', '.join(loctuple)))
-        fmt=sorted(fmt,key = lambda x:(-x[0],x[1]))[:10]
+        fmt=sorted(fmt,key = lambda x:(-x[0],x[1]))
         embed.add_field(name='Cities',value='\n'.join(['%s. %s - **%s**' %(n+1,i[1],f"{i[0]:,}") for (n,i) in enumerate(fmt)]))
         fmt=[]
+        cur.execute('''select distinct country_code from count_info''')
+        countrylist = {i[0] for i in cur}
+        cur.execute('''select distinct alt_country from count_info where alt_country is not null''')
+        countrylist.update({i[0] for i in cur})
+        countries={}
+        for i in countrylist:
+            cur.execute('''select sum(count) from count_info where server_id = ? and (country_code = ? or alt_country = ?)''',data= (interaction.guild_id, i,i))
+            if cur.rowcount!=0:
+                countries[i] = cur.fetchone()[0]
         for i in countries:
-            fmt.append((countries[i],iso2[i]))
+            fmt.append((int(countries[i]),iso2[i]))
         fmt=sorted(fmt,key = lambda x:(-x[0],x[1]))[:10]
         embed.add_field(name='Countries',value='\n'.join(['%s. %s - **%s**' %(n+1,i[1],f"{i[0]:,}") for (n,i) in enumerate(fmt)]))
     else:
@@ -1379,8 +1394,11 @@ async def cityinfo(interaction: discord.Interaction, city:str, province:Optional
     await interaction.response.defer(ephemeral=eph)
     res=search_cities(city,province,country,0)
     if res:
-        cur.execute("select count(*) from chain_info where server_id=? and city_id=? and valid=?",data=(interaction.guild_id,res[0],True))
-        count=cur.fetchone()[0]
+        cur.execute("select count from count_info where server_id=? and city_id=?",data=(interaction.guild_id,res[0]))
+        if cur.rowcount:
+            count=cur.fetchone()[0]
+        else:
+            count=0
         aname=citydata[(citydata['geonameid']==res[0])]
         default=aname[aname['default']==1].iloc[0]
         dname=default['name']
@@ -1423,7 +1441,7 @@ async def countryinfo(interaction: discord.Interaction, country:str,se:Optional[
     countrysearch=country.casefold().strip()
     res=countriesdata[((countriesdata['name'].str.casefold()==countrysearch)|(countriesdata['country'].str.casefold()==countrysearch))].iloc[0]
     if res.shape[0]!=0:
-        cur.execute("select count(*) from chain_info where server_id=? and country_code=? and valid=?",data=(interaction.guild_id,res['country'],True))
+        cur.execute("select sum(count) from count_info where server_id=? and (country_code=? or alt_country=?)",data=(interaction.guild_id,res['country'],res['country']))
         count=cur.fetchone()[0]
         aname=countriesdata[(countriesdata['geonameid']==res['geonameid'])]
         default=aname[aname['default']==1].iloc[0]
@@ -1530,6 +1548,25 @@ async def help(interaction: discord.Interaction):
     `/help`: sends this message"""]
     embed=discord.Embed(color=discord.Colour.from_rgb(0,255,0),description=messages[0])
     await interaction.followup.send(embed=embed,view=Help(messages))
+
+#  TEMPORARY COMMAND, DELETE LATER
+@tree.command(name="sync-count")
+@app_commands.default_permissions(moderate_members=True)
+async def synccount(interaction:discord.Interaction):
+    await interaction.response.defer()
+    cur.execute('''select distinct server_id,city_id,admin1,country,country_code,alt_country from chain_info where valid=1 and user_id is not null''')
+    totalcities=cur.rowcount
+    citieslist=[i for i in cur]
+    cur.execute('''truncate table count_info''')
+    await interaction.followup.send(f'**0/{totalcities}** cities processed (**0%**)')
+    interaction.message=await interaction.original_response()
+    for n,i in enumerate(citieslist):
+        cur.execute('''select count(*) from chain_info where server_id = ? and city_id = ? and valid=1 and user_id is not null''', data=i[:2])
+        cur.execute('''insert into count_info(server_id,city_id,name,admin1,country,country_code,alt_country,count) values (?,?,?,?,?,?,?,?)''',data=(i[0],i[1],allnames.loc[i[1]]['name'],i[2],i[3],i[4],i[5],cur.fetchone()[0]))
+        await interaction.message.edit(content=f'**{n+1}/{totalcities}** cities processed (**{int(100*(n+1)/totalcities)}%**)')
+        interaction.message=await interaction.original_response()
+    await interaction.message.edit(content=f'**{totalcities}/{totalcities}** cities processed (**100%**)')
+    conn.commit()
 
 tree.add_command(assign)
 tree.add_command(add)
