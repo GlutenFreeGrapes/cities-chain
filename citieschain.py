@@ -749,7 +749,8 @@ async def on_message_delete(message:discord.Message):
 
 @client.event
 async def on_message(message:discord.Message):
-    await chain(message)
+    if message.guild:
+        await chain(message)
 
 async def chain(message:discord.Message):
     authorid=message.author.id
@@ -844,32 +845,38 @@ async def chain(message:discord.Message):
                                 cur.execute('''update global_user_info set correct = ?, score = ?, last_active = ? where user_id = ?''',data=(uinfo[0]+1,uinfo[1]+1,int(message.created_at.timestamp()),authorid))
                                 cur.execute('''update server_info set last_user = ?, current_letter = ? where server_id = ?''',data=(authorid,letters[1],guildid))
                                 cur.execute('''insert into chain_info(server_id,user_id,round_number,count,city_id,name,admin1,country,country_code,alt_country,time_placed,valid) values (?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,res[0],n[0],n[2],n[1][0],n[1][1],n[3][0] if n[3] else None,int(message.created_at.timestamp()),True))
+                                
                                 cur.execute('''select count from count_info where server_id = ? and city_id = ?''',data=(guildid,res[0]))
                                 if cur.rowcount==0:
                                     cur.execute('''insert into count_info(server_id,city_id,name,admin1,country,country_code,alt_country,count) values (?,?,?,?,?,?,?,?)''',data=(guildid,res[0],n[0],allnames.loc[res[0]]['name'],n[1][0],n[1][1],n[3][0] if n[3] else None,1))
                                 else:
                                     citycount = cur.fetchone()[0]
                                     cur.execute('''update count_info set count=? where server_id=? and city_id=?''',data=(citycount+1,guildid,res[0]))
-                                if sinfo[9]<(len(citieslist)+1):
-                                    cur.execute('''update server_info set max_chain = ?,last_best = ? where server_id = ?''',data=(len(citieslist)+1,int(message.created_at.timestamp()),guildid))
-                                    await message.add_reaction('\N{BALLOT BOX WITH CHECK}')
-                                else:
-                                    await message.add_reaction('\N{WHITE HEAVY CHECK MARK}')
-                                await message.add_reaction(regionalindicators[country[0].lower()]+regionalindicators[country[1].lower()])
+                                
+                                try:
+                                    if sinfo[9]<(len(citieslist)+1):
+                                        cur.execute('''update server_info set max_chain = ?,last_best = ? where server_id = ?''',data=(len(citieslist)+1,int(message.created_at.timestamp()),guildid))
+                                        await message.add_reaction('\N{BALLOT BOX WITH CHECK}')
+                                    else:
+                                        await message.add_reaction('\N{WHITE HEAVY CHECK MARK}')
+                                    await message.add_reaction(regionalindicators[country[0].lower()]+regionalindicators[country[1].lower()])
+                                    
+                                    
+                                    if (country=="GB"):
+                                        if adm1=="Scotland":
+                                            await message.add_reaction("🏴󠁧󠁢󠁳󠁣󠁴󠁿")
+                                        elif adm1=="Wales":
+                                            await message.add_reaction("🏴󠁧󠁢󠁷󠁬󠁳󠁿")
 
-                                if (country=="GB"):
-                                    if adm1=="Scotland":
-                                        await message.add_reaction("🏴󠁧󠁢󠁳󠁣󠁴󠁿")
-                                    elif adm1=="Wales":
-                                        await message.add_reaction("🏴󠁧󠁢󠁷󠁬󠁳󠁿")
-
-                                if altcountry:
-                                    await message.add_reaction(regionalindicators[altcountry[0].lower()]+regionalindicators[altcountry[1].lower()])
-                                cur.execute('''select reaction from react_info where server_id = ? and city_id = ?''', data=(guildid,res[0]))
-                                if cur.rowcount>0:
-                                    await message.add_reaction(cur.fetchone()[0])
-                                if not ((res[2].replace(' ','').isalpha() and res[2].isascii())):
-                                    await message.add_reaction(regionalindicators[letters[1]])
+                                    if altcountry:
+                                        await message.add_reaction(regionalindicators[altcountry[0].lower()]+regionalindicators[altcountry[1].lower()])
+                                    cur.execute('''select reaction from react_info where server_id = ? and city_id = ?''', data=(guildid,res[0]))
+                                    if cur.rowcount>0:
+                                        await message.add_reaction(cur.fetchone()[0])
+                                    if not ((res[2].replace(' ','').isalpha() and res[2].isascii())):
+                                        await message.add_reaction(regionalindicators[letters[1]])
+                                except:
+                                    pass
                             else:
                                 await fail(message,"**No going twice.**",sinfo,citieslist,res,n,True)
                         else:
@@ -888,7 +895,11 @@ async def chain(message:discord.Message):
 async def fail(message:discord.Message,reason,sinfo,citieslist,res,n,cityfound):
     guildid=message.guild.id
     authorid=message.author.id
-    await message.add_reaction('\N{CROSS MARK}')
+    try:
+        await message.add_reaction('\N{CROSS MARK}')
+    except:
+        pass
+
     cur.execute('''select incorrect,score from server_user_info where server_id = ? and user_id = ?''',data=(guildid,authorid))
     uinfo=cur.fetchone()
     cur.execute('''update server_user_info set incorrect = ?, score = ?, last_active = ? where server_id = ? and user_id = ?''',data=(uinfo[0]+1,uinfo[1]-1,int(message.created_at.timestamp()),guildid,authorid))
@@ -1549,44 +1560,13 @@ async def help(interaction: discord.Interaction):
     embed=discord.Embed(color=discord.Colour.from_rgb(0,255,0),description=messages[0])
     await interaction.followup.send(embed=embed,view=Help(messages))
 
-#  TEMPORARY COMMAND, DELETE LATER
-@tree.command(name="sync-count")
-@app_commands.default_permissions(moderate_members=True)
-async def synccount(interaction:discord.Interaction):
-    await interaction.response.defer()
-    cur.execute('''select distinct server_id,city_id,country,country_code,alt_country from chain_info where valid=1 and user_id is not null''')
-    totalcities=cur.rowcount
-    citieslist=[i for i in cur]
-    for i in citieslist:
-        for j in citieslist:
-            if (i!=j) and (i[0]==j[0]) and (i[1]==j[1]):
-                print(i,j)
-    cur.execute('''truncate table count_info''')
-    conn.commit()
-    await interaction.followup.send(f'**0/{totalcities}** cities processed (**0%**)')
-    interaction.message=await interaction.original_response()
-    c=0.1
-    for n,i in enumerate(citieslist):
-        cur.execute('''select count(*) from chain_info where server_id = ? and city_id = ? and valid=1 and user_id is not null''', data=i[:2])
-        try:
-            j=allnames.loc[i[1]]
-        except Exception as e:
-            j={'name':'Weather Station','admin1':'03','country':'IT'}
-
-        cur.execute('''insert into count_info(server_id,city_id,name,admin1,country,country_code,alt_country,count) values (?,?,?,?,?,?,?,?)''',data=(i[0],i[1],j['name'],admin1data[(admin1data['country']==j['country'])&(admin1data['admin1']==j['admin1'])&(admin1data['default']==1)]['name'].iloc[0] if j['admin1'] else None,i[2],i[3],i[4],cur.fetchone()[0]))
-        if ((n+1)/totalcities)>c:
-            await interaction.message.edit(content=f'**{n+1}/{totalcities}** cities processed (**{int(100*(n+1)/totalcities)}%**)')
-            interaction.message=await interaction.original_response()
-            c+=max(.1,1/totalcities)
-    await interaction.message.edit(content=f'**{totalcities}/{totalcities}** cities processed (**100%**)')
-    conn.commit()
-
-import traceback
+import traceback,datetime
 @client.event
 async def on_error(event, *args, **kwargs):
-    embed = discord.Embed(title=':x: Event Error', colour=0xe74c3c) #Red
+    embed = discord.Embed(title=':x: Event Error', colour=0xe74c3c)
     embed.add_field(name='Event', value=event)
     embed.description = '```\n%s\n```' % traceback.format_exc()
+    embed.timestamp = datetime.datetime.now()
     app_info = await client.application_info()
     owner = await client.fetch_user(app_info.team.owner_id)
     await owner.send(embed=embed)
