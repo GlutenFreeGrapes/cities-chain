@@ -83,11 +83,11 @@ cur.execute('''create table if not exists chain_info(
             round_number int, 
             count int, 
             city_id int default -1,
-            name varchar(200),
+            name varchar(3000),
             admin1 varchar(200),
             country varchar(100),
             country_code char(2),
-            alt_country varchar(100),
+            alt_country char(2),
             time_placed int,
             valid bool,
             primary key(server_id,city_id,round_number,count,time_placed),
@@ -110,6 +110,12 @@ cur.execute('''create table if not exists count_info(
             count int,
             primary key(server_id,city_id))
             ''')
+
+
+
+#MODIFY TABLE
+cur.execute('''alter table chain_info modify alt_country char(2) null''')
+cur.execute('''alter table chain_info modify name varchar(3000)''')
 
 client = discord.Client(intents=intents)
 tree=app_commands.tree.CommandTree(client)
