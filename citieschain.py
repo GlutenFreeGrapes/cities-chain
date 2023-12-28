@@ -1525,7 +1525,7 @@ async def unblock(interaction: discord.Interaction,member: discord.Member):
 @tree.command(description="Lists all commands and what they do. ")
 async def help(interaction: discord.Interaction):
     await interaction.response.defer()
-    messages=["""**Set commands:**
+    messages=["""**Set commands (requires mod perms):**
     `/set channel [channel]`: sets the channel the bot will listen to
     `/set prefix ([prefix])`: sets prefix to use when listening for cities
     `/set choose-city [option]`: if turned on, allows bot to choose the city that begins the next chain
@@ -1533,7 +1533,7 @@ async def help(interaction: discord.Interaction):
     `/set repeat [num]`: sets number of different cities that have to be said before a city can be repeated again. If set to -1, repeating is disallowed
     """,
     """
-    **Reaction/Repeat commands (requires mo):**
+    **Reaction/Repeat commands (requires mod perms):**
     `/add react [city] ([administrative-division][country])`: bot autoreacts an emoji when a given city is said
     `/remove react [city] ([administrative-division][country])`: bot removes autoreact for given city
     `/add repeat [city] ([administrative-division][country])`: bot will ignore no repeats rule for given city
