@@ -5541,9 +5541,11 @@ geonameid	country	admin1	name	default
 1529047	CN	13	Région autonome de Xinjiang	0
 1529047	CN	13	Shinjang	0
 1529047	CN	13	Shinjang Uyghur Aptonom Rayoni	0
+1529047	CN	13	Singjang	0
 1529047	CN	13	Sinkiang	0
 1529047	CN	13	Sinkiang Uighur Autonomous Region	0
 1529047	CN	13	Sinkiang Uigur Autonomous Ch’ü	0
+1529047	CN	13	Uigurien	0
 1529047	CN	13	Uygur Autonomous Region of Xinjiang	0
 1529047	CN	13	Xinjiang Uighur Zizhiqu	0
 1529047	CN	13	Xinjiang Uigur Zizhiqu	0
@@ -5551,8 +5553,10 @@ geonameid	country	admin1	name	default
 1529047	CN	13	Xinjiang Uyghur Zizhiqu	0
 1529047	CN	13	Xinjiang Uygur Zizhiqu	0
 1529047	CN	13	Xinjiang Weiwu’er Zizhiqu	0
+1529047	CN	13	Синьцзян	0
 1529047	CN	13	شىنجاڭ	0
 1529047	CN	13	شىنجاڭ ئۇيغۇر ئاپتونوم رايونى	0
+1529047	CN	13	新	0
 1529047	CN	13	新疆	0
 1529047	CN	13	新疆维吾尔自治区	0
 1784764	CN	02	Zhejiang	1
@@ -5673,17 +5677,18 @@ geonameid	country	admin1	name	default
 1796480	CN	26	陝西	0
 1796480	CN	26	陝西省	0
 1796480	CN	26	산시 성	0
-1799355	CN	21	Ningxia Hui Autonomous Region	1
+1799355	CN	21	Ningxia	1
 1799355	CN	21	Hui Autonomous Region of Ningxia	0
 1799355	CN	21	NHAR	0
 1799355	CN	21	Ninghsia Hui Autonomous Region	0
 1799355	CN	21	Ningsia	0
 1799355	CN	21	Ningsia Chinese Moslem Autonomous Ch’ü	0
 1799355	CN	21	Ningsia Hui Autonomous Region	0
-1799355	CN	21	Ningxia	0
 1799355	CN	21	Ningxia Hui Autonomous Qu	0
+1799355	CN	21	Ningxia Hui Autonomous Region	0
 1799355	CN	21	Ningxia Huizu Zizhiqu	0
 1799355	CN	21	Région autonome de Ningxia	0
+1799355	CN	21	宁	0
 1799355	CN	21	宁夏	0
 1799355	CN	21	宁夏回族自治区	0
 1806222	CN	03	Jiangxi	1
@@ -5767,6 +5772,8 @@ geonameid	country	admin1	name	default
 1809867	CN	16	Guangxi Zhuang	0
 1809867	CN	16	Guangxi Zhuang Autonomous Region	0
 1809867	CN	16	Guangxi Zhuangzu Zizhiqu	0
+1809867	CN	16	Gvangjsih	0
+1809867	CN	16	Gvangjsih Bouxcuengh Swcigih	0
 1809867	CN	16	Kuang-hsi	0
 1809867	CN	16	Kuang-hsi Sheng	0
 1809867	CN	16	Kuang-hsi-chuang-tsu Tzu-chih-ch’ü	0
@@ -5777,6 +5784,7 @@ geonameid	country	admin1	name	default
 1809867	CN	16	Zhuang Autonomous Region of Guangxi	0
 1809867	CN	16	广西	0
 1809867	CN	16	广西壮族自治区	0
+1809867	CN	16	桂	0
 1809935	CN	30	Guangdong	1
 1809935	CN	30	Guangdong Province	0
 1809935	CN	30	Guangdong Sheng	0
@@ -5833,17 +5841,22 @@ geonameid	country	admin1	name	default
 1818058	CN	01	安徽	0
 1818058	CN	01	安徽省	0
 2035607	CN	20	Inner Mongolia	1
+2035607	CN	20	Autonome Region Innere Mongolei	0
 2035607	CN	20	Binnen-Mongolië	0
 2035607	CN	20	Indre Mongolia	0
 2035607	CN	20	Inner Mongolia Autonomous Region	0
-2035607	CN	20	Inner Mongolian Autonomous Ch’ü	0
-2035607	CN	20	Inner Mongolian Autonomous Region	0
+2035607	CN	20	Innere Mongolei	0
+2035607	CN	20	Mongolia Interior	0
+2035607	CN	20	Mongolie-Intérieure	0
 2035607	CN	20	Nei Menggu Zizhiqu	0
 2035607	CN	20	Nei Monggol Zizhiqu	0
 2035607	CN	20	Nei Mongol	0
 2035607	CN	20	Nei Mongol Zizhiqu	0
 2035607	CN	20	Nei-meng-ku Tzu-chih-ch’u	0
 2035607	CN	20	Région autonome de Mongolie-Intérieure	0
+2035607	CN	20	Unutrašnja Mongolija	0
+2035607	CN	20	ᠥᠪᠥᠷᠮᠣᠩᠭᠣᠯ	0
+2035607	CN	20	ᠥᠪᠥᠷᠮᠣᠩᠭᠣᠯ ᠤᠨᠥᠪᠡᠷᠲᠡᠭᠨᠵᠠᠰᠠᠬᠤᠣᠷᠣᠨ	0
 2035607	CN	20	内蒙古	0
 2035607	CN	20	内蒙古自治区	0
 2036115	CN	19	Liaoning	1

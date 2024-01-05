@@ -112,10 +112,12 @@ cur.execute('''create table if not exists count_info(
             ''')
 
 
-
 #MODIFY TABLE
-cur.execute('''alter table chain_info modify alt_country char(2) null''')
-cur.execute('''alter table chain_info modify name varchar(3000)''')
+cur.execute('''alter table chain_info add message_id bigint default 0''')
+cur.execute('''alter table chain_info drop foreign key chain_info_ibfk_1''')
+cur.execute('''alter table chain_info drop primary key''')
+cur.execute('''alter table chain_info add primary key(server_id,city_id,round_number,count,time_placed,message_id)''')
+cur.execute('''alter table chain_info add foreign key (server_id) references server_info(server_id)''')
 
 client = discord.Client(intents=intents)
 tree=app_commands.tree.CommandTree(client)
@@ -850,7 +852,7 @@ async def chain(message:discord.Message):
                                 uinfo=cur.fetchone()
                                 cur.execute('''update global_user_info set correct = ?, score = ?, last_active = ? where user_id = ?''',data=(uinfo[0]+1,uinfo[1]+1,int(message.created_at.timestamp()),authorid))
                                 cur.execute('''update server_info set last_user = ?, current_letter = ? where server_id = ?''',data=(authorid,letters[1],guildid))
-                                cur.execute('''insert into chain_info(server_id,user_id,round_number,count,city_id,name,admin1,country,country_code,alt_country,time_placed,valid) values (?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,res[0],n[0],n[2],n[1][0],n[1][1],n[3][0] if n[3] else None,int(message.created_at.timestamp()),True))
+                                cur.execute('''insert into chain_info(server_id,user_id,round_number,count,city_id,name,admin1,country,country_code,alt_country,time_placed,valid,message_id) values (?,?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,res[0],n[0],n[2],n[1][0],n[1][1],n[3][0] if n[3] else None,int(message.created_at.timestamp()),True,message.id))
                                 
                                 cur.execute('''select count from count_info where server_id = ? and city_id = ?''',data=(guildid,res[0]))
                                 if cur.rowcount==0:
@@ -919,9 +921,9 @@ async def fail(message:discord.Message,reason,sinfo,citieslist,res,n,cityfound):
     else:
         await message.channel.send('<@%s> RUINED IT AT **%s**!! %s'%(authorid,f"{len(citieslist):,}",reason))
     if cityfound:
-        cur.execute('''insert into chain_info(server_id,user_id,round_number,count,city_id,name,admin1,country,country_code,alt_country,time_placed,valid) values (?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,res[0],n[0],n[2],n[1][0],n[1][1],n[3][0] if n[3] else None,int(message.created_at.timestamp()),False))
+        cur.execute('''insert into chain_info(server_id,user_id,round_number,count,city_id,name,admin1,country,country_code,alt_country,time_placed,valid,message_id) values (?,?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,res[0],n[0],n[2],n[1][0],n[1][1],n[3][0] if n[3] else None,int(message.created_at.timestamp()),False,message.id))
     else:
-        cur.execute('''insert into chain_info(server_id,user_id,round_number,count,name,time_placed,valid) values (?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,message.content[len(sinfo[10]):],int(message.created_at.timestamp()),False))
+        cur.execute('''insert into chain_info(server_id,user_id,round_number,count,name,time_placed,valid,message_id) values (?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,message.content[len(sinfo[10]):],int(message.created_at.timestamp()),False,message.id))
     cur.execute('''update server_info set chain_end = ?, current_letter = ?, last_user = ? where server_id = ?''',data=(True,'-',None,guildid))
     if sinfo[3]:
         entr=allnames.loc[(newid)]
