@@ -6530,6 +6530,7 @@ geonameid	country	name	default
 7626836	CW	Kyurasao	0
 7626836	CW	Kòrsou	0
 7626836	CW	Kýurasao	0
+7626836	CW	Land Curaçao	0
 7626836	CW	Pais Kòrsou	0
 7626836	CW	País de Curazao	0
 7626836	CW	i-Curaçao	0
@@ -21101,6 +21102,7 @@ geonameid	country	name	default
 4566966	PR	波多黎各	0
 4566966	PR	푸에르토리코	0
 6254930	PS	Palestinian Territory	1
+6254930	PS	Država Palestina	0
 6254930	PS	Falastiin	0
 6254930	PS	Falastin	0
 6254930	PS	Filistin	0
@@ -21122,7 +21124,6 @@ geonameid	country	name	default
 6254930	PS	Palestine	0
 6254930	PS	Palestinia nutome	0
 6254930	PS	Palestinian Territories	0
-6254930	PS	Palestinian Territory (the Occupied)	0
 6254930	PS	Palestinian West Bank and Gaza	0
 6254930	PS	Palestinsk territorium	0
 6254930	PS	Palestinë	0
@@ -21136,6 +21137,8 @@ geonameid	country	name	default
 6254930	PS	Palèstina	0
 6254930	PS	Palɛsine	0
 6254930	PS	Palẹsítínì	0
+6254930	PS	Staat Palästina	0
+6254930	PS	State of Palestine	0
 6254930	PS	Stato di Palestina	0
 6254930	PS	Sêse tî Palestîni	0
 6254930	PS	Territori palestinesi	0
@@ -21143,14 +21146,18 @@ geonameid	country	name	default
 6254930	PS	an Phalaistín	0
 6254930	PS	i-Palestine	0
 6254930	PS	il-Palestina	0
-6254930	PS	the Occupied Palestinian Territory	0
+6254930	PS	oPT	0
+6254930	PS	occupied Palestinian Territory	0
+6254930	PS	État de Palestine	0
 6254930	PS	Παλαιστίνη	0
 6254930	PS	Палестин	0
 6254930	PS	Палестина	0
 6254930	PS	ПалестӀина	0
 6254930	PS	Палесціна	0
 6254930	PS	Պաղեստին	0
+6254930	PS	מדינה פלסטינית	0
 6254930	PS	פלסטין	0
+6254930	PS	دولة فلسطين	0
 6254930	PS	فلسطين	0
 6254930	PS	فلسطین	0
 6254930	PS	فَلَستیٖن	0

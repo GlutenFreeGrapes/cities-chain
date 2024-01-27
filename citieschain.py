@@ -112,13 +112,6 @@ cur.execute('''create table if not exists count_info(
             ''')
 
 
-#MODIFY TABLE
-cur.execute('''alter table chain_info add message_id bigint default 0''')
-cur.execute('''alter table chain_info drop foreign key chain_info_ibfk_1''')
-cur.execute('''alter table chain_info drop primary key''')
-cur.execute('''alter table chain_info add primary key(server_id,city_id,round_number,count,time_placed,message_id)''')
-cur.execute('''alter table chain_info add foreign key (server_id) references server_info(server_id)''')
-
 client = discord.Client(intents=intents)
 tree=app_commands.tree.CommandTree(client)
 

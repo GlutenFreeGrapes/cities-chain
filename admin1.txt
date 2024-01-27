@@ -1631,7 +1631,7 @@ geonameid	country	admin1	name	default
 2145234	AU	07	विक्टोरिया	0
 2145234	AU	07	วิกตอเรีย	0
 2145234	AU	07	ビクトリア州	0
-2145234	AU	07	維多利亞州	0
+2145234	AU	07	维多利亚州	0
 2145234	AU	07	빅토리아	0
 2147291	AU	06	Tasmania	1
 2147291	AU	06	State of Tasmania	0
@@ -1660,6 +1660,8 @@ geonameid	country	admin1	name	default
 2155400	AU	02	Новый Южный Уэльс	0
 2155400	AU	02	Штат Новый Южный Уэльс	0
 2155400	AU	02	นิวเซาท์เวลส์	0
+2155400	AU	02	ニューサウスウェールズ州	0
+2155400	AU	02	新南威尔士州	0
 2177478	AU	01	Australian Capital Territory	1
 2177478	AU	01	ACT	0
 2177478	AU	01	Austraalia pealinna ala	0
@@ -2121,10 +2123,12 @@ geonameid	country	admin1	name	default
 3229999	BA	01	Federazione di Bosnia ed Erzegovina	0
 3229999	BA	01	Fédération de Bosnie-et-Herzégovine	0
 3229999	BA	01	Föderation Bosnien und Herzegowina	0
+3229999	BA	01	Muslimansko-Hrvatska Federacija	0
 3229999	BA	01	Федерация Боснии и Герцеговины	0
 3229999	BA	01	Федерација БиХ	0
 3229999	BA	01	Федерација Босне и Херцеговине	0
 3230000	BA	02	Srpska	1
+3230000	BA	02	Bosnia Serb Republic	0
 3230000	BA	02	Repubblica Serba di Bosnia ed Erzegovina	0
 3230000	BA	02	Republic of Srpska	0
 3230000	BA	02	Republika Srpska	0
@@ -2395,6 +2399,7 @@ geonameid	country	admin1	name	default
 3337388	BE	VLG	Région Flamande	0
 3337388	BE	VLG	Vlaams Gewest	0
 3337388	BE	VLG	Vlaanderen	0
+3337388	BE	VLG	佛兰德斯	0
 6930701	BF	01	Boucle du Mouhoun	1
 6930701	BF	01	Boucle du Mouhoun Region	0
 6930703	BF	02	Cascades	1
@@ -5506,7 +5511,7 @@ geonameid	country	admin1	name	default
 1279685	CN	14	Tibet	1
 1279685	CN	14	Autonomes Gebiet Tibet	0
 1279685	CN	14	Autonomna regija Tibet	0
-1279685	CN	14	Böd	0
+1279685	CN	14	Bod	0
 1279685	CN	14	Den autonome region Tibet	0
 1279685	CN	14	Den autonome regionen Tibet	0
 1279685	CN	14	Hsi-tsang Tzu-chih-ch’ü	0
@@ -5845,6 +5850,8 @@ geonameid	country	admin1	name	default
 2035607	CN	20	Binnen-Mongolië	0
 2035607	CN	20	Indre Mongolia	0
 2035607	CN	20	Inner Mongolia Autonomous Region	0
+2035607	CN	20	Inner Mongolian Autonomous Ch’ü	0
+2035607	CN	20	Inner Mongolian Autonomous Region	0
 2035607	CN	20	Innere Mongolei	0
 2035607	CN	20	Mongolia Interior	0
 2035607	CN	20	Mongolie-Intérieure	0
@@ -10018,6 +10025,8 @@ geonameid	country	admin1	name	default
 3012874	FR	11	Île-de-France	0
 3012874	FR	11	Île-de-France Region	0
 3012874	FR	11	อิล-เดอ-ฟรองซ์	0
+3012874	FR	11	イル・ド・フランス	0
+3012874	FR	11	法兰西岛	0
 3012874	FR	11	일드프랑스	0
 3023519	FR	94	Corsica	1
 3023519	FR	94	Collectivité Territoriale de Corse	0
@@ -10283,6 +10292,8 @@ geonameid	country	admin1	name	default
 2634895	GB	WLS	Țara Galilor	0
 2634895	GB	WLS	Уэльс	0
 2634895	GB	WLS	เวลส์	0
+2634895	GB	WLS	ウェールズ	0
+2634895	GB	WLS	威尔士	0
 2638360	GB	SCT	Scotland	1
 2638360	GB	SCT	Alba	0
 2638360	GB	SCT	Albain	0
@@ -10450,19 +10461,28 @@ geonameid	country	admin1	name	default
 611716	GE	51	თბილისი	0
 611716	GE	51	ქალაქი თბილისი	0
 611716	GE	51	트빌리시	0
-615929	GE	04	Achara	1
-615929	GE	04	Acharis A.S.S.R.	0
-615929	GE	04	Acharis ASSR	0
-615929	GE	04	Acharis Avtonomiuri Respublika	0
-615929	GE	04	Acharis Avtonomiuri Sabchot'a Sots'ialisturi Respublika	0
-615929	GE	04	Acharis avtonomia	0
-615929	GE	04	Adzharskaya Avtonomnaya Sovetskaya Sotsialisticheskaya Respublika	0
+615929	GE	04	Adjara	1
+615929	GE	04	Acara	0
+615929	GE	04	Acaristan	0
+615929	GE	04	Acarıstan	0
+615929	GE	04	Achara	0
+615929	GE	04	Adjarian ASSR	0
+615929	GE	04	Adjarian Autonomous Soviet Socialist Republic	0
+615929	GE	04	Adjarie	0
+615929	GE	04	Adscharien	0
+615929	GE	04	Adžarija	0
+615929	GE	04	Autonomous Republic of Adjara	0
+615929	GE	04	Ayaria	0
 615929	GE	04	Aĝario	0
 615929	GE	04	Aŭtonoma Respubliko Aĝario	0
 615929	GE	04	Автономная Республика Аджария	0
 615929	GE	04	Аджария	0
+615929	GE	04	Аджарская Автономная Советская Социалистическая Республика	0
+615929	GE	04	Аджарія	0
+615929	GE	04	Աջարիա	0
 615929	GE	04	აჭარა	0
 615929	GE	04	აჭარის ავტონომიური რესპუბლიკა	0
+615929	GE	04	აჭარის ავტონომიური საბჭოთა სოციალისტური რესპუბლიკა	0
 615929	GE	04	아자리야 공화국	0
 865536	GE	68	Kvemo Kartli	1
 865536	GE	68	Alsó-Kartli	0
@@ -16032,7 +16052,9 @@ geonameid	country	admin1	name	default
 1850144	JP	40	Tokyo Metropolis	0
 1850144	JP	40	Tokyo Prefecture	0
 1850144	JP	40	টোকিও	0
+1850144	JP	40	จังหวัดโตเกียว	0
 1850144	JP	40	とうきょうと	0
+1850144	JP	40	东京都	0
 1850144	JP	40	東京	0
 1850144	JP	40	東京都	0
 1850144	JP	40	도쿄 도	0
@@ -20510,10 +20532,17 @@ geonameid	country	admin1	name	default
 858808	MD	86	紹爾德內什蒂區	0
 858808	MD	86	숄더네슈티 구	0
 858889	MD	58	Transnistria	1
-858889	MD	58	Judeţul Dubăsari	0
+858889	MD	58	Administrative-Territorial Units of the Left Bank of the Dniester	0
+858889	MD	58	Administrativno teritorijalna jedinica Lijeve obale Dnjestra	0
+858889	MD	58	Pridnjestrovlje	0
 858889	MD	58	Stînga Nistrului	0
+858889	MD	58	Transitria	0
 858889	MD	58	Transnistrien	0
-858889	MD	58	Unitatea Teritorială din Stînga Nistrului	0
+858889	MD	58	Unitățile Administrativ-Teritoriale din stînga Nistrului	0
+858889	MD	58	Автономні територіальні утворення з особливим правовим статусом Придністров'я	0
+858889	MD	58	Административно-территориальные единицы левобережья Днестра	0
+858889	MD	58	Приднестровья	0
+858889	MD	58	Придністров'я	0
 858895	MD	51	Gagauzia	1
 858895	MD	51	Autonome Territoriale Einheit Gagausien	0
 858895	MD	51	Autonomous Territorial Unit of Gagauzia	0
@@ -20693,7 +20722,6 @@ geonameid	country	admin1	name	default
 12104729	ME	24	Komuna Tuz	0
 12104729	ME	24	Opština Tuzi	0
 12640530	ME	25	Zeta	1
-12640530	ME	25	ME.25	0
 7670842	MG	71	Diana	1
 7670846	MG	72	Sava	1
 7670847	MG	42	Sofia	1
@@ -23522,8 +23550,24 @@ geonameid	country	admin1	name	default
 3319179	NL	16	fl	0
 3319179	NL	16	Флеволанд	0
 3319179	NL	16	플레볼란트 주	0
+780166	NO	05	Finnmark	1
+780166	NO	05	Finnmark Fylke	0
+780166	NO	05	Finnmárku	0
+3132015	NO	20	Vestfold	1
+3132015	NO	20	Vestfold Fylke	0
+3132015	NO	20	Vestfold county	0
+3133897	NO	18	Troms	1
+3133897	NO	18	Romsa	0
+3133897	NO	18	Troms Fylke	0
+3134723	NO	17	Telemark	1
+3134723	NO	17	Bratsberg amt	0
+3134723	NO	17	Telemark  county	0
+3134723	NO	17	Telemark Fylke	0
 3141558	NO	14	Rogaland	1
 3141558	NO	14	Rogaland Fylke	0
+3143188	NO	13	Ostfold	1
+3143188	NO	13	Østfold	0
+3143188	NO	13	Østfold county	0
 3143242	NO	12	Oslo	1
 3143242	NO	12	Oslo Fylke	0
 3144301	NO	09	Nordland	1
@@ -23532,16 +23576,21 @@ geonameid	country	admin1	name	default
 3145495	NO	08	Møre	0
 3145495	NO	08	Møre og Romsdal	0
 3145495	NO	08	Romsdal	0
+3159665	NO	04	Buskerud	1
+3159665	NO	04	Buskerud Fylke	0
+3159665	NO	04	Buskerud county	0
+3163480	NO	01	Akershus	1
+3163480	NO	01	Akershus  county	0
+3163480	NO	01	Akershus Fylke	0
+3163480	NO	01	Акерсхус	0
+3163480	NO	01	фюльке Акерсхус	0
 11862827	NO	21	Trondelag	1
 11862827	NO	21	Tröndelag	0
 11862827	NO	21	Trøndelag	0
 11862827	NO	21	Trøndelag fylke	0
-12110595	NO	30	Viken	1
 12110596	NO	42	Agder	1
-12110597	NO	54	Troms og Finnmark	1
 12110598	NO	34	Innlandet	1
 12110598	NO	34	اينلانه	0
-12110599	NO	38	Vestfold og Telemark	1
 12110600	NO	46	Vestland	1
 12095447	NP	1	Province 1	1
 12095448	NP	2	Province 2	1
@@ -25734,12 +25783,25 @@ geonameid	country	admin1	name	default
 281132	PS	GZ	加沙地帶	0
 281132	PS	GZ	가자 지구	0
 285153	PS	WE	West Bank	1
-285153	PS	WE	Aḑ Ḑaffah al Gharbīyah	0
+285153	PS	WE	Batı Şeria	0
+285153	PS	WE	Cisgiordania	0
+285153	PS	WE	Cisjordania	0
 285153	PS	WE	Cisjordanie	0
 285153	PS	WE	Cisjordània	0
+285153	PS	WE	HaGadáh HaMaʽarávit	0
 285153	PS	WE	Vestbredden	0
 285153	PS	WE	Västbanken	0
+285153	PS	WE	Westbank	0
+285153	PS	WE	Westjordanland	0
+285153	PS	WE	Zapadna obala	0
+285153	PS	WE	aḍ-Ḍiffah al-Ġarbiyyah	0
+285153	PS	WE	Δυτική Όχθη	0
+285153	PS	WE	Западный берег реки Иордан	0
+285153	PS	WE	Західний берег річки Йордан	0
+285153	PS	WE	הַגָּדָה הַמַּעֲרָבִית	0
 285153	PS	WE	الضفة الغربية	0
+285153	PS	WE	पश्चिमी तट	0
+285153	PS	WE	約旦河西岸地區	0
 2262961	PT	19	Setubal	1
 2262961	PT	19	District of Setúbal	0
 2262961	PT	19	Distrikt Setúbal	0
@@ -26200,16 +26262,20 @@ geonameid	country	admin1	name	default
 662892	RO	39	Valcea County	1
 662892	RO	39	Judeţul Vâlcea	0
 662892	RO	39	Judeţul Vîlcea	0
+662892	RO	39	Județul Vâlcea	0
 662892	RO	39	Vâlcea	0
 662892	RO	39	Vâlcea County	0
 663116	RO	38	Vaslui County	1
 663116	RO	38	Judeţul Vaslui	0
+663116	RO	38	Județul Vaslui	0
 663116	RO	38	Vaslui	0
 664517	RO	37	Tulcea County	1
 664517	RO	37	Judeţul Tulcea	0
+664517	RO	37	Județul Tulcea	0
 664517	RO	37	Tulcea	0
 665091	RO	36	Timis County	1
 665091	RO	36	Judeţul Timiş	0
+665091	RO	36	Județul Timiș	0
 665091	RO	36	Kreis Temesch	0
 665091	RO	36	Temes	0
 665091	RO	36	Temes megye	0
@@ -26219,6 +26285,7 @@ geonameid	country	admin1	name	default
 665091	RO	36	Timiș County	0
 665283	RO	35	Teleorman County	1
 665283	RO	35	Judeţul Teleorman	0
+665283	RO	35	Județul Teleorman	0
 665283	RO	35	Teleorman	0
 665849	RO	34	Suceava	1
 665849	RO	34	Boucovine	0
@@ -26241,7 +26308,7 @@ geonameid	country	admin1	name	default
 667869	RO	32	Szatmár vármegye	0
 667869	RO	32	comitatus Szathmariensis	0
 668248	RO	31	Salaj County	1
-668248	RO	31	Judeţul Sălaj	0
+668248	RO	31	Județul Sălaj	0
 668248	RO	31	Sălaj	0
 668248	RO	31	Sălaj County	0
 669737	RO	30	Prahova	1
@@ -26313,11 +26380,13 @@ geonameid	country	admin1	name	default
 671857	RO	29	올트 주	0
 672460	RO	28	Neamt County	1
 672460	RO	28	Judeţul Neamţ	0
+672460	RO	28	Județul Neamț	0
 672460	RO	28	Neamţ	0
 672460	RO	28	Neamț	0
 672460	RO	28	Neamț County	0
 672628	RO	27	Mures County	1
 672628	RO	27	Judeţul Mureş	0
+672628	RO	27	Județul Mureș	0
 672628	RO	27	Kreis Mieresch	0
 672628	RO	27	Maros	0
 672628	RO	27	Maros megye	0
@@ -26327,11 +26396,13 @@ geonameid	country	admin1	name	default
 672628	RO	27	Mureș County	0
 673612	RO	26	Mehedinti County	1
 673612	RO	26	Judeţul Mehedinţi	0
+673612	RO	26	Județul Mehedinți	0
 673612	RO	26	Mehedinţi	0
 673612	RO	26	Mehedinți	0
 673612	RO	26	Mehedinți County	0
 673887	RO	25	Maramures	1
 673887	RO	25	Judeţul Maramureş	0
+673887	RO	25	Județul Maramureș	0
 673887	RO	25	Maramureş	0
 673887	RO	25	Maramureş County	0
 673887	RO	25	Maramureș	0
@@ -26342,11 +26413,13 @@ geonameid	country	admin1	name	default
 675809	RO	23	Iași	0
 675809	RO	23	Iași County	0
 675809	RO	23	Judeţul Iaşi	0
+675809	RO	23	Județul Iași	0
 675848	RO	22	Ialomita County	1
 675848	RO	22	Ialomiţa	0
 675848	RO	22	Ialomița	0
 675848	RO	22	Ialomița County	0
 675848	RO	22	Judeţul Ialomiţa	0
+675848	RO	22	Județul Ialomița	0
 675917	RO	21	Hunedoara County	1
 675917	RO	21	Hunedoara	0
 675917	RO	21	Judeţul Hunedoara	0
@@ -26368,6 +26441,7 @@ geonameid	country	admin1	name	default
 677692	RO	18	Galați	0
 677692	RO	18	Galați County	0
 677692	RO	18	Judeţul Galaţi	0
+677692	RO	18	Județul Galați	0
 679134	RO	17	Dolj	1
 679134	RO	17	Dolj County	0
 679134	RO	17	Judeţul Dolj	0
@@ -26390,6 +26464,7 @@ geonameid	country	admin1	name	default
 680962	RO	14	Județul Constanța	0
 681291	RO	13	Cluj County	1
 681291	RO	13	Cluj	0
+681291	RO	13	Județul Cluj	0
 681291	RO	13	Klausenburg	0
 681291	RO	13	Kolozs	0
 681291	RO	13	Kolozs megye	0
@@ -26399,15 +26474,18 @@ geonameid	country	admin1	name	default
 682714	RO	12	Caraș-Severin	0
 682714	RO	12	Caraș-Severin County	0
 682714	RO	12	Judeţul Caraş-Severin	0
+682714	RO	12	Județul Caraș-Severin	0
 683016	RO	41	Calarasi County	1
 683016	RO	41	Călăraşi	0
 683016	RO	41	Călărași	0
 683016	RO	41	Călărași County	0
 683016	RO	41	Judeţul Călăraşi	0
+683016	RO	41	Județul Călărași	0
 683121	RO	11	Buzau County	1
 683121	RO	11	Buzău	0
 683121	RO	11	Buzău County	0
 683121	RO	11	Judeţul Buzău	0
+683121	RO	11	Județul Buzău	0
 683504	RO	10	Bucuresti	1
 683504	RO	10	Bucarest	0
 683504	RO	10	Bucureşti	0
@@ -26418,21 +26496,25 @@ geonameid	country	admin1	name	default
 683843	RO	09	Brașov	0
 683843	RO	09	Brașov County	0
 683843	RO	09	Judeţul Braşov	0
+683843	RO	09	Județul Brașov	0
 683901	RO	08	Braila County	1
 683901	RO	08	Brăila	0
 683901	RO	08	Brăila County	0
 683901	RO	08	Judeţul Brăila	0
+683901	RO	08	Județul Brăila	0
 684038	RO	07	Botosani County	1
 684038	RO	07	Botoşani	0
 684038	RO	07	Botoșani	0
 684038	RO	07	Botoșani County	0
 684038	RO	07	Judeţul Botoşani	0
+684038	RO	07	Județul Botoșani	0
 684647	RO	06	Bistrita-Nasaud County	1
 684647	RO	06	Beszterce-Naszód megye	0
 684647	RO	06	Bistriţa-Năsăud	0
 684647	RO	06	Bistrița-Năsăud	0
 684647	RO	06	Bistrița-Năsăud County	0
 684647	RO	06	Judeţul Bistriţa-Năsăud	0
+684647	RO	06	Județul Bistrița-Năsăud	0
 684878	RO	05	Bihor County	1
 684878	RO	05	Bihar megye	0
 684878	RO	05	Bihor	0
@@ -26442,11 +26524,13 @@ geonameid	country	admin1	name	default
 685947	RO	04	Bacău	0
 685947	RO	04	Bacău County	0
 685947	RO	04	Judeţul Bacău	0
+685947	RO	04	Județul Bacău	0
 686192	RO	03	Arges	1
 686192	RO	03	Argeş	0
 686192	RO	03	Argeș	0
 686192	RO	03	Argeș County	0
 686192	RO	03	Judeţul Argeş	0
+686192	RO	03	Județul Argeș	0
 686253	RO	02	Arad County	1
 686253	RO	02	Arad	0
 686253	RO	02	Judeţul Arad	0
@@ -26454,6 +26538,7 @@ geonameid	country	admin1	name	default
 686581	RO	01	Alba County	1
 686581	RO	01	Alba	0
 686581	RO	01	Judeţul Alba	0
+686581	RO	01	Județul Alba	0
 865518	RO	43	Ilfov	1
 865518	RO	43	Condado de Ilfov	0
 865518	RO	43	Distretto di Ilfov	0
@@ -31082,6 +31167,8 @@ geonameid	country	admin1	name	default
 1606589	TH	42	Samut Prakarn	0
 1606589	TH	42	จังหวัดสมุทรปราการ	0
 1606589	TH	42	สมุทรปราการ	0
+1606589	TH	42	サムットプラカーン県	0
+1606589	TH	42	沙没巴干府	0
 1606789	TH	20	Sakon Nakhon	1
 1606789	TH	20	Changwat Sakon Nakhon	0
 1606789	TH	20	Sakhon Nakon	0
@@ -31283,6 +31370,8 @@ geonameid	country	admin1	name	default
 1609348	TH	40	Krung Thep Mahanakhon Amon Rattanakosin Mahinthara Ayuthaya Mahadilok Phop Noppharat Ratchathani Burirom Udomratchaniwet Mahasathan Amon Piman Awatan Sathit Sakkathattiya Witsanukam Prasit	0
 1609348	TH	40	กรุงเทพมหานคร	0
 1609348	TH	40	กรุงเทพฯ	0
+1609348	TH	40	バンコク	0
+1609348	TH	40	曼谷	0
 1609775	TH	22	Khon Kaen	1
 1609775	TH	22	Changwad Khonkaen	0
 1609775	TH	22	Changwat Khon Kaen	0
@@ -34135,6 +34224,7 @@ geonameid	country	admin1	name	default
 742865	TR	41	پارێزگای کۆجائێلی	0
 742865	TR	41	कोकाएली	0
 742865	TR	41	कोचेली प्रांत	0
+742865	TR	41	โคไซเอลี	0
 742865	TR	41	ქოჯაელის პროვინცია	0
 742865	TR	41	コジャエリ県	0
 742865	TR	41	科贾埃利省	0
