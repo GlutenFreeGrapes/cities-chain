@@ -373,8 +373,6 @@ class Paginator(discord.ui.View):
     async def back(self, interaction, button):
         self.page=self.lens
         await self.updateembed(interaction)
-    async def interaction_check(self, interaction: discord.Interaction):
-        return interaction.user.id == self.author
 
 class Confirmation(discord.ui.View):
     def __init__(self,serverid):
