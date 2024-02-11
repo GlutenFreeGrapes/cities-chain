@@ -22,10 +22,13 @@ conn = mariadb.connect(
     password=env["DB_PASSWORD"],
     host=env["DB_HOST"],
     database=None)
+
+
 cur = conn.cursor() 
 
 cur.execute('create database if not exists ' + env["DB_NAME"])
 cur.execute('use ' + env["DB_NAME"])
+cur.execute("SET @@session.wait_timeout = 3600") # max 1hr timeout
 
 cur.execute('''create table if not exists server_info(
             server_id bigint, 
