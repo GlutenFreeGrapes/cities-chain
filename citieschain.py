@@ -22,8 +22,6 @@ conn = mariadb.connect(
     password=env["DB_PASSWORD"],
     host=env["DB_HOST"],
     database=None)
-
-
 cur = conn.cursor() 
 
 cur.execute('create database if not exists ' + env["DB_NAME"])
@@ -1599,13 +1597,14 @@ async def help(interaction: discord.Interaction):
 import traceback,datetime
 @client.event
 async def on_error(event, *args, **kwargs):
-    embed = discord.Embed(title=':x: Event Error', colour=0xe74c3c)
-    embed.add_field(name='Event', value=event)
-    embed.description = '```\n%s\n```' % traceback.format_exc()
-    embed.timestamp = datetime.datetime.now()
-    app_info = await client.application_info()
-    owner = await client.fetch_user(app_info.team.owner_id)
-    await owner.send(embed=embed)
+    if not traceback.format_exc().endswith("Server has gone away"):
+        embed = discord.Embed(title=':x: Event Error', colour=0xe74c3c)
+        embed.add_field(name='Event', value=event)
+        embed.description = '```\n%s\n```' % traceback.format_exc()
+        embed.timestamp = datetime.datetime.now()
+        app_info = await client.application_info()
+        owner = await client.fetch_user(app_info.team.owner_id)
+        await owner.send(embed=embed)
 
 
 tree.add_command(assign)
