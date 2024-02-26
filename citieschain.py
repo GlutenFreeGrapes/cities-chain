@@ -1014,18 +1014,21 @@ async def cities(interaction: discord.Interaction,order:Literal['sequential','al
     guildid=interaction.guild_id
     cur.execute('''select round_number,repeats,min_repeat from server_info where server_id = ?''',data=(guildid,))
     s=cur.fetchone()
-    cur.execute('''select name,admin1,country,country_code,alt_country from chain_info where server_id = ? and round_number = ? order by count desc''',data=(guildid,s[0]))
-    if cur.rowcount>0:
+    cur.execute('''select city_id from repeat_info where server_id = ?''', data=(interaction.guild_id,))
+    repeated={i[0] for i in cur}
+    cur.execute('''select name,admin1,country,country_code,alt_country,city_id from chain_info where server_id = ? and round_number = ? order by count desc''',data=(guildid,s[0]))
+    if cur.rowcount>0 and len({i for i in cur if i[5] not in repeated}):
         cutoff=[]
         for i in cur:
-            if i[1] and i[4]:
-                cutoff.append((i[0],(i[2],i[3]),i[1],(i[4],)))
-            elif i[1]:
-                cutoff.append((i[0],(i[2],i[3]),i[1]))
-            elif i[4]:
-                cutoff.append((i[0],(i[2],i[3]),(i[4],)))
-            else:
-                cutoff.append((i[0],(i[2],i[3])))
+            if i[5] not in repeated:
+                if i[1] and i[4]:
+                    cutoff.append((i[0],(i[2],i[3]),i[1],(i[4],)))
+                elif i[1]:
+                    cutoff.append((i[0],(i[2],i[3]),i[1]))
+                elif i[4]:
+                    cutoff.append((i[0],(i[2],i[3]),(i[4],)))
+                else:
+                    cutoff.append((i[0],(i[2],i[3])))
         if s[1]:
             cutoff=cutoff[:s[2]]
         fmt=[]
@@ -1066,28 +1069,30 @@ async def allcities(interaction: discord.Interaction,order:Literal['sequential',
     guildid=interaction.guild_id
     cur.execute('''select round_number from server_info where server_id = ?''',data=(guildid,))
     s=cur.fetchone()
-    cur.execute('''select name,admin1,country,country_code,alt_country from chain_info where server_id = ? and round_number = ? order by count desc''',data=(guildid,s[0]))
+    cur.execute('''select city_id from repeat_info where server_id = ?''', data=(interaction.guild_id,))
+    repeated={i[0] for i in cur}
+    cur.execute('''select name,admin1,country,country_code,alt_country,city_id from chain_info where server_id = ? and round_number = ? order by count desc''',data=(guildid,s[0]))
     if cur.rowcount>0:
         cutoff=[]
         for i in cur:
             if i[1] and i[4]:
-                cutoff.append((i[0],(i[2],i[3]),i[1],(i[4],)))
+                cutoff.append(((i[0],(i[2],i[3]),i[1],(i[4],)), i[5] in repeated))
             elif i[1]:
-                cutoff.append((i[0],(i[2],i[3]),i[1]))
+                cutoff.append(((i[0],(i[2],i[3]),i[1]), i[5] in repeated))
             elif i[4]:
-                cutoff.append((i[0],(i[2],i[3]),(i[4],)))
+                cutoff.append(((i[0],(i[2],i[3]),(i[4],)), i[5] in repeated))
             else:
-                cutoff.append((i[0],(i[2],i[3])))
+                cutoff.append(((i[0],(i[2],i[3])), i[5] in repeated))
         fmt=[]
-        for i in cutoff:
+        for i,j in cutoff:
             if len(i)==4:
-                fmt.append(i[0]+', '+i[2]+' :flag_'+i[1][1].lower()+':'+''.join(':flag_'+j.lower()+':' for j in i[3]))
+                fmt.append(i[0]+', '+i[2]+' :flag_'+i[1][1].lower()+':'+''.join(':flag_'+j.lower()+':' for j in i[3])+(' :repeat:' if j else ''))
             elif len(i)==2:
-                fmt.append(i[0]+' :flag_'+i[1][1].lower()+':')
+                fmt.append(i[0]+' :flag_'+i[1][1].lower()+':'+(' :repeat:' if j else ''))
             elif type(i[2])==tuple:
-                fmt.append(i[0]+' :flag_'+i[1][1].lower()+':'+''.join(':flag_'+j.lower()+':' for j in i[2]))
+                fmt.append(i[0]+' :flag_'+i[1][1].lower()+':'+''.join(':flag_'+j.lower()+':' for j in i[2])+(' :repeat:' if j else ''))
             else:
-                fmt.append(i[0]+', '+i[2]+' :flag_'+i[1][1].lower()+':')
+                fmt.append(i[0]+', '+i[2]+' :flag_'+i[1][1].lower()+':'+(' :repeat:' if j else ''))
         seq=['%s. %s'%(n+1,fmt[n]) for n,i in enumerate(cutoff)]
         alph=['- '+fmt[i[1]] for i in sorted(zip(cutoff,range(len(cutoff))))]
         if order=='sequential':
@@ -1264,6 +1269,8 @@ async def popular(interaction: discord.Interaction,se:Optional[Literal['yes','no
     await interaction.response.defer(ephemeral=eph)
     cur.execute('''select distinct city_id,country_code,alt_country from count_info where server_id = ? order by count desc''',data=(interaction.guild_id,))
     cities=[i for i in cur]
+    cur.execute('''select city_id from repeat_info where server_id = ?''', data=(interaction.guild_id,))
+    repeated={i[0] for i in cur}
     embed=discord.Embed(title="Popular Cities/Countries - `%s`"%interaction.guild.name,color=discord.Colour.from_rgb(0,255,0))
     if len(cities)>0:
         fmt=[]
@@ -1282,7 +1289,7 @@ async def popular(interaction: discord.Interaction,se:Optional[Literal['yes','no
                     loctuple=(k,m+'/'+n)
                 else:
                     loctuple=(k,m)
-            fmt.append((c,', '.join(loctuple)))
+            fmt.append((c,', '.join(loctuple)+(' :repeat:' if i[0] in repeated else '')))
         fmt=sorted(fmt,key = lambda x:(-x[0],x[1]))
         embed.add_field(name='Cities',value='\n'.join(['%s. %s - **%s**' %(n+1,i[1],f"{i[0]:,}") for (n,i) in enumerate(fmt)]))
         fmt=[]
@@ -1434,7 +1441,6 @@ async def cityinfo(interaction: discord.Interaction, city:str, province:Optional
 
     cur.execute('select min_pop from server_info where server_id=?',data=(interaction.guild_id,))
     minimum_population = cur.fetchone()[0]
-
     res=search_cities(city,province,country,0,minimum_population)
     if res:
         cur.execute("select count from count_info where server_id=? and city_id=?",data=(interaction.guild_id,res[0]))
@@ -1442,12 +1448,14 @@ async def cityinfo(interaction: discord.Interaction, city:str, province:Optional
             count=cur.fetchone()[0]
         else:
             count=0
+        cur.execute('''select * from repeat_info where server_id = ? and city_id=?''', data=(interaction.guild_id,res[0]))
+        repeatable=cur.rowcount
         aname=citydata[(citydata['geonameid']==res[0])]
         default=aname[aname['default']==1].iloc[0]
         dname=default['name']
         embed=discord.Embed(title='Information - %s'%dname,color=discord.Colour.from_rgb(0,255,0))
         embed.add_field(name='Geonames ID',value=res[0],inline=True)
-        embed.add_field(name='Count',value=f"{count:,}",inline=True)
+        embed.add_field(name='Count',value=f"{count:,}{' :repeat:' if repeatable else ''}",inline=True)
         embed.add_field(name='Name',value=dname,inline=True)
         alts=aname[(aname['default']==0)]['name']
         secondEmbed=False

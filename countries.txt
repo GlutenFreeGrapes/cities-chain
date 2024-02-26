@@ -11617,7 +11617,6 @@ geonameid	country	iso3	name	default
 3378535	GY	GUY	가이아나	0
 1819730	HK	HKG	Hong Kong	1
 1819730	HK	HKG	Babban Yankin Mulkin Hong Kong na Ƙasar Sin	0
-1819730	HK	HKG	Colony of Hong Kong	0
 1819730	HK	HKG	Gonkong	0
 1819730	HK	HKG	HK	0
 1819730	HK	HKG	HKG	0
@@ -11679,6 +11678,7 @@ geonameid	country	iso3	name	default
 1819730	HK	HKG	ሆንግ ኮንግ	0
 1819730	HK	HKG	ហុងកុង	0
 1819730	HK	HKG	香港	0
+1819730	HK	HKG	香港特別行政區	0
 1819730	HK	HKG	香港特别行政区	0
 1819730	HK	HKG	홍콩	0
 1547314	HM	HMD	Heard Island and McDonald Islands	1
