@@ -1031,17 +1031,17 @@ async def cities(interaction: discord.Interaction,order:Literal['sequential','al
         cutoff=[]
         for i in cur:
             if i[1] and i[4]:
-                cutoff.append((i[0],(i[2],i[3]),i[1],(i[4],)))
+                cutoff.append(((i[0],(i[2],i[3]),i[1],(i[4],)), i[5] in repeated))
             elif i[1]:
-                cutoff.append((i[0],(i[2],i[3]),i[1]))
+                cutoff.append(((i[0],(i[2],i[3]),i[1]), i[5] in repeated))
             elif i[4]:
-                cutoff.append((i[0],(i[2],i[3]),(i[4],)))
+                cutoff.append(((i[0],(i[2],i[3]),(i[4],)), i[5] in repeated))
             else:
-                cutoff.append((i[0],(i[2],i[3])))
+                cutoff.append(((i[0],(i[2],i[3])), i[5] in repeated))
         if s[1]:
             cutoff=cutoff[:s[2]]
         fmt=[]
-        for i in cutoff:
+        for i,j in cutoff:
             if len(i)==4:
                 fmt.append(i[0]+', '+i[2]+' :flag_'+i[1][1].lower()+':'+''.join(':flag_'+j.lower()+':' for j in i[3])+(' :repeat:' if j else ''))
             elif len(i)==2:
