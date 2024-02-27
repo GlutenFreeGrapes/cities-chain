@@ -478,11 +478,13 @@ async def on_guild_join(guild:discord.Guild):
             await channel.send(embed=embed,view=Help(messages))
         break
 
-modperms=discord.Permissions(moderate_members=True)
-discord.PermissionOverwrite()
+async def owner_modcheck(interaction: discord.Interaction):
+    app_info = await client.application_info()
+    owner = await client.fetch_user(app_info.team.owner_id)
+    return interaction.permissions.moderate_members or interaction.user==owner
 
-assign = app_commands.Group(name="set", description="Set different things for the chain.",default_permissions=modperms)
-
+assign = app_commands.Group(name="set", description="Set different things for the chain.",)
+@app_commands.check(owner_modcheck)
 @assign.command(description="Sets the channel for the bot to monitor for cities chain.")
 @app_commands.describe(channel="The channel where the cities chain will happen")
 async def channel(interaction: discord.Interaction, channel: discord.TextChannel|discord.Thread):
@@ -498,6 +500,7 @@ async def channel(interaction: discord.Interaction, channel: discord.TextChannel
     conn.commit()
     await interaction.followup.send('Channel set to <#%s>.'%channel.id)
 
+@app_commands.check(owner_modcheck)
 @assign.command(description="Sets the gap between when a city can be repeated in the chain.")
 @app_commands.describe(num="The minimum number of cities before they can repeat again, set to -1 to disallow any repeats")
 async def repeat(interaction: discord.Interaction, num: app_commands.Range[int,-1,None]):
@@ -534,6 +537,7 @@ async def repeat(interaction: discord.Interaction, num: app_commands.Range[int,-
     else:
         await interaction.followup.send('Command can only be used after the chain has ended.')
 
+@app_commands.check(owner_modcheck)
 @assign.command(description="Sets the minimum population of cities in the chain.")
 @app_commands.describe(population="The minimum population of cities in the chain")
 async def population(interaction: discord.Interaction, population: app_commands.Range[int,1,None]):
@@ -555,6 +559,7 @@ async def population(interaction: discord.Interaction, population: app_commands.
     else:
         await interaction.followup.send('Command can only be used after the chain has ended.')
 
+@app_commands.check(owner_modcheck)
 @assign.command(description="Sets the prefix to listen to.")
 @app_commands.describe(prefix="Prefix that all cities to be chained must begin with")
 async def prefix(interaction: discord.Interaction, prefix: Optional[app_commands.Range[str,0,10]]=''):
@@ -579,6 +584,7 @@ async def prefix(interaction: discord.Interaction, prefix: Optional[app_commands
     else:
         await interaction.followup.send('Command can only be used after the chain has ended.')
 
+@app_commands.check(owner_modcheck)
 @assign.command(name='choose-city',description="Toggles if bot can choose starting city for the next chain.")
 @app_commands.describe(option="on to let the bot choose the next city, off otherwise")
 async def choosecity(interaction: discord.Interaction, option:Literal["on","off"]):
@@ -629,7 +635,8 @@ async def countrycomplete(interaction: discord.Interaction, search: str):
     results.extend([iso3[i] for i in iso3 if i.casefold().startswith(s) and iso3[i] not in results])
     return [app_commands.Choice(name=i,value=i) for i in results[:10]]
 
-add = app_commands.Group(name='add', description="Adds reactions/repeats for the chain.",default_permissions=modperms)
+add = app_commands.Group(name='add', description="Adds reactions/repeats for the chain.")
+@app_commands.check(owner_modcheck)
 @add.command(description="Adds reaction for a city. When cityed, react to client's message with emoji to react to city with.")
 @app_commands.describe(city="The city that the client will react to",province="State, province, etc that the city is located in",country="Country the city is located in")
 @app_commands.rename(province='administrative-division')
@@ -675,6 +682,7 @@ async def react(interaction: discord.Interaction, city:str, province:Optional[st
     else:
         await interaction.followup.send('City not recognized. Please try again. ')
 
+@app_commands.check(owner_modcheck)
 @add.command(description="Adds repeating exception for a city.")
 @app_commands.describe(city="The city that the client will allow repeats for",province="State, province, etc that the city is located in",country="Country the city is located in")
 @app_commands.rename(province='administrative-division')
@@ -707,7 +715,8 @@ async def repeat(interaction: discord.Interaction, city:str, province:Optional[s
     else:
         await interaction.followup.send('Command can only be used after the chain has ended.')
 
-remove = app_commands.Group(name='remove', description="Removes reactions/repeats for the chain.",default_permissions=modperms)
+remove = app_commands.Group(name='remove', description="Removes reactions/repeats for the chain.")
+@app_commands.check(owner_modcheck)
 @remove.command(description="Removes reaction for a city.")
 @app_commands.describe(city="The city that the client will not react to",province="State, province, etc that the city is located in",country="Country the city is located in")
 @app_commands.rename(province='administrative-division')
@@ -734,6 +743,7 @@ async def react(interaction: discord.Interaction, city:str, province:Optional[st
     else:
         await interaction.followup.send('City not recognized. Please try again. ')
 
+@app_commands.check(owner_modcheck)
 @remove.command(description="Removes repeating exception for a city.")
 @app_commands.describe(city="The city that the client will disallow repeats for",province="State, province, etc that the city is located in",country="Country the city is located in")
 @app_commands.rename(province='administrative-division')
@@ -1618,4 +1628,4 @@ tree.add_command(add)
 tree.add_command(remove)
 tree.add_command(stats)
 
-client.run(env["DISCORD_TOKEN"])
+client.run(env["DISCORD_TOKEN"], reconnect=1)
