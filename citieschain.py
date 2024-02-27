@@ -1027,30 +1027,29 @@ async def cities(interaction: discord.Interaction,order:Literal['sequential','al
     cur.execute('''select city_id from repeat_info where server_id = ?''', data=(interaction.guild_id,))
     repeated={i[0] for i in cur}
     cur.execute('''select name,admin1,country,country_code,alt_country,city_id from chain_info where server_id = ? and round_number = ? order by count desc''',data=(guildid,s[0]))
-    if cur.rowcount>0 and len({i for i in cur if i[5] not in repeated}):
+    if cur.rowcount>0:
         cutoff=[]
         for i in cur:
-            if i[5] not in repeated:
-                if i[1] and i[4]:
-                    cutoff.append((i[0],(i[2],i[3]),i[1],(i[4],)))
-                elif i[1]:
-                    cutoff.append((i[0],(i[2],i[3]),i[1]))
-                elif i[4]:
-                    cutoff.append((i[0],(i[2],i[3]),(i[4],)))
-                else:
-                    cutoff.append((i[0],(i[2],i[3])))
+            if i[1] and i[4]:
+                cutoff.append((i[0],(i[2],i[3]),i[1],(i[4],)))
+            elif i[1]:
+                cutoff.append((i[0],(i[2],i[3]),i[1]))
+            elif i[4]:
+                cutoff.append((i[0],(i[2],i[3]),(i[4],)))
+            else:
+                cutoff.append((i[0],(i[2],i[3])))
         if s[1]:
             cutoff=cutoff[:s[2]]
         fmt=[]
         for i in cutoff:
             if len(i)==4:
-                fmt.append(i[0]+', '+i[2]+' :flag_'+i[1][1].lower()+':'+''.join(':flag_'+j.lower()+':' for j in i[3]))
+                fmt.append(i[0]+', '+i[2]+' :flag_'+i[1][1].lower()+':'+''.join(':flag_'+j.lower()+':' for j in i[3])+(' :repeat:' if j else ''))
             elif len(i)==2:
-                fmt.append(i[0]+' :flag_'+i[1][1].lower()+':')
+                fmt.append(i[0]+' :flag_'+i[1][1].lower()+':'+(' :repeat:' if j else ''))
             elif type(i[2])==tuple:
-                fmt.append(i[0]+' :flag_'+i[1][1].lower()+':'+''.join(':flag_'+j.lower()+':' for j in i[2]))
+                fmt.append(i[0]+' :flag_'+i[1][1].lower()+':'+''.join(':flag_'+j.lower()+':' for j in i[2])+(' :repeat:' if j else ''))
             else:
-                fmt.append(i[0]+', '+i[2]+' :flag_'+i[1][1].lower()+':')
+                fmt.append(i[0]+', '+i[2]+' :flag_'+i[1][1].lower()+':'+(' :repeat:' if j else ''))
         seq=['%s. %s'%(n+1,fmt[n]) for n,i in enumerate(cutoff)]
         alph=['- '+fmt[i[1]] for i in sorted(zip(cutoff,range(len(cutoff))))]
         if order=='sequential':
