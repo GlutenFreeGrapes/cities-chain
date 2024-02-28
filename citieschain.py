@@ -1506,20 +1506,26 @@ async def countryinfo(interaction: discord.Interaction, country:str,se:Optional[
         aname=countriesdata[(countriesdata['geonameid']==res['geonameid'])]
         default=aname[aname['default']==1].iloc[0]
         dname=default['name']
-        embed=discord.Embed(title='Information - :flag_%s: %s (%s) - Count: %s'%(res['country'].lower(),dname,res['country'],f"{count:,}"),color=discord.Colour.from_rgb(0,255,0))
+        embed=discord.Embed(title='Information - :flag_%s: %s (%s) - Count: %s'%(res['country'].lower(),dname,res['country'],f"{count:,}" if count else 0),color=discord.Colour.from_rgb(0,255,0))
         alts=aname[(aname['default']==0)]['name']
         if alts.shape[0]!=0:
             joinednames='`'+'`,`'.join(alts)+'`'
             if (len(joinednames)<4096):
                 embed.description=joinednames
-                await interaction.followup.send(embed=embed,ephemeral=eph)
+                tosend=[embed]
             else:
                 commaindex=joinednames[:4096].rfind(',')+1
                 embed.description=joinednames[:commaindex]
                 embed2=discord.Embed(color=discord.Colour.from_rgb(0,255,0))
                 embed2.description=joinednames[commaindex:]
-                await interaction.followup.send(embed=embed,ephemeral=eph)
-                await interaction.followup.send(embed=embed2,ephemeral=eph)
+                tosend=[embed,embed2]
+            topcities=discord.Embed(title=f'''Popular Cities - :flag_{res['country'].lower()}: {dname} ({res['country']})''',color=discord.Colour.from_rgb(0,255,0))
+            cur.execute('''select name,admin1,count from count_info where server_id=? and country_code=? order by count desc limit 10''',data=(interaction.guild_id,res['country']))
+            if cur.rowcount>0:
+                citylist=[f'''{n+1}. {i[0]}, {i[1]} - **{i[2]}**''' if i[1] else f'''{n+1}. {i[0]} - **{i[2]}**''' for n,i in enumerate(cur)]
+                topcities.description='\n'.join(citylist)
+                tosend.append(topcities)
+            await interaction.followup.send(embeds=tosend,ephemeral=eph)
         else:
             embed.description='There are no alternate names for this country.'
             await interaction.followup.send(embed=embed,ephemeral=eph)
