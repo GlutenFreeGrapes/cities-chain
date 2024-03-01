@@ -417,9 +417,13 @@ class Confirmation(discord.ui.View):
         await interaction.response.edit_message(embed=discord.Embed(color=discord.Colour.from_rgb(255,0,0),description='Server stats have not been reset.'),view=self)
         self.message = await interaction.original_response()
 
+owner=None
 @client.event
 async def on_ready():
+    global owner
     await tree.sync()
+    app_info = await client.application_info()
+    owner = await client.fetch_user(app_info.team.owner_id)
     cur.execute('select server_id from server_info')
     alr={i for (i,) in cur}
     empty={i.id for i in client.guilds}-alr
@@ -479,8 +483,6 @@ async def on_guild_join(guild:discord.Guild):
         break
 
 async def owner_modcheck(interaction: discord.Interaction):
-    app_info = await client.application_info()
-    owner = await client.fetch_user(app_info.team.owner_id)
     return interaction.permissions.moderate_members or interaction.user==owner
 
 assign = app_commands.Group(name="set", description="Set different things for the chain.",)
@@ -813,7 +815,7 @@ async def chain(message:discord.Message):
             cur.execute('select user_id from bans where banned=?',data=(True,))
             bans={i[0] for i in cur}
             if authorid in bans:
-                message.add_reaction('\N{NO PEDESTRIANS}')
+                await message.add_reaction('\N{NO PEDESTRIANS}')
                 return
             cur.execute('''select * from server_user_info where user_id = ? and server_id = ?''',data=(authorid,message.guild.id))
             if cur.rowcount==0:
@@ -1533,7 +1535,7 @@ async def countryinfo(interaction: discord.Interaction, country:str,se:Optional[
         await interaction.followup.send('Country not recognized. Please try again. ',ephemeral=eph)
 
 @tree.command(name='delete-stats',description='Deletes server stats.')
-@app_commands.default_permissions(moderate_members=True)
+@app_commands.check(owner_modcheck)
 async def deletestats(interaction: discord.Interaction):
     embed=discord.Embed(color=discord.Colour.from_rgb(255,0,0),title='Are you sure?',description='This action is irreversible.')
     view=Confirmation(interaction.guild_id)
@@ -1545,22 +1547,25 @@ async def ping(interaction: discord.Interaction):
     await interaction.response.send_message('Pong! `%s ms`'%(client.latency*1000))
 
 @tree.command(description="Blocks a user. ")
-@app_commands.default_permissions(moderate_members=True)
+@app_commands.check(owner_modcheck)
 async def block(interaction: discord.Interaction,member: discord.Member):
-    cur.execute('select user_id from bans where banned=?',data=(True,))
-    bans={i[0] for i in cur}
-    if interaction.user.id in bans:
-        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
-        return
-    if member.id in bans:
-        cur.execute('''insert into bans(user_id,banned) values (?,?)''',data=(member.id,True))
+    if member!=owner and not client.user.bot:
+        cur.execute('select user_id from bans where banned=?',data=(True,))
+        bans={i[0] for i in cur}
+        if interaction.user.id in bans:
+            await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
+            return
+        if member.id not in bans:
+            cur.execute('''insert into bans(user_id,banned) values (?,?)''',data=(member.id,True))
+        else:
+            cur.execute('''update bans set banned=? where user_id=?''',data=(True,member.id))
+        conn.commit()
+        await interaction.response.send_message(f"<@{member.id}> has been blocked from using this bot. ")
     else:
-        cur.execute('''update bans set banned=? where user_id=?''',data=(True,member.id))
-    conn.commit()
-    await interaction.response.send_message(f"<@{member.id}> has been blocked from using this bot. ")
+        await interaction.response.send_message(f"Nice try, bozo")
 
 @tree.command(description="Unblocks a user. ")
-@app_commands.default_permissions(moderate_members=True)
+@app_commands.check(owner_modcheck)
 async def unblock(interaction: discord.Interaction,member: discord.Member):
     cur.execute('select user_id from bans where banned=?',data=(True,))
     bans={i[0] for i in cur}
