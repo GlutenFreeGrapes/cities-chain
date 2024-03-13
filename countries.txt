@@ -26320,6 +26320,7 @@ geonameid	country	iso3	name	default
 1668284	TW	TWN	Taivan	0
 1668284	TW	TWN	Taivanas	0
 1668284	TW	TWN	Taivāna	0
+1668284	TW	TWN	Taiwan R.O.C.	0
 1668284	TW	TWN	Taiwan ROC	0
 1668284	TW	TWN	Taiwan nutome	0
 1668284	TW	TWN	Taiwana	0

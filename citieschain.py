@@ -1010,10 +1010,7 @@ async def user(interaction: discord.Interaction, member:Optional[discord.Member]
     else:
         uinfo=cur.fetchone()
         embed=discord.Embed(title="User Stats", color=discord.Colour.from_rgb(0,255,0))
-        if member.avatar:
-            embed.set_author(name=member.name, icon_url=member.avatar.url)
-        else:
-            embed.set_author(name=member.name)
+        
         if (uinfo[0]+uinfo[1])>0:
             embed.add_field(name='Global Stats',value=f"Correct: **{f'{uinfo[0]:,}'}**\nIncorrect: **{f'{uinfo[1]:,}'}**\nCorrect Rate: **{round(uinfo[0]/(uinfo[0]+uinfo[1])*10000)/100}%**\nScore: **{f'{uinfo[2]:,}'}**\nLast Active: <t:{uinfo[3]}:R>",inline=True)
         cur.execute('select correct,incorrect,score,last_active from server_user_info where user_id = ? and server_id = ?',data=(member.id,interaction.guild_id))
@@ -1022,7 +1019,7 @@ async def user(interaction: discord.Interaction, member:Optional[discord.Member]
             embed.add_field(name='Stats for ```%s```'%interaction.guild.name,value=f"Correct: **{f'{uinfo[0]:,}'}**\nIncorrect: **{f'{uinfo[1]:,}'}**\nCorrect Rate: **{round(uinfo[0]/(uinfo[0]+uinfo[1])*10000)/100}%**\nScore: **{f'{uinfo[2]:,}'}**\nLast Active: <t:{uinfo[3]}:R>",inline=True)
         
     
-        favcities = discord.Embed(title=f"Favorite Cities - `{member.name}`", color=discord.Colour.from_rgb(0,255,0))
+        favcities = discord.Embed(title=f"Favorite Cities", color=discord.Colour.from_rgb(0,255,0))
         favc = []
         # (THANKS MARENS FOR SQL CODE)
         cur.execute('SELECT city_id, COUNT(*) AS use_count FROM chain_info WHERE server_id = ? AND user_id = ? AND valid = 1 GROUP BY city_id ORDER BY use_count DESC LIMIT 10',data=(interaction.guild_id,member.id))
@@ -1032,11 +1029,17 @@ async def user(interaction: discord.Interaction, member:Optional[discord.Member]
             if cityrow['admin1']:
                 adm1 = admin1data[(admin1data['admin1']==cityrow['admin1']) & (admin1data['country']==cityrow['country']) & (admin1data['default']==1)]
                 citystring+=adm1.iloc[0]['name']+", "
-            citystring+=f" :flag_{cityrow['country'].lower()}:"
+            citystring+=f":flag_{cityrow['country'].lower()}:"
             if cityrow['alt-country']:
                 citystring+=f":flag_{cityrow['alt-country'].lower()}:"
             favc.append(citystring+f' - **{i[1]}**')
         favcities.description = '\n'.join([f"{n+1}. "+i for n,i in enumerate(favc)])
+        if member.avatar:
+            embed.set_author(name=member.name, icon_url=member.avatar.url)
+            favcities.set_author(name=member.name, icon_url=member.avatar.url)
+        else:
+            embed.set_author(name=member.name)
+            favcities.set_author(name=member.name)
         await interaction.followup.send(embeds=[embed,favcities],ephemeral=eph)
 
 @stats.command(description="Displays list of cities that cannot be repeated.")
