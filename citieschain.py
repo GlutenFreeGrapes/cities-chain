@@ -386,7 +386,7 @@ class Confirmation(discord.ui.View):
             await self.message.edit(embed=discord.Embed(color=discord.Colour.from_rgb(255,0,0),description='Interaction timed out. Server stats have not been reset.'),view=self)
     @discord.ui.button(label='Yes', style=discord.ButtonStyle.green)
     async def yes(self, interaction:discord.Interaction, button):
-        if interaction.user==self.message.author:
+        if interaction.user.id==self.message.interaction.user.id:
             self.children[0].disabled=True
             self.children[1].disabled=True
             self.to=False
@@ -412,7 +412,7 @@ class Confirmation(discord.ui.View):
             self.message = await interaction.original_response()
     @discord.ui.button(label='No', style=discord.ButtonStyle.red)
     async def no(self, interaction, button):
-        if interaction.user==self.message.author:
+        if interaction.user.id==self.message.interaction.user.id:
             self.children[0].disabled=True
             self.children[1].disabled=True
             self.to=False
@@ -795,6 +795,7 @@ async def on_message_delete(message:discord.Message):
 
 @client.event
 async def on_message(message:discord.Message):
+    global processes
     authorid=message.author.id
     if message.guild and authorid!=client.user.id:
         guildid=message.guild.id
@@ -805,23 +806,25 @@ async def on_message(message:discord.Message):
                     where server_id = ?''',data=(guildid,))
         channel_id, prefix=cur.fetchone()
         if message.content.strip().startswith(prefix) and message.content[len(prefix):].strip()!='' and message.channel.id==channel_id and not message.author.bot:
-            # IF THERE ARE MESSAGES BEING PROCESSED IN THIS SERVER, WAIT UNTIL PREVIOUS CHAIN
+            # IF THERE IS A CITY BEING PROCESSED, ADD IT TO THE QUEUE AND EVENTUALLY IT WILL BE REACHED. OTHERWISE PROCESS IMMEDIATELY WHILE KEEPING IN MIND THAT IT IS CURRENTLY BEING PROCESSED
             if processes[guildid]: 
-                await asyncio.wait([processes[guildid]])
-            # SET THIS MESSAGE TO BEING PROCESSED
-            processes[guildid] = asyncio.Task(chain(message,guildid,authorid))
+                processes[guildid].append((message,guildid,authorid))
+            else:
+                processes[guildid]=[(message,guildid,authorid)]
+                await asyncio.create_task(chain(message,guildid,authorid))
 
 async def chain(message:discord.Message,guildid,authorid):
-    cur.execute('''select round_number,
-                chain_end
-            from server_info
-            where server_id = ?''',data=(guildid,))
-    round_num,chain_ended = cur.fetchone()
     cur.execute('select user_id from bans where banned=?',data=(True,))
     bans={i[0] for i in cur}
     if authorid in bans:
         await message.add_reaction('\N{NO PEDESTRIANS}')
         return
+    cur.execute('''select round_number,
+                chain_end
+            from server_info
+            where server_id = ?''',data=(guildid,))
+    round_num,chain_ended = cur.fetchone()
+    print(message.content,round_num,chain_ended)
     cur.execute('''select * from server_user_info where user_id = ? and server_id = ?''',data=(authorid,guildid))
     if cur.rowcount==0:
         cur.execute('''select * from global_user_info where user_id = ?''',data=(authorid,))
@@ -935,9 +938,18 @@ async def chain(message:discord.Message,guildid,authorid):
             await fail(message,"**Wrong letter.**",sinfo,citieslist,res,n,True)
     else:
         await fail(message,"**City not recognized.**",sinfo,citieslist,None,None,False)
-    conn.commit()         
-    # MESSAGE HAS BEEN PROCESSED
-    processes[guildid] = None
+    conn.commit()
+
+    # remove this from the queue of messages to process
+    processes[guildid].pop(0)
+    # if queue of other cities to process empty, set to none again. otherwise, process next city
+    if len(processes[guildid])==0:
+        processes[guildid]=None
+    else:
+        await asyncio.create_task(chain(*processes[guildid][0]))
+        
+
+
 
 async def fail(message:discord.Message,reason,sinfo,citieslist,res,n,cityfound):
     guildid=message.guild.id
