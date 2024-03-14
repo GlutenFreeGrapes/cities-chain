@@ -282,19 +282,19 @@ class Help(discord.ui.View):
         await interaction.message.edit(embed=new,view=self)
         self.message=await interaction.original_response()
 
-    @discord.ui.button(label='SET', style=discord.ButtonStyle.primary)
+    @discord.ui.button(label='Settings', style=discord.ButtonStyle.primary)
     async def setButton(self, interaction, button):
         await self.updateembed(0,interaction)
 
-    @discord.ui.button(label='REACT/REPEAT', style=discord.ButtonStyle.primary)
+    @discord.ui.button(label='Reactions/Repeats', style=discord.ButtonStyle.primary)
     async def reactRepeatButton(self, interaction, button):
         await self.updateembed(1,interaction)
 
-    @discord.ui.button(label='STATS', style=discord.ButtonStyle.primary)
+    @discord.ui.button(label='Stats', style=discord.ButtonStyle.primary)
     async def statsButton(self, interaction, button):
         await self.updateembed(2,interaction)
 
-    @discord.ui.button(label='OTHER COMMANDS', style=discord.ButtonStyle.primary)
+    @discord.ui.button(label='Other Commands', style=discord.ButtonStyle.primary)
     async def otherButton(self, interaction, button):
         await self.updateembed(3,interaction)
 
@@ -384,38 +384,40 @@ class Confirmation(discord.ui.View):
         self.children[1].disabled=True
         if self.to:
             await self.message.edit(embed=discord.Embed(color=discord.Colour.from_rgb(255,0,0),description='Interaction timed out. Server stats have not been reset.'),view=self)
-    @discord.ui.button(label='YES', style=discord.ButtonStyle.green)
-    async def yes(self, interaction, button):
-        self.children[0].disabled=True
-        self.children[1].disabled=True
-        self.to=False
-        cur.execute('''delete from chain_info where server_id=?''',data=(interaction.guild_id,))
-        cur.execute('''delete from count_info where server_id=?''',data=(interaction.guild_id,))
-        cur.execute('''select user_id,correct,incorrect,score from server_user_info where server_id=?''',data=(interaction.guild_id,))
-        for i in cur.fetchall():
-            cur.execute('''select correct,incorrect,score from global_user_info where user_id=?''',data=(i[0],))
-            j=cur.fetchone()
-            if (i[1]-j[0]==0) and (i[2]-j[1]==0) and (i[3]-j[2]==0):
-                cur.execute('''delete from global_user_info where user_id=?''',data=(i[0],))
-            else:
-                cur.execute('''select last_active from server_user_info where user_id=? and server_id!=? order by last_active desc''',data=(i[0],interaction.guild_id))
-                la=cur.fetchone()[0]
-                cur.execute('''update global_user_info 
-                                set correct = ?,incorrect = ?,score = ?,last_active = ? where user_id = ?''', data=(j[0]-i[1],j[1]-i[2],j[2]-i[3],la,i[0]))
-        cur.execute('''delete from server_user_info where server_id=?''',data=(interaction.guild_id,))
-        cur.execute('''delete from react_info where server_id=?''',data=(interaction.guild_id,))
-        cur.execute('''delete from repeat_info where server_id=?''',data=(interaction.guild_id,))
-        cur.execute('''update server_info set round_number=?,current_letter=?,last_user=?,max_chain=?,last_best=?,chain_end=? where server_id=?''',data=(0,'-',None,0,None,True,interaction.guild_id))
-        conn.commit()
-        await interaction.response.edit_message(embed=discord.Embed(color=discord.Colour.from_rgb(0,255,0),description='Server stats have been reset. Choose any city to continue.'),view=self)
-        self.message = await interaction.original_response()
-    @discord.ui.button(label='NO', style=discord.ButtonStyle.red)
+    @discord.ui.button(label='Yes', style=discord.ButtonStyle.green)
+    async def yes(self, interaction:discord.Interaction, button):
+        if interaction.user==self.message.author:
+            self.children[0].disabled=True
+            self.children[1].disabled=True
+            self.to=False
+            cur.execute('''delete from chain_info where server_id=?''',data=(interaction.guild_id,))
+            cur.execute('''delete from count_info where server_id=?''',data=(interaction.guild_id,))
+            cur.execute('''select user_id,correct,incorrect,score from server_user_info where server_id=?''',data=(interaction.guild_id,))
+            for i in cur.fetchall():
+                cur.execute('''select correct,incorrect,score from global_user_info where user_id=?''',data=(i[0],))
+                j=cur.fetchone()
+                if (i[1]-j[0]==0) and (i[2]-j[1]==0) and (i[3]-j[2]==0):
+                    cur.execute('''delete from global_user_info where user_id=?''',data=(i[0],))
+                else:
+                    cur.execute('''select last_active from server_user_info where user_id=? and server_id!=? order by last_active desc''',data=(i[0],interaction.guild_id))
+                    la=cur.fetchone()[0]
+                    cur.execute('''update global_user_info 
+                                    set correct = ?,incorrect = ?,score = ?,last_active = ? where user_id = ?''', data=(j[0]-i[1],j[1]-i[2],j[2]-i[3],la,i[0]))
+            cur.execute('''delete from server_user_info where server_id=?''',data=(interaction.guild_id,))
+            cur.execute('''delete from react_info where server_id=?''',data=(interaction.guild_id,))
+            cur.execute('''delete from repeat_info where server_id=?''',data=(interaction.guild_id,))
+            cur.execute('''update server_info set round_number=?,current_letter=?,last_user=?,max_chain=?,last_best=?,chain_end=? where server_id=?''',data=(0,'-',None,0,None,True,interaction.guild_id))
+            conn.commit()
+            await interaction.response.edit_message(embed=discord.Embed(color=discord.Colour.from_rgb(0,255,0),description='Server stats have been reset. Choose any city to continue.'),view=self)
+            self.message = await interaction.original_response()
+    @discord.ui.button(label='No', style=discord.ButtonStyle.red)
     async def no(self, interaction, button):
-        self.children[0].disabled=True
-        self.children[1].disabled=True
-        self.to=False
-        await interaction.response.edit_message(embed=discord.Embed(color=discord.Colour.from_rgb(255,0,0),description='Server stats have not been reset.'),view=self)
-        self.message = await interaction.original_response()
+        if interaction.user==self.message.author:
+            self.children[0].disabled=True
+            self.children[1].disabled=True
+            self.to=False
+            await interaction.response.edit_message(embed=discord.Embed(color=discord.Colour.from_rgb(255,0,0),description='Server stats have not been reset.'),view=self)
+            self.message = await interaction.original_response()
 
 owner=None
 processes = {}
@@ -473,7 +475,7 @@ async def on_guild_join(guild:discord.Guild):
     **There are a few other commands as well:**
     `/city-info [city] ([administrative-division][country])`: gets information about the given city
     `/country-info [country]`: gets information about the given country
-    `delete-stats`: deletes stats for your server
+    `/delete-stats`: deletes stats for your server
     `/ping`: shows bot latency
     `/block [user]`: blocks a certain user if they are purposefully ruining the chain
     `/unblock [user]`: unblocks a certain user
@@ -1607,7 +1609,7 @@ async def countryinfo(interaction: discord.Interaction, country:str,se:Optional[
 async def deletestats(interaction: discord.Interaction):
     embed=discord.Embed(color=discord.Colour.from_rgb(255,0,0),title='Are you sure?',description='This action is irreversible.')
     view=Confirmation(interaction.guild_id)
-    await interaction.response.send_message(embed=embed,view=view,ephemeral=True)
+    await interaction.response.send_message(embed=embed,view=view)
     view.message=await interaction.original_response()
 
 @tree.command(description="Tests the client's latency. ")
@@ -1681,7 +1683,7 @@ async def help(interaction: discord.Interaction):
     **Other commands:**
     `/city-info [city] ([administrative-division][country])`: gets information about the given city
     `/country-info [country]`: gets information about the given countryes
-    `delete-stats`: deletes stats for your server
+    `/delete-stats`: deletes stats for your server
     `/ping`: shows bot latency
     `/block [user]`: blocks a certain user if they are purposefully ruining the chain
     `/unblock [user]`: unblocks a certain user
