@@ -439,6 +439,8 @@ async def on_ready():
 
 @client.event
 async def on_guild_join(guild:discord.Guild):
+    global processes
+    processes[guild.id]=None
     cur.execute('''insert into server_info(server_id) VALUES (?)''',data=(guild.id,))
     messages=["""Use the **/set channel [channel]** command to set the channel the bot will listen to. **This must be done in order for the bot to work.**
 
