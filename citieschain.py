@@ -784,27 +784,29 @@ async def repeat(interaction: discord.Interaction, city:str, province:Optional[s
 
 @client.event
 async def on_message_delete(message:discord.Message):
-    guildid = message.guild.id
-    cur.execute('''select last_user,channel_id,current_letter from server_info where server_id=?''',data=(guildid,))
-    minfo=cur.fetchone()
-    if ((message.author.id,message.channel.id)==minfo[:2]):
-        cur.execute('''select last_active from server_user_info where user_id=? and server_id=?''',data=(minfo[0],guildid))
-        t = cur.fetchone()[0]
-        if int(message.created_at.timestamp())==t:
-            cur.execute('''select name from chain_info where time_placed=? and user_id=? and server_id=?''',data=(t,minfo[0],guildid))
-            await message.channel.send("<@%s> has deleted their city of `%s`. The next letter is `%s`."%(minfo[0],cur.fetchone()[0],minfo[2]))
+    if message.guild:
+        guildid = message.guild.id
+        cur.execute('''select last_user,channel_id,current_letter from server_info where server_id=?''',data=(guildid,))
+        minfo=cur.fetchone()
+        if ((message.author.id,message.channel.id)==minfo[:2]):
+            cur.execute('''select last_active from server_user_info where user_id=? and server_id=?''',data=(minfo[0],guildid))
+            t = cur.fetchone()[0]
+            if int(message.created_at.timestamp())==t:
+                cur.execute('''select name from chain_info where time_placed=? and user_id=? and server_id=?''',data=(t,minfo[0],guildid))
+                await message.channel.send("<@%s> has deleted their city of `%s`. The next letter is `%s`."%(minfo[0],cur.fetchone()[0],minfo[2]))
 
 @client.event
 async def on_message_edit(message:discord.Message, after:discord.Message):
-    guildid = message.guild.id
-    cur.execute('''select last_user,channel_id,current_letter from server_info where server_id=?''',data=(guildid,))
-    minfo=cur.fetchone()
-    if ((message.author.id,message.channel.id)==minfo[:2]):
-        cur.execute('''select last_active from server_user_info where user_id=? and server_id=?''',data=(minfo[0],guildid))
-        t = cur.fetchone()[0]
-        if int(message.created_at.timestamp())==t:
-            cur.execute('''select name from chain_info where time_placed=? and user_id=? and server_id=?''',data=(t,minfo[0],guildid))
-            await message.channel.send("<@%s> has edited their city of `%s`. The next letter is `%s`."%(minfo[0],cur.fetchone()[0],minfo[2]))
+    if message.guild:
+        guildid = message.guild.id
+        cur.execute('''select last_user,channel_id,current_letter from server_info where server_id=?''',data=(guildid,))
+        minfo=cur.fetchone()
+        if ((message.author.id,message.channel.id)==minfo[:2]):
+            cur.execute('''select last_active from server_user_info where user_id=? and server_id=?''',data=(minfo[0],guildid))
+            t = cur.fetchone()[0]
+            if int(message.created_at.timestamp())==t:
+                cur.execute('''select name from chain_info where time_placed=? and user_id=? and server_id=?''',data=(t,minfo[0],guildid))
+                await message.channel.send("<@%s> has edited their city of `%s`. The next letter is `%s`."%(minfo[0],cur.fetchone()[0],minfo[2]))
 
 
 @client.event
