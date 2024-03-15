@@ -794,6 +794,18 @@ async def on_message_delete(message:discord.Message):
             cur.execute('''select name from chain_info where time_placed=? and user_id=? and server_id=?''',data=(t,minfo[0],guildid))
             await message.channel.send("<@%s> has deleted their city of `%s`. The next letter is `%s`."%(minfo[0],cur.fetchone()[0],minfo[2]))
 
+@client.event
+async def on_message_edit(message:discord.Message, after:discord.Message):
+    guildid = message.guild.id
+    cur.execute('''select last_user,channel_id,current_letter from server_info where server_id=?''',data=(guildid,))
+    minfo=cur.fetchone()
+    if ((message.author.id,message.channel.id)==minfo[:2]):
+        cur.execute('''select last_active from server_user_info where user_id=? and server_id=?''',data=(minfo[0],guildid))
+        t = cur.fetchone()[0]
+        if int(message.created_at.timestamp())==t:
+            cur.execute('''select name from chain_info where time_placed=? and user_id=? and server_id=?''',data=(t,minfo[0],guildid))
+            await message.channel.send("<@%s> has edited their city of `%s`. The next letter is `%s`."%(minfo[0],cur.fetchone()[0],minfo[2]))
+
 
 @client.event
 async def on_message(message:discord.Message):
@@ -826,7 +838,6 @@ async def chain(message:discord.Message,guildid,authorid):
             from server_info
             where server_id = ?''',data=(guildid,))
     round_num,chain_ended = cur.fetchone()
-    print(message.content,round_num,chain_ended)
     cur.execute('''select * from server_user_info where user_id = ? and server_id = ?''',data=(authorid,guildid))
     if cur.rowcount==0:
         cur.execute('''select * from global_user_info where user_id = ?''',data=(authorid,))
