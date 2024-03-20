@@ -936,7 +936,7 @@ async def chain(message:discord.Message,guildid,authorid):
                             cur.execute('''select reaction from react_info where server_id = ? and city_id = ?''', data=(guildid,res[0]))
                             if cur.rowcount>0:
                                 await message.add_reaction(cur.fetchone()[0])
-                            if not ((res[2].replace(' ','').isalpha() and res[2].isascii())):
+                            if not ((message.content[len(sinfo[10]):].isalpha() and message.content[len(sinfo[10]):].isascii())):
                                 await message.add_reaction(regionalindicators[letters[1]])
                         except:
                             pass
