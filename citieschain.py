@@ -10,6 +10,8 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 
+PRANK_SERVER=1046644822859055164
+
 citydata,countriesdata,admin1data,admin2data=pd.read_csv('cities.txt',sep='\t',keep_default_na=False,na_values='',dtype={'admin1':str,'admin2':str,'alt-country':str}),pd.read_csv('countries.txt',sep='\t',keep_default_na=False,na_values=''),pd.read_csv('admin1.txt',sep='\t',keep_default_na=False,na_values='',dtype={'admin1':str}),pd.read_csv('admin2.txt',sep='\t',keep_default_na=False,na_values='',dtype={'admin1':str,'admin2':str,})
 citydata=citydata.fillna(np.nan).replace([np.nan], [None])
 countriesdata=countriesdata.fillna(np.nan).replace([np.nan], [None])
@@ -808,10 +810,11 @@ async def on_message_edit(message:discord.Message, after:discord.Message):
                 cur.execute('''select name from chain_info where time_placed=? and user_id=? and server_id=?''',data=(t,minfo[0],guildid))
                 await message.channel.send("<@%s> has edited their city of `%s`. The next letter is `%s`."%(minfo[0],cur.fetchone()[0],minfo[2]))
 
+bannedcountries={}
 
 @client.event
 async def on_message(message:discord.Message):
-    global processes
+    global processes,bannedcountries
     authorid=message.author.id
     if message.guild and authorid!=client.user.id:
         guildid=message.guild.id
@@ -821,14 +824,32 @@ async def on_message(message:discord.Message):
                     from server_info
                     where server_id = ?''',data=(guildid,))
         channel_id, prefix=cur.fetchone()
-        if message.content.strip().startswith(prefix) and message.content[len(prefix):].strip()!='' and message.channel.id==channel_id and not message.author.bot:
+
+        # OLD PREFIX SYSTEM
+        if guildid==PRANK_SERVER:
+            condition=not message.content.strip().startswith(prefix) and message.content.strip()!='' and message.channel.id==channel_id and not message.author.bot
+        else:
+            condition=message.content.strip().startswith(prefix) and message.content[len(prefix):].strip()!='' and message.channel.id==channel_id and not message.author.bot
+        
+        cur.execute('''select distinct country_code from count_info where server_id = ?''',data=(guildid,))
+        countrylist = {i[0] for i in cur}
+        countries={}
+        for i in countrylist:
+            cur.execute('''select sum(count) from count_info where server_id = ? and (country_code = ? or alt_country = ?)''',data= (guildid, i,i))
+            if cur.rowcount!=0:
+                countries[i] = cur.fetchone()[0]
+        bannedcountries=set(i[1] for i in sorted([(countries[i],i) for i in countries])[:10])
+
+        if condition:
             # IF THERE IS A CITY BEING PROCESSED, ADD IT TO THE QUEUE AND EVENTUALLY IT WILL BE REACHED. OTHERWISE PROCESS IMMEDIATELY WHILE KEEPING IN MIND THAT IT IS CURRENTLY BEING PROCESSED
             if processes[guildid]: 
                 processes[guildid].append((message,guildid,authorid))
             else:
                 processes[guildid]=[(message,guildid,authorid)]
                 await asyncio.create_task(chain(message,guildid,authorid))
-
+        elif message.guild.id==PRANK_SERVER and message.channel.id==channel_id and not message.author.bot:
+            if re.search(r"\b((my bad)|(oop(s?))|(s(o?)(r?)ry))\b",message.content,re.I):
+                await message.reply("it's ok")
 async def chain(message:discord.Message,guildid,authorid):
     cur.execute('select user_id from bans where banned=?',data=(True,))
     bans={i[0] for i in cur}
@@ -865,7 +886,11 @@ async def chain(message:discord.Message,guildid,authorid):
     sinfo=cur.fetchone()
     cur.execute('''select city_id from chain_info where server_id = ? and round_number = ? order by count desc''',data=(guildid,sinfo[0]))
     citieslist=[i for (i,) in cur]
-    res=search_cities_chain(message.content[len(sinfo[10]):],0,sinfo[2])
+    # OLD PREFIX SYSTEM
+    if guildid==PRANK_SERVER:
+        res=search_cities_chain(message.content,0,sinfo[2])
+    else:
+        res=search_cities_chain(message.content[len(sinfo[10]):],0,sinfo[2])
     if res:
         cur.execute('''select
                 round_number,
@@ -900,46 +925,69 @@ async def chain(message:discord.Message,guildid,authorid):
                     repeatset=set()
                 if ((sinfo[4] and res[0] not in set(citieslist[:sinfo[1]])) or (not sinfo[4] and res[0] not in set(citieslist)) or (res[0] in repeatset)):
                     if sinfo[8]!=message.author.id:
-                        cur.execute('''select correct,score from server_user_info where server_id = ? and user_id = ?''',data=(guildid,authorid))
-                        uinfo=cur.fetchone()
-                        cur.execute('''update server_user_info set correct = ?, score = ?, last_active = ? where server_id = ? and user_id = ?''',data=(uinfo[0]+1,uinfo[1]+1,int(message.created_at.timestamp()),guildid,authorid))
-                        cur.execute('''select correct,score from global_user_info where user_id=?''',data=(authorid,))
-                        uinfo=cur.fetchone()
-                        cur.execute('''update global_user_info set correct = ?, score = ?, last_active = ? where user_id = ?''',data=(uinfo[0]+1,uinfo[1]+1,int(message.created_at.timestamp()),authorid))
-                        cur.execute('''update server_info set last_user = ?, current_letter = ? where server_id = ?''',data=(authorid,letters[1],guildid))
-                        cur.execute('''insert into chain_info(server_id,user_id,round_number,count,city_id,name,admin1,country,country_code,alt_country,time_placed,valid,message_id) values (?,?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,res[0],n[0],n[2],n[1][0],n[1][1],n[3][0] if n[3] else None,int(message.created_at.timestamp()),True,message.id))
-                        
-                        cur.execute('''select count from count_info where server_id = ? and city_id = ?''',data=(guildid,res[0]))
-                        if cur.rowcount==0:
-                            cur.execute('''insert into count_info(server_id,city_id,name,admin1,country,country_code,alt_country,count) values (?,?,?,?,?,?,?,?)''',data=(guildid,res[0],n[0],allnames.loc[res[0]]['name'],n[1][0],n[1][1],n[3][0] if n[3] else None,1))
-                        else:
-                            citycount = cur.fetchone()[0]
-                            cur.execute('''update count_info set count=? where server_id=? and city_id=?''',data=(citycount+1,guildid,res[0]))
-                        
-                        try:
-                            if sinfo[9]<(len(citieslist)+1):
-                                cur.execute('''update server_info set max_chain = ?,last_best = ? where server_id = ?''',data=(len(citieslist)+1,int(message.created_at.timestamp()),guildid))
-                                await message.add_reaction('\N{BALLOT BOX WITH CHECK}')
-                            else:
-                                await message.add_reaction('\N{WHITE HEAVY CHECK MARK}')
-                            await message.add_reaction(regionalindicators[country[0].lower()]+regionalindicators[country[1].lower()])
-                            
-                            
-                            if (country=="GB"):
-                                if adm1=="Scotland":
-                                    await message.add_reaction("🏴󠁧󠁢󠁳󠁣󠁴󠁿")
-                                elif adm1=="Wales":
-                                    await message.add_reaction("🏴󠁧󠁢󠁷󠁬󠁳󠁿")
 
-                            if altcountry:
-                                await message.add_reaction(regionalindicators[altcountry[0].lower()]+regionalindicators[altcountry[1].lower()])
-                            cur.execute('''select reaction from react_info where server_id = ? and city_id = ?''', data=(guildid,res[0]))
-                            if cur.rowcount>0:
-                                await message.add_reaction(cur.fetchone()[0])
-                            if not ((message.content[len(sinfo[10]):].isalpha() and message.content[len(sinfo[10]):].isascii())):
-                                await message.add_reaction(regionalindicators[letters[1]])
-                        except:
-                            pass
+                        # BAN TOP 10 COUNTRIES
+                        if not ((guildid==PRANK_SERVER) and (country in bannedcountries or altcountry in bannedcountries)):
+
+
+                            cur.execute('''select correct,score from server_user_info where server_id = ? and user_id = ?''',data=(guildid,authorid))
+                            uinfo=cur.fetchone()
+                            cur.execute('''update server_user_info set correct = ?, score = ?, last_active = ? where server_id = ? and user_id = ?''',data=(uinfo[0]+1,uinfo[1]+1,int(message.created_at.timestamp()),guildid,authorid))
+                            cur.execute('''select correct,score from global_user_info where user_id=?''',data=(authorid,))
+                            uinfo=cur.fetchone()
+                            cur.execute('''update global_user_info set correct = ?, score = ?, last_active = ? where user_id = ?''',data=(uinfo[0]+1,uinfo[1]+1,int(message.created_at.timestamp()),authorid))
+                            cur.execute('''update server_info set last_user = ?, current_letter = ? where server_id = ?''',data=(authorid,letters[1],guildid))
+                            cur.execute('''insert into chain_info(server_id,user_id,round_number,count,city_id,name,admin1,country,country_code,alt_country,time_placed,valid,message_id) values (?,?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,res[0],n[0],n[2],n[1][0],n[1][1],n[3][0] if n[3] else None,int(message.created_at.timestamp()),True,message.id))
+                            
+                            cur.execute('''select count from count_info where server_id = ? and city_id = ?''',data=(guildid,res[0]))
+                            if cur.rowcount==0:
+                                cur.execute('''insert into count_info(server_id,city_id,name,admin1,country,country_code,alt_country,count) values (?,?,?,?,?,?,?,?)''',data=(guildid,res[0],n[0],allnames.loc[res[0]]['name'],n[1][0],n[1][1],n[3][0] if n[3] else None,1))
+                            else:
+                                citycount = cur.fetchone()[0]
+                                cur.execute('''update count_info set count=? where server_id=? and city_id=?''',data=(citycount+1,guildid,res[0]))
+                            
+                            try:
+                                if sinfo[9]<(len(citieslist)+1):
+                                    cur.execute('''update server_info set max_chain = ?,last_best = ? where server_id = ?''',data=(len(citieslist)+1,int(message.created_at.timestamp()),guildid))
+                                    await message.add_reaction('\N{BALLOT BOX WITH CHECK}')
+                                else:
+                                    await message.add_reaction('\N{WHITE HEAVY CHECK MARK}')
+                                # REACT WITH WRONG FLAGS
+                                if guildid!=PRANK_SERVER:
+                                    await message.add_reaction(regionalindicators[country[0].lower()]+regionalindicators[country[1].lower()])
+                                else:
+                                    randomcountry=random.choice(list(iso2.keys()))
+                                    await message.add_reaction(regionalindicators[randomcountry[0].lower()]+regionalindicators[randomcountry[1].lower()])
+                                
+                                if (country=="GB"):
+                                    if adm1=="Scotland":
+                                        await message.add_reaction("🏴󠁧󠁢󠁳󠁣󠁴󠁿")
+                                    elif adm1=="Wales":
+                                        await message.add_reaction("🏴󠁧󠁢󠁷󠁬󠁳󠁿")
+                                
+                                # ADD RANDOM COUNTRY REACT
+                                if altcountry:
+                                    if guildid!=PRANK_SERVER:
+                                        await message.add_reaction(regionalindicators[altcountry[0].lower()]+regionalindicators[altcountry[1].lower()])
+                                    else:
+                                        randomcountry=random.choice(list(iso2.keys()))
+                                        await message.add_reaction(regionalindicators[randomcountry[0].lower()]+regionalindicators[randomcountry[1].lower()])
+                                # REACT RANDOM THINGS TO CITIES THAT ARENT SUPPOSED TO HAVE REACTIONS
+                                if guildid==PRANK_SERVER:
+                                    cur.execute('''select reaction from react_info where server_id = ? and city_id <> ?''', data=(guildid,res[0]))                                    
+                                else:
+                                    cur.execute('''select reaction from react_info where server_id = ? and city_id = ?''', data=(guildid,res[0]))
+                                if cur.rowcount>0:
+                                    await message.add_reaction(cur.fetchone()[0])
+                                # ADD LETTER REACTION TO CITIES THAT USUALLY DON'T HAVE IT
+                                if not ((message.content[len(sinfo[10]):].isalpha() and message.content[len(sinfo[10]):].isascii())):
+                                    await message.add_reaction(regionalindicators[letters[1]])
+                                elif guildid==PRANK_SERVER:
+                                    await message.add_reaction(regionalindicators[random.choice('qwertyuiopasdfghjklzxcvbnm')])
+                            except:
+                                pass
+                        else:
+                            await fail(message,"**No cities from the top 10 most popular countries (/stats popular-cities).**",sinfo,citieslist,res,n,True)
                     else:
                         await fail(message,"**No going twice.**",sinfo,citieslist,res,n,True)
                 else:
@@ -982,6 +1030,12 @@ async def fail(message:discord.Message,reason,sinfo,citieslist,res,n,cityfound):
     cur.execute('''update global_user_info set incorrect = ?, score = ?, last_active = ? where user_id = ?''',data=(uinfo[0]+1,uinfo[1]-1,int(message.created_at.timestamp()),authorid))
     if sinfo[3]:
         poss=allnames[allnames['population']>=sinfo[2]]
+        
+        # choose only cities ending in x or q
+        
+        if guildid==PRANK_SERVER:
+            poss=poss[poss['last letter'].isin({'x','q'})]
+
         newid=int(random.choice(poss.index))
         await message.channel.send('<@%s> RUINED IT AT **%s**!! Start again from `%s` (next letter `%s`). %s'%(authorid,f"{len(citieslist):,}",poss.at[newid,'name'],poss.at[newid,'last letter'],reason))
     else:
@@ -989,7 +1043,7 @@ async def fail(message:discord.Message,reason,sinfo,citieslist,res,n,cityfound):
     if cityfound:
         cur.execute('''insert into chain_info(server_id,user_id,round_number,count,city_id,name,admin1,country,country_code,alt_country,time_placed,valid,message_id) values (?,?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,res[0],n[0],n[2],n[1][0],n[1][1],n[3][0] if n[3] else None,int(message.created_at.timestamp()),False,message.id))
     else:
-        cur.execute('''insert into chain_info(server_id,user_id,round_number,count,name,time_placed,valid,message_id) values (?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,message.content[len(sinfo[10]):],int(message.created_at.timestamp()),False,message.id))
+        cur.execute('''insert into chain_info(server_id,user_id,round_number,count,name,time_placed,valid,message_id) values (?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,message.content[len(sinfo[10]):] if guildid!= PRANK_SERVER else message.content,int(message.created_at.timestamp()),False,message.id))
     cur.execute('''update server_info set chain_end = ?, current_letter = ?, last_user = ? where server_id = ?''',data=(True,'-',None,guildid))
     if sinfo[3]:
         entr=allnames.loc[(newid)]
