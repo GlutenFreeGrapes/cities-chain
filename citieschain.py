@@ -848,7 +848,7 @@ async def on_message(message:discord.Message):
                 processes[guildid]=[(message,guildid,authorid)]
                 await asyncio.create_task(chain(message,guildid,authorid))
         elif message.guild.id==PRANK_SERVER and message.channel.id==channel_id and not message.author.bot:
-            if re.search(r"\b((mb)|(my bad)|(oop(s?))|((?<!not.*)s(o?)(r?)ry))\b",message.content,re.I):
+            if re.search(r"\b((mb)|(my bad)|(oop(s?))|(s(o?)(r?)ry))\b",message.content,re.I):
                 await message.reply("it's ok")
 async def chain(message:discord.Message,guildid,authorid):
     cur.execute('select user_id from bans where banned=?',data=(True,))
