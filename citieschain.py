@@ -838,7 +838,7 @@ async def on_message(message:discord.Message):
             cur.execute('''select sum(count) from count_info where server_id = ? and (country_code = ? or alt_country = ?)''',data= (guildid, i,i))
             if cur.rowcount!=0:
                 countries[i] = cur.fetchone()[0]
-        bannedcountries=set(i[1] for i in sorted([(countries[i],i) for i in countries])[:10])
+        bannedcountries=set(i[1] for i in sorted([(countries[i],i) for i in countries],reverse=1)[:10])
 
         if condition:
             # IF THERE IS A CITY BEING PROCESSED, ADD IT TO THE QUEUE AND EVENTUALLY IT WILL BE REACHED. OTHERWISE PROCESS IMMEDIATELY WHILE KEEPING IN MIND THAT IT IS CURRENTLY BEING PROCESSED
