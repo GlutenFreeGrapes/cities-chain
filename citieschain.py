@@ -5,9 +5,7 @@ import asyncio
 from os import environ as env
 from dotenv import load_dotenv
 
-from mpl_toolkits.basemap import Basemap
-import io
-import matplotlib.pyplot as plt
+
 
 load_dotenv()
 
@@ -230,49 +228,53 @@ def search_cities_chain(query, checkApostrophe,min_pop):
 
         return (int(r['geonameid']),r,r[s[r['match']]])
 
-def generate_map(city_id_list):
-    coords = [allnames.loc[city_id][['latitude','longitude']] for city_id in city_id_list]
-    lats,lons = zip(*coords)
+#def generate_map(city_id_list):
 
-    # add padding
-    SCALING_FACTOR = .25
-    mlon=min(lons)
-    Mlon=max(lons)
-    mlat=min(lats)
-    Mlat=max(lats)
+    #from mpl_toolkits.basemap import Basemap
+    #import io
+    #import matplotlib.pyplot as plt
+    #coords = [allnames.loc[city_id][['latitude','longitude']] for city_id in city_id_list]
+    #lats,lons = zip(*coords)
 
-    latdif = Mlat-mlat # height
-    londif = Mlon-mlon # width
+    ## add padding
+    #SCALING_FACTOR = .25
+    #mlon=min(lons)
+    #Mlon=max(lons)
+    #mlat=min(lats)
+    #Mlat=max(lats)
 
-    maxmargins = SCALING_FACTOR*max(latdif,londif)
-    if latdif>londif:
-        mlon+=londif/2
-        Mlon-=londif/2
-        londif=(maxmargins+londif)/(1+SCALING_FACTOR)
-        mlon-=londif/2
-        Mlon+=londif/2
-    else:
-        mlat+=latdif/2
-        Mlat-=latdif/2
-        latdif=(maxmargins+latdif)/(1+SCALING_FACTOR)
-        mlat-=latdif/2
-        Mlat+=latdif/2
-    if len(coords):
-        if len(coords)>1:
-            m = Basemap(llcrnrlon=max(-180,mlon-londif*(SCALING_FACTOR/2)),llcrnrlat=max(-90,mlat-latdif*(SCALING_FACTOR/2)),urcrnrlon=min(180,Mlon+londif*(SCALING_FACTOR/2)),urcrnrlat=min(90,Mlat+latdif*(SCALING_FACTOR/2)),resolution='l',projection='cyl')
-        else:
-            MARGIN_DEGREES = 5 # on each side
-            m = Basemap(llcrnrlon=lons[0]-MARGIN_DEGREES,llcrnrlat=lats[0]-MARGIN_DEGREES,urcrnrlon=lons[0]+MARGIN_DEGREES,urcrnrlat=lats[0]+MARGIN_DEGREES,resolution='l',projection='cyl')
-        x,y = m(lons,lats)
+    #latdif = Mlat-mlat # height
+    #londif = Mlon-mlon # width
 
-        m.fillcontinents()
-        m.drawcountries(color='w')
-        m.plot(x,y,marker='.',color='tab:blue')
-        img_buf = io.BytesIO()
-        plt.savefig(img_buf,format='png',bbox_inches='tight')
-        img_buf.seek(0)
-        plt.clf()
-        return discord.File(img_buf, filename='map.png')
+    #maxmargins = SCALING_FACTOR*max(latdif,londif)
+    #if latdif>londif:
+        #mlon+=londif/2
+        #Mlon-=londif/2
+        #londif=(maxmargins+londif)/(1+SCALING_FACTOR)
+        #mlon-=londif/2
+        #Mlon+=londif/2
+    #else:
+        #mlat+=latdif/2
+        #Mlat-=latdif/2
+        #latdif=(maxmargins+latdif)/(1+SCALING_FACTOR)
+        #mlat-=latdif/2
+        #Mlat+=latdif/2
+    #if len(coords):
+        #if len(coords)>1:
+            #m = Basemap(llcrnrlon=max(-180,mlon-londif*(SCALING_FACTOR/2)),llcrnrlat=max(-90,mlat-latdif*(SCALING_FACTOR/2)),urcrnrlon=min(180,Mlon+londif*(SCALING_FACTOR/2)),urcrnrlat=min(90,Mlat+latdif*(SCALING_FACTOR/2)),resolution='l',projection='cyl')
+        #else:
+            #MARGIN_DEGREES = 5 # on each side
+            #m = Basemap(llcrnrlon=lons[0]-MARGIN_DEGREES,llcrnrlat=lats[0]-MARGIN_DEGREES,urcrnrlon=lons[0]+MARGIN_DEGREES,urcrnrlat=lats[0]+MARGIN_DEGREES,resolution='l',projection='cyl')
+        #x,y = m(lons,lats)
+
+        #m.fillcontinents()
+        #m.drawcountries(color='w')
+        #m.plot(x,y,marker='.',color='tab:blue')
+        #img_buf = io.BytesIO()
+        #plt.savefig(img_buf,format='png',bbox_inches='tight')
+        #img_buf.seek(0)
+        #plt.clf()
+        #return discord.File(img_buf, filename='map.png')
 
 
 
