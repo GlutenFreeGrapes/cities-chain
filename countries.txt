@@ -11636,6 +11636,7 @@ geonameid	country	iso3	name	default
 1819730	HK	HKG	Hồng Kông	0
 1819730	HK	HKG	Ooŋ Koŋ	0
 1819730	HK	HKG	Posebna upravna regija Hong Kong	0
+1819730	HK	HKG	Sonderverwaltungszone Hongkong der Volksrepublik China	0
 1819730	HK	HKG	Xianggang	0
 1819730	HK	HKG	Xianggang Tebie Xingzhengqu	0
 1819730	HK	HKG	i-Hong Kong	0
@@ -23114,6 +23115,9 @@ geonameid	country	iso3	name	default
 1880251	SG	SGP	Singapore	1
 1880251	SG	SGP	Cingapura	0
 1880251	SG	SGP	Republic of Singapore	0
+1880251	SG	SGP	Republik Singapur	0
+1880251	SG	SGP	Republik Singapura	0
+1880251	SG	SGP	Republika Singapur	0
 1880251	SG	SGP	SG	0
 1880251	SG	SGP	SGP	0
 1880251	SG	SGP	Sigapoa	0
@@ -23173,6 +23177,7 @@ geonameid	country	iso3	name	default
 1880251	SG	SGP	સિંગાપુર	0
 1880251	SG	SGP	ସିଙ୍ଗାପୁର୍	0
 1880251	SG	SGP	சிங்கப்பூர்	0
+1880251	SG	SGP	சிங்கப்பூர் குடியரசு	0
 1880251	SG	SGP	సింగపూర్	0
 1880251	SG	SGP	ಸಿಂಗಪುರ್	0
 1880251	SG	SGP	സിംഗപ്പൂര്‍	0
