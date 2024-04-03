@@ -4,3 +4,5 @@ mariadb
 python-dotenv
 asyncio
 typing
+matplotlib
+basemap
