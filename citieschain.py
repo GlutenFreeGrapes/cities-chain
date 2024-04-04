@@ -1078,9 +1078,9 @@ async def user(interaction: discord.Interaction, member:Optional[discord.Member]
         await interaction.followup.send(embeds=[embed,favcities],ephemeral=eph)
 
 @stats.command(description="Displays list of cities.")
-@app_commands.rename(se='show-everyone')
-@app_commands.describe(order='The order in which the cities are presented, sequential or alphabetical',cities='Whether to show all cities or only the ones that cannot be repeated',se='Yes to show everyone stats, no otherwise')
-async def cities(interaction: discord.Interaction,order:Literal['sequential','alphabetical'],cities:Literal['all','non-repeatable'],se:Optional[Literal['yes','no']]='no'):
+@app_commands.rename(se='show-everyone',showmap='map')
+@app_commands.describe(order='The order in which the cities are presented, sequential or alphabetical',cities='Whether to show all cities or only the ones that cannot be repeated',showmap='Whether to show a map of cities',se='Yes to show everyone stats, no otherwise')
+async def cities(interaction: discord.Interaction,order:Literal['sequential','alphabetical'],cities:Literal['all','non-repeatable'],showmap:Optional[Literal['yes','no']]='no',se:Optional[Literal['yes','no']]='no'):
     eph=(se=='no')
     cit=cities.capitalize()+" Cities"
     title=f"{cit} - {order.capitalize()}"
@@ -1138,16 +1138,16 @@ async def cities(interaction: discord.Interaction,order:Literal['sequential','al
         else:
             embed.description='\n'.join(alph[:25])
             view=Paginator(1,alph,title,math.ceil(len(alph)/25),interaction.user.id)
-        await interaction.followup.send(embed=embed,view=view,ephemeral=eph,file=generate_map(cityids))
+        await interaction.followup.send(embed=embed,view=view,ephemeral=eph,files=[generate_map(cityids)] if showmap=='yes' else [])
         view.message=await interaction.original_response()
     else:
         embed=discord.Embed(title=title, color=discord.Colour.from_rgb(0,255,0),description='```null```')
         await interaction.followup.send(embed=embed,ephemeral=eph)
 
 @stats.command(name='round',description="Displays all cities said for one round.")
-@app_commands.rename(se='show-everyone')
-@app_commands.describe(round_num='Round to retrieve information from',se='Yes to show everyone stats, no otherwise')
-async def roundinfo(interaction: discord.Interaction,round_num:app_commands.Range[int,1,None],se:Optional[Literal['yes','no']]='no'):
+@app_commands.rename(se='show-everyone',showmap='map')
+@app_commands.describe(round_num='Round to retrieve information from',showmap='Whether to show a map of cities',se='Yes to show everyone stats, no otherwise')
+async def roundinfo(interaction: discord.Interaction,round_num:app_commands.Range[int,1,None],showmap:Optional[Literal['yes','no']]='no',se:Optional[Literal['yes','no']]='no'):
     eph=(se=='no')
     await interaction.response.defer(ephemeral=eph)
     guildid=interaction.guild_id
@@ -1197,7 +1197,7 @@ async def roundinfo(interaction: discord.Interaction,round_num:app_commands.Rang
                     fmt.append(':x: '+i[0]+', '+i[3]+' :flag_'+i[2][1].lower()+':')        
         embed=discord.Embed(title="Round %s - `%s`"%(f'{round_num:,}',interaction.guild.name), color=discord.Colour.from_rgb(0,255,0),description='\n'.join(fmt[:25]))
         view=Paginator(1,fmt,"Round %s - `%s`"%(f'{round_num:,}',interaction.guild.name),math.ceil(len(fmt)/25),interaction.user.id)
-        await interaction.followup.send(embed=embed,view=view,ephemeral=eph,file=generate_map(cityids))
+        await interaction.followup.send(embed=embed,view=view,ephemeral=eph,files=[generate_map(cityids)] if showmap=='yes' else [])
         view.message=await interaction.original_response()
     else:
         await interaction.followup.send("Round_num must be a number between **1** and **%s**."%s[0],ephemeral=eph)
