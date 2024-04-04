@@ -265,7 +265,7 @@ def generate_map(city_id_list):
 
         m.fillcontinents()
         m.drawcountries(color='w')
-        m.plot(x,y,marker='.',color='tab:blue')
+        m.plot(x,y,marker='.',color='tab:blue',linewidth=1,markersize=2.5)
         img_buf = io.BytesIO()
         plt.savefig(img_buf,format='png',bbox_inches='tight')
         img_buf.seek(0)
