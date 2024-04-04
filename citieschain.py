@@ -426,10 +426,11 @@ class Confirmation(discord.ui.View):
             self.message = await interaction.original_response()
 
 owner=None
-processes = {}
+cur.execute('select server_id from server_info')
+processes = {i:None for (i,) in cur}
 @client.event
 async def on_ready():
-    global owner,processes
+    global owner
     await tree.sync()
     app_info = await client.application_info()
     owner = await client.fetch_user(app_info.team.owner_id)
@@ -439,8 +440,6 @@ async def on_ready():
     for i in empty:
         cur.execute('''insert into server_info(server_id) VALUES (?)''',data=(i,))
     conn.commit()
-    cur.execute('select server_id from server_info')
-    processes = {i:None for (i,) in cur}
     print(f'Logged in as {client.user} (ID: {client.user.id})\n------')
 
 @client.event
@@ -809,7 +808,7 @@ async def on_message_edit(message:discord.Message, after:discord.Message):
         if ((message.author.id,message.channel.id)==minfo[:2]):
             cur.execute('''select last_active from server_user_info where user_id=? and server_id=?''',data=(minfo[0],guildid))
             t = cur.fetchone()[0]
-            if int(message.created_at.timestamp())==t:
+            if int(message.created_at.timestamp())==t and not message.edited_at:
                 cur.execute('''select name from chain_info where time_placed=? and user_id=? and server_id=?''',data=(t,minfo[0],guildid))
                 await message.channel.send("<@%s> has edited their city of `%s`. The next letter is `%s`."%(minfo[0],cur.fetchone()[0],minfo[2]))
 
@@ -826,13 +825,16 @@ async def on_message(message:discord.Message):
                     from server_info
                     where server_id = ?''',data=(guildid,))
         channel_id, prefix=cur.fetchone()
-        if message.content.strip().startswith(prefix) and message.content[len(prefix):].strip()!='' and message.channel.id==channel_id and not message.author.bot:
-            # IF THERE IS A CITY BEING PROCESSED, ADD IT TO THE QUEUE AND EVENTUALLY IT WILL BE REACHED. OTHERWISE PROCESS IMMEDIATELY WHILE KEEPING IN MIND THAT IT IS CURRENTLY BEING PROCESSED
-            if processes[guildid]: 
-                processes[guildid].append((message,guildid,authorid))
-            else:
-                processes[guildid]=[(message,guildid,authorid)]
-                await asyncio.create_task(chain(message,guildid,authorid))
+        if message.channel.id==channel_id and not message.author.bot:
+            if message.content.strip().startswith(prefix) and message.content[len(prefix):].strip()!='':
+                # IF THERE IS A CITY BEING PROCESSED, ADD IT TO THE QUEUE AND EVENTUALLY IT WILL BE REACHED. OTHERWISE PROCESS IMMEDIATELY WHILE KEEPING IN MIND THAT IT IS CURRENTLY BEING PROCESSED
+                if processes[guildid]: 
+                    processes[guildid].append((message,guildid,authorid))
+                else:
+                    processes[guildid]=[(message,guildid,authorid)]
+                    await asyncio.create_task(chain(message,guildid,authorid))
+            elif re.match(r"(?<!not )\b((mb)|(my bad)|(oop(s?))|(s(o?)(r?)ry))\b",message.content,re.I):
+                await message.reply("it's ok")
 
 async def chain(message:discord.Message,guildid,authorid):
     cur.execute('select user_id from bans where banned=?',data=(True,))
