@@ -812,6 +812,7 @@ async def on_message_edit(message:discord.Message, after:discord.Message):
                 cur.execute('''select name from chain_info where time_placed=? and user_id=? and server_id=?''',data=(t,minfo[0],guildid))
                 await message.channel.send("<@%s> has edited their city of `%s`. The next letter is `%s`."%(minfo[0],cur.fetchone()[0],minfo[2]))
 
+MONITOR_SERVERS = {1217861387108225036, 1126556064150736999} #monitoring a server for if the messages are getting through
 
 @client.event
 async def on_message(message:discord.Message):
@@ -826,6 +827,9 @@ async def on_message(message:discord.Message):
                     where server_id = ?''',data=(guildid,))
         channel_id, prefix=cur.fetchone()
         if message.channel.id==channel_id and not message.author.bot:
+            if guildid in MONITOR_SERVERS:
+                await owner.send(f"-----------------------{guildid}--------------------------")
+                await owner.send(f"Message: `{message.content}`, Prefix: `{prefix}`")
             if message.content.strip().startswith(prefix) and message.content[len(prefix):].strip()!='':
                 # IF THERE IS A CITY BEING PROCESSED, ADD IT TO THE QUEUE AND EVENTUALLY IT WILL BE REACHED. OTHERWISE PROCESS IMMEDIATELY WHILE KEEPING IN MIND THAT IT IS CURRENTLY BEING PROCESSED
                 if processes[guildid]: 
@@ -873,6 +877,8 @@ async def chain(message:discord.Message,guildid,authorid):
     cur.execute('''select city_id from chain_info where server_id = ? and round_number = ? order by count desc''',data=(guildid,sinfo[0]))
     citieslist=[i for (i,) in cur]
     res=search_cities_chain(message.content[len(sinfo[10]):],0,sinfo[2])
+    if guildid in MONITOR_SERVERS:
+        await owner.send(f"City found: `{res[0]}`")
     if res:
         cur.execute('''select
                 round_number,
