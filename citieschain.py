@@ -1064,15 +1064,16 @@ async def user(interaction: discord.Interaction, member:Optional[discord.Member]
         for i in cur:
             if len(favc)==10:
                 break
-            cityrow = allnames.loc[i[0]]
-            citystring = cityrow['name']+", "
-            if cityrow['admin1']:
-                adm1 = admin1data[(admin1data['admin1']==cityrow['admin1']) & (admin1data['country']==cityrow['country']) & (admin1data['default']==1)]
-                citystring+=adm1.iloc[0]['name']+", "
-            citystring+=f":flag_{cityrow['country'].lower()}:"
-            if cityrow['alt-country']:
-                citystring+=f":flag_{cityrow['alt-country'].lower()}:"
-            favc.append(citystring+f' - **{i[1]}**')
+            if i[0] not in allnames.index:
+                cityrow = allnames.loc[i[0]]
+                citystring = cityrow['name']+", "
+                if cityrow['admin1']:
+                    adm1 = admin1data[(admin1data['admin1']==cityrow['admin1']) & (admin1data['country']==cityrow['country']) & (admin1data['default']==1)]
+                    citystring+=adm1.iloc[0]['name']+", "
+                citystring+=f":flag_{cityrow['country'].lower()}:"
+                if cityrow['alt-country']:
+                    citystring+=f":flag_{cityrow['alt-country'].lower()}:"
+                favc.append(citystring+f' - **{i[1]}**')
         favcities.description = '\n'.join([f"{n+1}. "+i for n,i in enumerate(favc)])
         if member.avatar:
             embed.set_author(name=member.name, icon_url=member.avatar.url)
