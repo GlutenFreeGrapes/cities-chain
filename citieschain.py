@@ -1060,8 +1060,10 @@ async def user(interaction: discord.Interaction, member:Optional[discord.Member]
         favcities = discord.Embed(title=f"Favorite Cities", color=discord.Colour.from_rgb(0,255,0))
         favc = []
         # (THANKS MARENS FOR SQL CODE)
-        cur.execute('SELECT city_id, COUNT(*) AS use_count FROM chain_info WHERE server_id = ? AND user_id = ? AND valid = 1 GROUP BY city_id ORDER BY use_count DESC LIMIT 10',data=(interaction.guild_id,member.id))
+        cur.execute('SELECT city_id, COUNT(*) AS use_count FROM chain_info WHERE server_id = ? AND user_id = ? AND valid = 1 GROUP BY city_id ORDER BY use_count DESC',data=(interaction.guild_id,member.id))
         for i in cur:
+            if len(favc)==10:
+                break
             cityrow = allnames.loc[i[0]]
             citystring = cityrow['name']+", "
             if cityrow['admin1']:
