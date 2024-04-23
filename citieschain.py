@@ -1085,7 +1085,7 @@ async def user(interaction: discord.Interaction, member:Optional[discord.Member]
         cur.execute('SELECT alt_country, COUNT(*) AS use_count FROM chain_info WHERE server_id = ? AND user_id = ? AND valid = 1 AND alt_country IS NOT NULL GROUP BY alt_country ORDER BY use_count DESC',data=(interaction.guild_id,member.id))
         for i in cur:
             countryuses[i[0]]+=i[1]
-        fav_countries = [f"{j[1]} - **{j[0]}**" for j in sorted([(countryuses[i],iso2[i]) for i in countryuses])[:10]]
+        fav_countries = [f"{j[1]} - **{j[0]}**" for j in sorted([(countryuses[i],iso2[i]) for i in countryuses],reverse=1)[:10]]
         favcities.add_field(name='Countries',value='\n'.join([f"{n+1}. "+i for n,i in enumerate(fav_countries)]))
         if member.avatar:
             embed.set_author(name=member.name, icon_url=member.avatar.url)
@@ -1213,12 +1213,12 @@ async def roundinfo(interaction: discord.Interaction,round_num:app_commands.Rang
                     fmt.append(':x: '+i[0]+' :flag_'+i[2][1].lower()+':'+''.join(':flag_'+j.lower()+':' for j in i[3]))
                 else:
                     fmt.append(':x: '+i[0]+', '+i[3]+' :flag_'+i[2][1].lower()+':')        
-        embed=discord.Embed(title="Round %s"%(f'{round_num:,}',interaction.guild.name), color=discord.Colour.from_rgb(0,255,0),description='\n'.join(fmt[:25]))
+        embed=discord.Embed(title="Round %s"%(f'{round_num:,}'), color=discord.Colour.from_rgb(0,255,0),description='\n'.join(fmt[:25]))
         if interaction.guild.icon:
             embed.set_author(name=interaction.guild.name, icon_url=interaction.guild.icon.url)
         else:
             embed.set_author(name=interaction.guild.name)
-        view=Paginator(1,fmt,"Round %s"%(f'{round_num:,}',interaction.guild.name),math.ceil(len(fmt)/25),interaction.user.id)
+        view=Paginator(1,fmt,"Round %s"%(f'{round_num:,}'),math.ceil(len(fmt)/25),interaction.user.id)
         await interaction.followup.send(embed=embed,view=view,ephemeral=eph,files=[generate_map(cityids)] if showmap=='yes' else [])
         view.message=await interaction.original_response()
     else:
