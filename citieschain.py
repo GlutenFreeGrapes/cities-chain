@@ -357,6 +357,10 @@ class Paginator(discord.ui.View):
                 i.disabled=False
             self.children[2].label="%s/%s"%(self.page,self.lens)
         new=discord.Embed(title=self.title, color=discord.Colour.from_rgb(0,255,0),description='\n'.join(self.blist[self.page*25-25:self.page*25]))
+        if interaction.guild.icon:
+            new.set_author(name=interaction.guild.name, icon_url=interaction.guild.icon.url)
+        else:
+            new.set_author(name=interaction.guild.name)
         await interaction.response.edit_message(embed=new,view=self, attachments=self.message.attachments)
         self.message=await interaction.original_response()
         
@@ -1057,14 +1061,14 @@ async def user(interaction: discord.Interaction, member:Optional[discord.Member]
             embed.add_field(name='Stats for ```%s```'%interaction.guild.name,value=f"Correct: **{f'{uinfo[0]:,}'}**\nIncorrect: **{f'{uinfo[1]:,}'}**\nCorrect Rate: **{round(uinfo[0]/(uinfo[0]+uinfo[1])*10000)/100}%**\nScore: **{f'{uinfo[2]:,}'}**\nLast Active: <t:{uinfo[3]}:R>",inline=True)
         
     
-        favcities = discord.Embed(title=f"Favorite Cities", color=discord.Colour.from_rgb(0,255,0))
+        favcities = discord.Embed(title=f"Favorite Cities/Countries", color=discord.Colour.from_rgb(0,255,0))
         favc = []
         # (THANKS MARENS FOR SQL CODE)
         cur.execute('SELECT city_id, COUNT(*) AS use_count FROM chain_info WHERE server_id = ? AND user_id = ? AND valid = 1 GROUP BY city_id ORDER BY use_count DESC',data=(interaction.guild_id,member.id))
         for i in cur:
             if len(favc)==10:
                 break
-            if i[0] not in allnames.index:
+            if i[0] in allnames.index:
                 cityrow = allnames.loc[i[0]]
                 citystring = cityrow['name']+", "
                 if cityrow['admin1']:
@@ -1074,7 +1078,15 @@ async def user(interaction: discord.Interaction, member:Optional[discord.Member]
                 if cityrow['alt-country']:
                     citystring+=f":flag_{cityrow['alt-country'].lower()}:"
                 favc.append(citystring+f' - **{i[1]}**')
-        favcities.description = '\n'.join([f"{n+1}. "+i for n,i in enumerate(favc)])
+        favcities.add_field(name='Cities',value='\n'.join([f"{n+1}. "+i for n,i in enumerate(favc)]))
+        
+        cur.execute('SELECT country_code, COUNT(*) AS use_count FROM chain_info WHERE server_id = ? AND user_id = ? AND valid = 1 GROUP BY country_code ORDER BY use_count DESC',data=(interaction.guild_id,member.id))
+        countryuses = {i[0]:i[1] for i in cur}
+        cur.execute('SELECT alt_country, COUNT(*) AS use_count FROM chain_info WHERE server_id = ? AND user_id = ? AND valid = 1 AND alt_country IS NOT NULL GROUP BY alt_country ORDER BY use_count DESC',data=(interaction.guild_id,member.id))
+        for i in cur:
+            countryuses[i[0]]+=i[1]
+        fav_countries = [f"{j[1]} - **{j[0]}**" for j in sorted([(countryuses[i],iso2[i]) for i in countryuses])[:10]]
+        favcities.add_field(name='Countries',value='\n'.join([f"{n+1}. "+i for n,i in enumerate(fav_countries)]))
         if member.avatar:
             embed.set_author(name=member.name, icon_url=member.avatar.url)
             favcities.set_author(name=member.name, icon_url=member.avatar.url)
@@ -1201,8 +1213,12 @@ async def roundinfo(interaction: discord.Interaction,round_num:app_commands.Rang
                     fmt.append(':x: '+i[0]+' :flag_'+i[2][1].lower()+':'+''.join(':flag_'+j.lower()+':' for j in i[3]))
                 else:
                     fmt.append(':x: '+i[0]+', '+i[3]+' :flag_'+i[2][1].lower()+':')        
-        embed=discord.Embed(title="Round %s - `%s`"%(f'{round_num:,}',interaction.guild.name), color=discord.Colour.from_rgb(0,255,0),description='\n'.join(fmt[:25]))
-        view=Paginator(1,fmt,"Round %s - `%s`"%(f'{round_num:,}',interaction.guild.name),math.ceil(len(fmt)/25),interaction.user.id)
+        embed=discord.Embed(title="Round %s"%(f'{round_num:,}',interaction.guild.name), color=discord.Colour.from_rgb(0,255,0),description='\n'.join(fmt[:25]))
+        if interaction.guild.icon:
+            embed.set_author(name=interaction.guild.name, icon_url=interaction.guild.icon.url)
+        else:
+            embed.set_author(name=interaction.guild.name)
+        view=Paginator(1,fmt,"Round %s"%(f'{round_num:,}',interaction.guild.name),math.ceil(len(fmt)/25),interaction.user.id)
         await interaction.followup.send(embed=embed,view=view,ephemeral=eph,files=[generate_map(cityids)] if showmap=='yes' else [])
         view.message=await interaction.original_response()
     else:
@@ -1215,6 +1231,10 @@ async def slb(interaction: discord.Interaction,se:Optional[Literal['yes','no']]=
     eph=(se=='no')
     await interaction.response.defer(ephemeral=eph)
     embed=discord.Embed(title=f"TOP USERS IN ```{interaction.guild.name}```",color=discord.Colour.from_rgb(0,255,0))
+    if interaction.guild.icon:
+        embed.set_author(name=interaction.guild.name, icon_url=interaction.guild.icon.url)
+    else:
+        embed.set_author(name=interaction.guild.name)
     cur.execute('''select user_id,score from server_user_info where server_id = ? order by score desc''',data=(interaction.guild_id,))
     if cur.rowcount>0:
         top=[]
@@ -1357,7 +1377,11 @@ async def popular(interaction: discord.Interaction,se:Optional[Literal['yes','no
     cities=[i for i in cur]
     cur.execute('''select city_id from repeat_info where server_id = ?''', data=(interaction.guild_id,))
     repeated={i[0] for i in cur}
-    embed=discord.Embed(title="Popular Cities/Countries - `%s`"%interaction.guild.name,color=discord.Colour.from_rgb(0,255,0))
+    embed=discord.Embed(title="Popular Cities/Countries",color=discord.Colour.from_rgb(0,255,0))
+    if interaction.guild.icon:
+        embed.set_author(name=interaction.guild.name, icon_url=interaction.guild.icon.url)
+    else:
+        embed.set_author(name=interaction.guild.name)
     if len(cities)>0:
         fmt=[]
         for i in cities[:10]:
@@ -1367,14 +1391,14 @@ async def popular(interaction: discord.Interaction,se:Optional[Literal['yes','no
             k,l,m,n=j['name'],admin1data[(admin1data['country']==j['country'])&(admin1data['admin1']==j['admin1'])&(admin1data['default']==1)]['name'].iloc[0] if j['admin1'] else None,i[1],i[2]
             if l:
                 if n:
-                    loctuple=(k,l,m+'/'+n)
+                    loctuple=(k,l,f":flag_{m.lower()}::flag_{n.lower()}:")
                 else:
-                    loctuple=(k,l,m)
+                    loctuple=(k,l,f":flag_{m.lower()}:")
             else:
                 if n:
-                    loctuple=(k,m+'/'+n)
+                    loctuple=(k,f":flag_{m.lower()}::flag_{n.lower()}:")
                 else:
-                    loctuple=(k,m)
+                    loctuple=(k,f":flag_{m.lower()}:")
             fmt.append((c,', '.join(loctuple)+(' :repeat:' if i[0] in repeated else '')))
         fmt=sorted(fmt,key = lambda x:(-x[0],x[1]))
         embed.add_field(name='Cities',value='\n'.join(['%s. %s - **%s**' %(n+1,i[1],f"{i[0]:,}") for (n,i) in enumerate(fmt)]))
@@ -1406,7 +1430,11 @@ async def bestrds(interaction: discord.Interaction,se:Optional[Literal['yes','no
     cur.execute('''select round_number,chain_end from server_info where server_id = ?''',data=(interaction.guild_id,))
     bb=cur.fetchone()
     rounds=range(1,bb[0]+1)
-    embed=discord.Embed(title="Best Rounds - `%s`"%interaction.guild.name,color=discord.Colour.from_rgb(0,255,0))
+    embed=discord.Embed(title="Best Rounds",color=discord.Colour.from_rgb(0,255,0))
+    if interaction.guild.icon:
+        embed.set_author(name=interaction.guild.name, icon_url=interaction.guild.icon.url)
+    else:
+        embed.set_author(name=interaction.guild.name)
     if len(rounds)>0:
         fmt=[]
         maxrounds=[]
