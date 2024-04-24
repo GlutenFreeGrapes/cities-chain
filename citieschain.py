@@ -1289,12 +1289,15 @@ async def ulb(interaction: discord.Interaction,se:Optional[Literal['yes','no']]=
         counter=0
         for i in cur:
             try:
-                user_from_id = await client.fetch_user(i[0])
+                try:
+                    user_from_id = await client.get_user(i[0])
+                except:
+                    user_from_id = await client.fetch_user(i[0])
                 top.append(f'{counter+1}. {user_from_id.name} - **{f"{i[1]:,}"}**') 
                 counter+=1
                 if counter==10:
                     break
-            except:
+            except Exception as e:
                 pass
         embed.description='\n'.join(top)
     else:
@@ -1373,6 +1376,10 @@ async def repeat(interaction: discord.Interaction,se:Optional[Literal['yes','no'
 async def popular(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
     eph=(se=='no')
     await interaction.response.defer(ephemeral=eph)
+    if interaction.guild.id == 1046644822859055164:
+        await interaction.followup.send("sorry buddy")
+        return
+
     cur.execute('''select distinct city_id,country_code,alt_country from count_info where server_id = ? order by count desc''',data=(interaction.guild_id,))
     cities=[i for i in cur]
     cur.execute('''select city_id from repeat_info where server_id = ?''', data=(interaction.guild_id,))
