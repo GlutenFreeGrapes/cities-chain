@@ -1610,6 +1610,9 @@ async def cityinfo(interaction: discord.Interaction, city:str, province:Optional
 async def countryinfo(interaction: discord.Interaction, country:str,se:Optional[Literal['yes','no']]='no'):
     eph=(se=='no')
     await interaction.response.defer(ephemeral=eph)
+    if interaction.guild.id == 1046644822859055164:
+        await interaction.followup.send("not today buckaroo")
+        return
     countrysearch=country.casefold().strip()
     res=countriesdata[((countriesdata['name'].str.casefold()==countrysearch)|(countriesdata['country'].str.casefold()==countrysearch))].iloc[0]
     if res.shape[0]!=0:
