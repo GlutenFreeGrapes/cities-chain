@@ -1315,7 +1315,7 @@ async def repeat(interaction: discord.Interaction,se:Optional[Literal['yes','no'
 async def popular(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
     eph=(se=='no')
     await interaction.response.defer(ephemeral=eph)
-    if interaction.guild.id == 1126556064150736999:#1046644822859055164:
+    if interaction.guild.id == 1046644822859055164:
         await owner.send('<@%s> has discovered the popular command'%interaction.user.id)
 
     cur.execute('''select distinct city_id,country_code,alt_country from count_info where server_id = ? order by count desc''',data=(interaction.guild_id,))
@@ -1550,7 +1550,7 @@ async def cityinfo(interaction: discord.Interaction, city:str, province:Optional
 async def countryinfo(interaction: discord.Interaction, country:str,se:Optional[Literal['yes','no']]='no'):
     eph=(se=='no')
     await interaction.response.defer(ephemeral=eph)
-    if interaction.guild.id == 1126556064150736999:#1046644822859055164:
+    if interaction.guild.id == 1046644822859055164:
         await owner.send('<@%s> has discovered the country-info command'%interaction.user.id)
     countrysearch=country.casefold().strip()
     res=countriesdata[((countriesdata['name'].str.casefold()==countrysearch)|(countriesdata['country'].str.casefold()==countrysearch))].iloc[0]
