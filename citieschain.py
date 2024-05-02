@@ -233,6 +233,9 @@ def search_cities_chain(query, checkApostrophe,min_pop,include_deleted):
 
         return (int(r['geonameid']),r,r[s[r['match']]])
 
+async def update_db():
+    await owner.send("updated")
+
 def generate_map(city_id_list):
     coords = [allnames.loc[city_id][['latitude','longitude']] for city_id in city_id_list]
     lats,lons = zip(*coords)
@@ -785,6 +788,9 @@ async def on_message_edit(message:discord.Message, after:discord.Message):
 @client.event
 async def on_message(message:discord.Message):
     global processes
+    if message.author == owner and (message.content=='update-db'):
+        await update_db()
+        return
     authorid=message.author.id
     if message.guild and authorid!=client.user.id:
         guildid=message.guild.id
@@ -802,7 +808,7 @@ async def on_message(message:discord.Message):
                 else:
                     processes[guildid]=[(message,guildid,authorid)]
                     await asyncio.create_task(chain(message,guildid,authorid))
-            elif re.match(r"(?<!not )\b((mb)|(my bad)|(oop(s?))|(s(o?)(r?)ry))\b",message.content,re.I):
+            elif re.search(r"(?<!not )\b((mb)|(my bad)|(oop(s?))|(s(o?)(r?)ry))\b",message.content,re.I):
                 await message.reply("it's ok")
 
 async def chain(message:discord.Message,guildid,authorid):
@@ -912,7 +918,7 @@ async def chain(message:discord.Message,guildid,authorid):
                                 cur.execute('''select reaction from react_info where server_id = ? and city_id = ?''', data=(guildid,res[0]))
                                 if cur.rowcount>0:
                                     await message.add_reaction(cur.fetchone()[0])
-                                if not ((res[2].replace(' ','').isalpha() and res[2].isascii())):
+                                if not ((res[2].replace(' ','').isalpha() and res[2].isascii() and message.content[len(sinfo[10]):].find(',')<0)):
                                     await message.add_reaction(regionalindicators[letters[1]])
                             except:
                                 pass
@@ -1548,8 +1554,9 @@ async def countryinfo(interaction: discord.Interaction, country:str,se:Optional[
     eph=(se=='no')
     await interaction.response.defer(ephemeral=eph)
     countrysearch=country.casefold().strip()
-    res=countriesdata[((countriesdata['name'].str.casefold()==countrysearch)|(countriesdata['country'].str.casefold()==countrysearch))].iloc[0]
+    res=countriesdata[((countriesdata['name'].str.casefold()==countrysearch)|(countriesdata['country'].str.casefold()==countrysearch))]
     if res.shape[0]!=0:
+        res = res.iloc[0]
         cur.execute("select sum(count) from count_info where server_id=? and (country_code=? or alt_country=?)",data=(interaction.guild_id,res['country'],res['country']))
         count=cur.fetchone()[0]
         aname=countriesdata[(countriesdata['geonameid']==res['geonameid'])]
@@ -1574,7 +1581,9 @@ async def countryinfo(interaction: discord.Interaction, country:str,se:Optional[
                 citylist=[f'''{n+1}. {i[0]}, {i[1]} - **{i[2]}**''' if i[1] else f'''{n+1}. {i[0]} - **{i[2]}**''' for n,i in enumerate(cur)]
                 topcities.description='\n'.join(citylist)
                 tosend.append(topcities)
-            await interaction.followup.send(embeds=tosend,ephemeral=eph)
+            await interaction.followup.send(embed=tosend[0],ephemeral=eph)
+            if len(tosend)-1:
+                await interaction.followup.send(embed=tosend[1],ephemeral=eph)            
         else:
             embed.description='There are no alternate names for this country.'
             await interaction.followup.send(embed=embed,ephemeral=eph)
@@ -1664,13 +1673,14 @@ async def help(interaction: discord.Interaction,setting: Literal['rules','comman
         """,
         """
         **Other commands:**
-        `/city-info [city] ([administrative-division][country])`: gets information about the given city
-        `/country-info [country]`: gets information about the given countries
+        `/city-info [city] ([administrative-division][country][show-everyone])`: gets information about the given city
+        `/country-info [country] ([show-everyone])`: gets information about the given countries
         `/delete-stats`: deletes stats for your server
         `/ping`: shows bot latency
         `/block [user]`: blocks a certain user if they are purposefully ruining the chain
         `/unblock [user]`: unblocks a certain user
-        `/help [setting]`: sends this message"""]
+        `/help [setting] ([show-everyone])`: sends this message
+        `/about([show-everyone])`: about the bot """]
         embed.description=messages[0]
         await interaction.followup.send(embed=embed,view=Help(messages),ephemeral=(se=='no'))
     elif setting == 'emojis':
@@ -1679,6 +1689,18 @@ async def help(interaction: discord.Interaction,setting: Literal['rules','comman
     elif setting == 'tips':
         embed.description = '''**Tips**\n- When many people are playing, play cities that start and end with the same letter to avoid breaking the chain. \n- If you want to specify a different city than the one the bot interprets, you can use commas to specify provinces, states, or countries: \nExamples: \n:white_check_mark: Atlanta\n:white_check_mark: Atlanta, United States\n:white_check_mark: Atlanta, Georgia\n:white_check_mark: Atlanta, Fulton County\n:white_check_mark: Atlanta, Fulton County, Georgia, United States\nYou can specify a maximum of 2 administrative divisions, not including the country. \n- Remember, at the end of the day, it is just a game, and the game is supposed to be lighthearted and fun.'''
         await interaction.followup.send(embed=embed,ephemeral=(se=='no'))
+
+@tree.command(description="Information about the bot.")
+@app_commands.describe(se='Yes to show everyone stats, no otherwise')
+@app_commands.rename(se='show-everyone')
+async def about(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
+    embed = discord.Embed(color=GREEN,title="About Cities Chain Bot")
+    embed.add_field(name="Ping",value=f"{int(client.latency*1000)} ms")
+    embed.add_field(name="Support Server",value="[here](https://discord.gg/xTERJGpx5d)")
+    embed.add_field(name="Suggestions Channel",value="<#1231870769454125129>\n<#1221861912657006612>")
+    embed.add_field(name="Data Source",value="[Geonames](https://geonames.org) - [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)")
+    embed.add_field(name="GitHub Repository",value="[here](https://github.com/GlutenFreeGrapes/cities-chain)")
+    await interaction.response.send_message(embed=embed,ephemeral=se=='no')
 
 import traceback,datetime
 @client.event
