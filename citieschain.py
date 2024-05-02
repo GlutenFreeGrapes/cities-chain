@@ -946,33 +946,31 @@ async def chain(message:discord.Message,guildid,authorid):
     else:
         await asyncio.create_task(chain(*processes[guildid][0]))
         
-@tree.command(name="fix-count-info")
-@app_commands.check(owner_modcheck)
-async def fixci(interaction:discord.Interaction):
-    await interaction.response.send_message("starting")
-    cur.execute('''select distinct(city_id) from count_info''')
-    all_city_ids = {i for (i,) in cur}
-    # for every city id, iterate, get id and state, update properly
-    default_admin1 = admin1data[admin1data['default']==1]
-    for n,city_id in enumerate(all_city_ids):
-        # city info
-        city_info = allnames.loc[city_id]
-        # admin1 default name
-        if city_info['admin1']!=None:
-            try:
-                admin1_name = default_admin1[(default_admin1['admin1']==city_info['admin1'])&(default_admin1['country']==city_info['country'])].iloc[0]['name']
-            except:
-                admin1_name = None
-        else:
-            admin1_name=None
-        cur.execute('''update count_info set name=?, admin1=? where city_id=?''',(city_info['name'],admin1_name,city_id))   
-        if (n+1)%100==0:
-            m = await interaction.original_response()
-            await m.edit(content=f"{n+1}/{len(all_city_ids)} ({(n+1)/len(all_city_ids)*100}%)")
-    conn.commit()
-    await interaction.followup.send('done')
-
-
+# @tree.command(name="fix-count-info")
+# @app_commands.check(owner_modcheck)
+# async def fixci(interaction:discord.Interaction):
+#     await interaction.response.send_message("starting")
+#     cur.execute('''select distinct(city_id) from count_info''')
+#     all_city_ids = {i for (i,) in cur}
+#     # for every city id, iterate, get id and state, update properly
+#     default_admin1 = admin1data[admin1data['default']==1]
+#     for n,city_id in enumerate(all_city_ids):
+#         # city info
+#         city_info = allnames.loc[city_id]
+#         # admin1 default name
+#         if city_info['admin1']!=None:
+#             try:
+#                 admin1_name = default_admin1[(default_admin1['admin1']==city_info['admin1'])&(default_admin1['country']==city_info['country'])].iloc[0]['name']
+#             except:
+#                 admin1_name = None
+#         else:
+#             admin1_name=None
+#         cur.execute('''update count_info set name=?, admin1=? where city_id=?''',(city_info['name'],admin1_name,city_id))   
+#         if (n+1)%100==0:
+#             m = await interaction.original_response()
+#             await m.edit(content=f"{n+1}/{len(all_city_ids)} ({(n+1)/len(all_city_ids)*100}%)")
+#     conn.commit()
+#     await interaction.followup.send('done')
 
 async def fail(message:discord.Message,reason,sinfo,citieslist,res,n,cityfound):
     guildid=message.guild.id
