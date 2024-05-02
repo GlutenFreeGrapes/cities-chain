@@ -1199,7 +1199,7 @@ async def slb(interaction: discord.Interaction,se:Optional[Literal['yes','no']]=
         embed.set_author(name=interaction.guild.name, icon_url=interaction.guild.icon.url)
     else:
         embed.set_author(name=interaction.guild.name)
-    cur.execute('''select user_id,score from server_user_info where server_id = ? order by score desc''',data=(interaction.guild_id,))
+    cur.execute('''select user_id,score from server_user_info where server_id = ? order by score desc limit 10''',data=(interaction.guild_id,))
     if cur.rowcount>0:
         embed.description='\n'.join([f'{n+1}. <@{i[0]}> - **{f"{i[1]:,}"}**' for n,i in enumerate(cur)])
     else:
