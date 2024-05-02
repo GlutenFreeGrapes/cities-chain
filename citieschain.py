@@ -893,7 +893,8 @@ async def chain(message:discord.Message,guildid,authorid):
                             
                             cur.execute('''select count from count_info where server_id = ? and city_id = ?''',data=(guildid,res[0]))
                             if cur.rowcount==0:
-                                cur.execute('''insert into count_info(server_id,city_id,name,admin1,country,country_code,alt_country,count) values (?,?,?,?,?,?,?,?)''',data=(guildid,res[0],n[0],allnames.loc[res[0]]['name'],n[1][0],n[1][1],n[3][0] if n[3] else None,1))
+                                
+                                cur.execute('''insert into count_info(server_id,city_id,name,admin1,country,country_code,alt_country,count) values (?,?,?,?,?,?,?,?)''',data=(guildid,res[0],allnames.loc[res[0]]['name'],n[2],n[1][0],n[1][1],n[3][0] if n[3] else None,1))
                             else:
                                 citycount = cur.fetchone()[0]
                                 cur.execute('''update count_info set count=? where server_id=? and city_id=?''',data=(citycount+1,guildid,res[0]))
@@ -945,6 +946,31 @@ async def chain(message:discord.Message,guildid,authorid):
     else:
         await asyncio.create_task(chain(*processes[guildid][0]))
         
+@tree.command(name="fix-count-info")
+@app_commands.check(owner_modcheck)
+async def fixci(interaction:discord.Interaction):
+    await interaction.response.send_message("starting")
+    cur.execute('''select distinct(city_id) from count_info''')
+    all_city_ids = {i for (i,) in cur}
+    # for every city id, iterate, get id and state, update properly
+    default_admin1 = admin1data[admin1data['default']==1]
+    for n,city_id in enumerate(all_city_ids):
+        # city info
+        city_info = allnames.loc[city_id]
+        # admin1 default name
+        if city_info['admin1']!=None:
+            try:
+                admin1_name = default_admin1[(default_admin1['admin1']==city_info['admin1'])&(default_admin1['country']==city_info['country'])].iloc[0]['name']
+            except:
+                admin1_name = None
+        else:
+            admin1_name=None
+        cur.execute('''update count_info set name=?, admin1=? where city_id=?''',(city_info['name'],admin1_name,city_id))   
+        if (n+1)%100==0:
+            m = await interaction.original_response()
+            await m.edit(content=f"{n+1}/{len(all_city_ids)} ({(n+1)/len(all_city_ids)*100}%)")
+    conn.commit()
+    await interaction.followup.send('done')
 
 
 
@@ -1581,9 +1607,13 @@ async def countryinfo(interaction: discord.Interaction, country:str,se:Optional[
                 citylist=[f'''{n+1}. {i[0]}, {i[1]} - **{i[2]}**''' if i[1] else f'''{n+1}. {i[0]} - **{i[2]}**''' for n,i in enumerate(cur)]
                 topcities.description='\n'.join(citylist)
                 tosend.append(topcities)
-            await interaction.followup.send(embed=tosend[0],ephemeral=eph)
-            if len(tosend)-1:
-                await interaction.followup.send(embed=tosend[1],ephemeral=eph)            
+            embed_sizes = [sum([len(j) for j in (i.title if i.title else '',i.description)]) for i in tosend]
+            # while over limit send embeds individually
+            while sum(embed_sizes)>6000:
+                await interaction.followup.send(embed=tosend[0],ephemeral=eph)
+                embed_sizes=embed_sizes[1:]      
+                tosend=tosend[1:] 
+            await interaction.followup.send(embeds=tosend,ephemeral=eph)      
         else:
             embed.description='There are no alternate names for this country.'
             await interaction.followup.send(embed=embed,ephemeral=eph)
