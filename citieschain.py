@@ -232,12 +232,12 @@ def search_cities_chain(query, checkApostrophe,min_pop,include_deleted):
 
 async def update_db():
     await owner.send("starting")
-    open('data files/geobundle.tgz', 'wb').write(requests.get('https://cityguesser.dbots.net/geobundles/geobundle.tgz', allow_redirects=True).content)
-    tar = tarfile.open('data files/geobundle.tgz')
-    tar.extractall('data files/')
+    open('geobundle.tgz', 'wb').write(requests.get('https://cityguesser.dbots.net/geobundles/geobundle.tgz', allow_redirects=True).content)
+    tar = tarfile.open('geobundle.tgz')
+    tar.extractall()
     tar.close()
-    deleted = set(json.load(open('data files/geobundle/deleted.json','r')))
-    raw_data = pd.read_csv('data files/geobundle/cities.tsv',sep='\t',dtype={'name':str,'asciiname':str,'alternatenames':str,'cc2':str,'admin1 code':str,'admin2 code':str,'admin3 code':str,'admin4 code':str,'population':int,'elevation':str},keep_default_na=False,na_values='',index_col=0,names=['geonameid','name','asciiname','alternatenames','latitude','longitude','feature class','feature code','country code','cc2','admin1 code','admin2 code','admin3 code','admin4 code','population','elevation','dem','timezone','modification date'])
+    deleted = set(json.load(open('geobundle/deleted.json','r')))
+    raw_data = pd.read_csv('geobundle/cities.tsv',sep='\t',dtype={'name':str,'asciiname':str,'alternatenames':str,'cc2':str,'admin1 code':str,'admin2 code':str,'admin3 code':str,'admin4 code':str,'population':int,'elevation':str},keep_default_na=False,na_values='',index_col=0,names=['geonameid','name','asciiname','alternatenames','latitude','longitude','feature class','feature code','country code','cc2','admin1 code','admin2 code','admin3 code','admin4 code','population','elevation','dem','timezone','modification date'])
     await owner.send("loaded files")
     # filling in asciinames that are nan
     raw_data.loc[raw_data['asciiname'].isna(),'asciiname'] = raw_data.loc[raw_data['asciiname'].isna(),'name'].apply(unidecode.unidecode)
