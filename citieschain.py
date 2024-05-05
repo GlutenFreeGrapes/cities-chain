@@ -1,12 +1,9 @@
-import discord,re,pandas as pd,random,math,mariadb,numpy as np
+import discord, re, pandas as pd, random, math, mariadb, numpy as np, tarfile, requests, unidecode, json, asyncio, io
 from discord import app_commands
 from typing import Optional,Literal
-import asyncio
 from os import environ as env
 from dotenv import load_dotenv
-
 from mpl_toolkits.basemap import Basemap
-import io
 import matplotlib.pyplot as plt
 
 load_dotenv()
@@ -135,7 +132,7 @@ allcountries=sorted(allcountries)
 regionalindicators={chr(97+i):chr(127462+i) for i in range(26)}
 
 def search_cities(city,province,country,min_pop,include_deleted):
-    city=re.sub(',$','',city.casefold().strip())
+    city=re.sub(',$','',city.lower().strip())
     if city[-1]==',':
         city=city[:-1]
     if province:
@@ -146,15 +143,15 @@ def search_cities(city,province,country,min_pop,include_deleted):
 
 def search_cities_chain(query, checkApostrophe,min_pop,include_deleted):
     s=('name','decoded','punct-space','punct-empty')
-    q=re.sub(',$','',query.casefold().strip())
+    q=re.sub(',$','',query.lower().strip())
     if q[-1]==',':
         q=q[:-1]
     p=re.sub('\s*,\s*',',',q).split(',')
     city=p[0]
-    res1=citydata[(citydata['name'].str.casefold()==city)]
-    res2=citydata[(citydata['decoded'].str.casefold()==city)]
-    res3=citydata[(citydata['punct-space'].str.casefold()==city)]
-    res4=citydata[(citydata['punct-empty'].str.casefold()==city)]
+    res1=citydata[(citydata['name'].str.lower()==city)]
+    res2=citydata[(citydata['decoded'].str.lower()==city)]
+    res3=citydata[(citydata['punct-space'].str.lower()==city)]
+    res4=citydata[(citydata['punct-empty'].str.lower()==city)]
 
     res1=res1.assign(match=0)
     res2=res2.assign(match=1)
@@ -165,9 +162,9 @@ def search_cities_chain(query, checkApostrophe,min_pop,include_deleted):
     results=results.drop_duplicates(subset=('geonameid','name'))
     if len(p)==2:
         otherdivision=p[1]
-        cchoice=countriesdata[(countriesdata['name'].str.casefold()==otherdivision)|(countriesdata['country'].str.casefold()==otherdivision)]
-        a1choice=admin1data[(admin1data['name'].str.casefold()==otherdivision)|(admin1data['admin1'].str.casefold()==otherdivision)]
-        a2choice=admin2data[(admin2data['name'].str.casefold()==otherdivision)|(admin2data['admin2'].str.casefold()==otherdivision)]
+        cchoice=countriesdata[(countriesdata['name'].str.lower()==otherdivision)|(countriesdata['country'].str.lower()==otherdivision)]
+        a1choice=admin1data[(admin1data['name'].str.lower()==otherdivision)|(admin1data['admin1'].str.lower()==otherdivision)]
+        a2choice=admin2data[(admin2data['name'].str.lower()==otherdivision)|(admin2data['admin2'].str.lower()==otherdivision)]
         cchoice=set(cchoice['country'])
         a1choice=set(zip(a1choice['country'],a1choice['admin1']))
         a2choice=set(zip(a2choice['country'],a2choice['admin1'],a2choice['admin2']))
@@ -184,10 +181,10 @@ def search_cities_chain(query, checkApostrophe,min_pop,include_deleted):
     elif len(p)==3:
         otherdivision=p[1]
         country=p[2]
-        cchoice=countriesdata[((countriesdata['name'].str.casefold()==country)|(countriesdata['country'].str.casefold()==country))]
+        cchoice=countriesdata[((countriesdata['name'].str.lower()==country)|(countriesdata['country'].str.lower()==country))]
         c=set(cchoice['country'])
-        a1choice=admin1data[((admin1data['name'].str.casefold()==otherdivision)|(admin1data['admin1'].str.casefold()==otherdivision))&(admin1data['country'].isin(c))]
-        a2choice=admin2data[((admin2data['name'].str.casefold()==otherdivision)|(admin2data['admin2'].str.casefold()==otherdivision))&(admin2data['country'].isin(c))]
+        a1choice=admin1data[((admin1data['name'].str.lower()==otherdivision)|(admin1data['admin1'].str.lower()==otherdivision))&(admin1data['country'].isin(c))]
+        a2choice=admin2data[((admin2data['name'].str.lower()==otherdivision)|(admin2data['admin2'].str.lower()==otherdivision))&(admin2data['country'].isin(c))]
         a1choice=set(zip(a1choice['country'],a1choice['admin1']))
         a2choice=set(zip(a2choice['country'],a2choice['admin1'],a2choice['admin2']))
         rcol=results.columns
@@ -203,11 +200,11 @@ def search_cities_chain(query, checkApostrophe,min_pop,include_deleted):
         admin2=p[1]
         admin1=p[2]
         country=p[3]
-        cchoice=countriesdata[(countriesdata['name'].str.casefold()==country)|(countriesdata['country'].str.casefold()==country)]
+        cchoice=countriesdata[(countriesdata['name'].str.lower()==country)|(countriesdata['country'].str.lower()==country)]
         c=set(cchoice['country'])
-        a1choice=admin1data[(admin1data['name'].str.casefold()==admin1)|(admin1data['admin1'].str.casefold()==admin1)&(admin1data['country'].isin(c))]
+        a1choice=admin1data[(admin1data['name'].str.lower()==admin1)|(admin1data['admin1'].str.lower()==admin1)&(admin1data['country'].isin(c))]
         a1=set(a1choice['admin1'])
-        a2choice=admin2data[(admin2data['name'].str.casefold()==admin2)|(admin2data['admin2'].str.casefold()==admin2)&(admin2data['country'].isin(c))&(admin2data['admin1'].isin(a1))]
+        a2choice=admin2data[(admin2data['name'].str.lower()==admin2)|(admin2data['admin2'].str.lower()==admin2)&(admin2data['country'].isin(c))&(admin2data['admin1'].isin(a1))]
         a2choice=set(zip(a2choice['country'],a2choice['admin1'],a2choice['admin2']))
         rcol=results.columns
         a2results=pd.DataFrame(columns=rcol)
@@ -234,7 +231,113 @@ def search_cities_chain(query, checkApostrophe,min_pop,include_deleted):
         return (int(r['geonameid']),r,r[s[r['match']]])
 
 async def update_db():
-    await owner.send("updated")
+    await owner.send("starting")
+    open('data files/geobundle.tgz', 'wb').write(requests.get('https://cityguesser.dbots.net/geobundles/geobundle.tgz', allow_redirects=True).content)
+    tar = tarfile.open('data files/geobundle.tgz')
+    tar.extractall('data files/')
+    tar.close()
+    deleted = set(json.load(open('data files/geobundle/deleted.json','r')))
+    raw_data = pd.read_csv('data files/geobundle/cities.tsv',sep='\t',dtype={'name':str,'asciiname':str,'alternatenames':str,'cc2':str,'admin1 code':str,'admin2 code':str,'admin3 code':str,'admin4 code':str,'population':int,'elevation':str},keep_default_na=False,na_values='',index_col=0,names=['geonameid','name','asciiname','alternatenames','latitude','longitude','feature class','feature code','country code','cc2','admin1 code','admin2 code','admin3 code','admin4 code','population','elevation','dem','timezone','modification date'])
+    await owner.send("loaded files")
+    # filling in asciinames that are nan
+    raw_data.loc[raw_data['asciiname'].isna(),'asciiname'] = raw_data.loc[raw_data['asciiname'].isna(),'name'].apply(unidecode.unidecode)
+
+    # resolve alt countries
+
+    # fill in na values for altnames
+    raw_data['alternatenames'] = raw_data['alternatenames'].fillna('')
+
+    # check consistency with admin1 and admin2 data
+    has_admin1 = raw_data[raw_data['admin1 code'].notna()]
+    has_admin2 = raw_data[raw_data['admin2 code'].notna()]
+    raw_adm1 = set(zip(has_admin1['country code'],has_admin1['admin1 code']))
+    raw_adm2 = set(zip(has_admin2['country code'],has_admin2['admin1 code'],has_admin2['admin2 code']))
+    all_adm1 = set(zip(admin1data['country'],admin1data['admin1']))
+    all_adm2 = set(zip(admin2data['country'],admin2data['admin1'],admin2data['admin2']))
+    nonexistent_adm1 = raw_adm1-all_adm1
+    nonexistent_adm2 = raw_adm2-all_adm2
+    for i in nonexistent_adm2:
+        raw_data.loc[(raw_data['admin2 code']==i[2])&(raw_data['admin1 code']==i[1])&(raw_data['country code']==i[0]),'admin2 code'] = None  
+
+    for i in nonexistent_adm1:
+        raw_data.loc[(raw_data['admin1 code']==i[1])&(raw_data['country code']==i[0]),'admin1 code'] = None
+    await owner.send("resolved nonexistent admin1/admin2 codes")
+
+    # final table
+    citydata = raw_data[['asciiname','population','country code','admin1 code','admin2 code','cc2','latitude','longitude']]
+    citydata = citydata.assign(default=1).rename({'asciiname':'name'}, axis = 1)
+
+    # individual rows for each altname (will remove duplicates later)
+    alt_names = pd.DataFrame(raw_data['alternatenames'].str.split(',').tolist(),index=raw_data.index).stack().reset_index([0,'geonameid'])
+    alt_names.columns = ['geonameid','name']
+    alt_names = alt_names[alt_names['name']!='']
+    # add in name 
+    name = raw_data[['name']]
+    name = name.rename_axis('geonameid').reset_index()
+    alt_names=pd.concat([alt_names, name])
+    # copy data for altnames
+    for column in ('population','country code','admin1 code','admin2 code','cc2'):
+        alt_names[column] = alt_names['geonameid'].apply(lambda x: citydata.at[x, column])
+    # add to df
+    citydata['geonameid'] = citydata.index
+    citydata = pd.concat([citydata,alt_names])
+
+    # deleted column
+    citydata['deleted'] = citydata['geonameid'].isin(deleted).astype(int)
+    citydata = citydata.rename({'cc2':'alt-country','country code':'country','admin1 code':'admin1','admin2 code':'admin2'}, axis = 1).sort_values(['deleted','country','geonameid','default','name'],ascending=[1,1,1,0,1]).drop_duplicates(subset=('geonameid','name'))
+    citydata['default'] = citydata['default'].fillna(0).astype(int)
+    citydata.index = range(len(citydata.index))
+    await owner.send("table created")
+    
+    # apply romanization
+    punctuation = r"[^\w\s]"
+    letter_search = r'[a-zA-Z]'
+    citydata['name'] = citydata['name'].apply(lambda name: re.sub(r'\s+',' ',name).strip())
+
+    # generate lowercase column, add zipped geonameid,lower columns to set, check for membership when making new columns
+    citydata['lower']=citydata['name'].str.lower()
+    citydata=citydata.drop_duplicates(['geonameid','lower'])
+    lower_names = set(zip(citydata['geonameid'],citydata['lower']))
+
+    citydata['decoded'] = citydata['name'].apply(lambda q: re.sub(r'\s+',' ',unidecode.unidecode(q)).strip())
+    citydata['punct-space'] = citydata['decoded'].apply(lambda q: re.sub(r'\s+',' ',(re.sub(punctuation,' ',q)).strip()))
+    citydata['punct-empty'] = citydata['decoded'].apply(lambda q: re.sub(r'\s+',' ',(re.sub(punctuation,'',q)).strip()))
+    citydata['first-letter'] = citydata['punct-space'].apply(lambda q: re.search(letter_search,q).group(0).lower() if re.search(letter_search,q) else None)
+    citydata['last-letter'] = citydata['punct-space'].apply(lambda q: re.search(letter_search,q[::-1]).group(0).lower() if re.search(letter_search,q[::-1]) else None)
+
+    # the ones that couldnt be romanized
+    citydata = citydata[citydata['first-letter'].notna()]
+    await owner.send("finished romanization")
+
+    # clean up now?
+    # check for membership in other columns before removing duplicates
+    citydata['lower2'] = citydata['decoded'].str.lower()
+    citydata['zip2'] = list(zip(citydata['geonameid'],citydata['lower2']))
+    citydata['lower3'] = citydata['punct-space'].str.lower()
+    citydata['zip3'] = list(zip(citydata['geonameid'],citydata['lower3']))
+    citydata['lower4'] = citydata['punct-empty'].str.lower()
+    citydata['zip4'] = list(zip(citydata['geonameid'],citydata['lower4']))
+
+    citydata['decoded'] = citydata['decoded'].where(~citydata['zip2'].isin(lower_names),None)
+    lower_names.update(citydata['zip2'])
+    citydata['punct-space'] = citydata['punct-space'].where(~citydata['zip3'].isin(lower_names),None)
+    lower_names.update(citydata['zip3'])
+    citydata['punct-empty'] = citydata['punct-empty'].where(~citydata['zip4'].isin(lower_names),None)
+    lower_names.update(citydata['zip4'])
+
+    citydata['decoded'] = citydata['decoded'].where(~citydata['zip2'].duplicated(),None)
+    citydata['punct-space'] = citydata['punct-space'].where(~citydata['zip3'].duplicated(),None)
+    citydata['punct-empty'] = citydata['punct-empty'].where(~citydata['zip4'].duplicated(),None)
+    await owner.send("cleaned up table")
+
+    # sort columns and data
+    citydata = citydata[['geonameid','name','population','country','admin1','admin2','alt-country','default','latitude','longitude','decoded','punct-space','punct-empty','first-letter','last-letter','deleted']]
+    citydata=citydata.sort_values(['deleted','country','geonameid','default','name'],ascending=[1,1,1,0,1])
+    await owner.send("sorted")
+
+    # save to tsv
+    citydata.to_csv('cities.txt',index=0,sep='\t')
+    await owner.send("updating completed\n-----------------")
 
 def generate_map(city_id_list):
     coords = [allnames.loc[city_id][['latitude','longitude']] for city_id in city_id_list]
@@ -613,10 +716,10 @@ async def choosecity(interaction: discord.Interaction, option:Literal["on","off"
 async def countrycomplete(interaction: discord.Interaction, search: str):
     if search=='':
         return []
-    s=search.casefold()
-    results=[i for i in allcountries if i.casefold().startswith(s)]
-    results.extend([iso2[i] for i in iso2 if i.casefold().startswith(s) and iso2[i] not in results])
-    results.extend([iso3[i] for i in iso3 if i.casefold().startswith(s) and iso3[i] not in results])
+    s=search.lower()
+    results=[i for i in allcountries if i.lower().startswith(s)]
+    results.extend([iso2[i] for i in iso2 if i.lower().startswith(s) and iso2[i] not in results])
+    results.extend([iso3[i] for i in iso3 if i.lower().startswith(s) and iso3[i] not in results])
     return [app_commands.Choice(name=i,value=i) for i in results[:10]]
 
 add = app_commands.Group(name='add', description="Adds reactions/repeats for the chain.")
@@ -788,8 +891,8 @@ async def on_message_edit(message:discord.Message, after:discord.Message):
 @client.event
 async def on_message(message:discord.Message):
     global processes
-    if message.author == owner and (message.content=='update-db'):
-        await update_db()
+    if message.author == owner and (message.content=='update-db') and isinstance(message.channel, discord.channel.DMChannel):
+        await asyncio.create_task(update_db())
         return
     authorid=message.author.id
     if message.guild and authorid!=client.user.id:
@@ -1158,15 +1261,19 @@ async def cities(interaction: discord.Interaction,order:Literal['sequential','al
 
 @stats.command(name='round',description="Displays all cities said for one round.")
 @app_commands.rename(se='show-everyone',showmap='map')
-@app_commands.describe(round_num='Round to retrieve information from',showmap='Whether to show a map of cities',se='Yes to show everyone stats, no otherwise')
-async def roundinfo(interaction: discord.Interaction,round_num:app_commands.Range[int,1,None],showmap:Optional[Literal['yes','no']]='no',se:Optional[Literal['yes','no']]='no'):
+@app_commands.describe(round_num='Round to retrieve information from (0 = current round, -1 = previous round)',showmap='Whether to show a map of cities',se='Yes to show everyone stats, no otherwise')
+async def roundinfo(interaction: discord.Interaction,round_num:app_commands.Range[int,-1,None],showmap:Optional[Literal['yes','no']]='no',se:Optional[Literal['yes','no']]='no'):
     eph=(se=='no')
     await interaction.response.defer(ephemeral=eph)
     guildid=interaction.guild_id
     cur.execute('''select round_number from server_info where server_id = ?''',data=(guildid,))
     s=cur.fetchone()
+
+    if round_num<=0:
+        round_num=s[0]+round_num
+
     cur.execute('''select name,admin1,country,country_code,alt_country,city_id,valid from chain_info where server_id = ? and round_number = ? order by count asc''',data=(guildid,round_num))
-    if round_num<=s[0]:
+    if 1<=round_num<=s[0]:
         cutoff=[]
 
         cityids=[]
@@ -1216,7 +1323,10 @@ async def roundinfo(interaction: discord.Interaction,round_num:app_commands.Rang
         await interaction.followup.send(embed=embed,view=view,ephemeral=eph,files=[generate_map(cityids)] if showmap=='yes' else [])
         view.message=await interaction.original_response()
     else:
-        await interaction.followup.send("Round_num must be a number between **1** and **%s**."%s[0],ephemeral=eph)
+        if s[0]:
+            await interaction.followup.send("Round_num must be a number between **1** and **%s**."%s[0],ephemeral=eph)
+        else:
+            await interaction.followup.send("No rounds played yet.",ephemeral=eph)
 
 @stats.command(description="Displays serverwide user leaderboard.")
 @app_commands.rename(se='show-everyone')
@@ -1577,8 +1687,8 @@ async def cityinfo(interaction: discord.Interaction, city:str, province:Optional
 async def countryinfo(interaction: discord.Interaction, country:str,se:Optional[Literal['yes','no']]='no'):
     eph=(se=='no')
     await interaction.response.defer(ephemeral=eph)
-    countrysearch=country.casefold().strip()
-    res=countriesdata[((countriesdata['name'].str.casefold()==countrysearch)|(countriesdata['country'].str.casefold()==countrysearch))]
+    countrysearch=country.lower().strip()
+    res=countriesdata[((countriesdata['name'].str.lower()==countrysearch)|(countriesdata['country'].str.lower()==countrysearch))]
     if res.shape[0]!=0:
         res = res.iloc[0]
         cur.execute("select sum(count) from count_info where server_id=? and (country_code=? or alt_country=?)",data=(interaction.guild_id,res['country'],res['country']))
@@ -1661,15 +1771,15 @@ async def unblock(interaction: discord.Interaction,member: discord.Member):
     await interaction.response.send_message(f"<@{member.id}> has been unblocked. ")
 
 @tree.command(description="Gets information about the bot and the game. ")
-@app_commands.describe(setting="The setting to get information for",se='Yes to show everyone stats, no otherwise')
+@app_commands.describe(topic="The topic to get information for",se='Yes to show everyone stats, no otherwise')
 @app_commands.rename(se='show-everyone')
-async def help(interaction: discord.Interaction,setting: Literal['rules','commands','emojis','tips'],se:Optional[Literal['yes','no']]='no'):
+async def help(interaction: discord.Interaction,topic: Literal['rules','commands','emojis','tips'],se:Optional[Literal['yes','no']]='no'):
     await interaction.response.defer(ephemeral=(se=='no'))
     embed=discord.Embed(color=GREEN)
-    if setting=='rules':
+    if topic=='rules':
         embed.description='''**Rules**\nOne person chooses a city, then the next person must choose a city beginning with the last letter of the previous city. \nExamples: \nLondo**n** --> **N**ew Yor**k** --> **K**arachi\nLondo**n** --> **N**anjin**g** --> **G**uadalajara\n\nThe chain can be broken in a few different ways, such as the next city not starting with the last letter, the next city not existing, the next city having too small of a population, the next user going twice, or putting down a city that has been said before. The settings for some of those can be changed, but here are some examples:\n**User A**: New Haven\n**User B**: London (city starts with wrong letter)\n\n**User A**: New Haven\n**User A**: Nagoya (user went twice in a row)\n\n**User A**: New Haven\n**User B**: New Kent (city's population is below 1000, if 1000 is the minimum population set)\n\n**User A**: New Haven\n**User B**: New Haven (same city repeated)\n\n**User A**: New Haven\n**User B**: Never Gonna Give You Up (city does not exist)\n\nCities must be prefixed by the server's given prefix in order to be counted towards the chain (by default it's **!**, but this can be changed).'''
         await interaction.followup.send(embed=embed,ephemeral=(se=='no'))
-    elif setting=='commands':
+    elif topic=='commands':
         messages=["""**Set commands (requires mod perms):**
         `/set channel [channel]`: sets the channel the bot will listen to
         `/set prefix ([prefix])`: sets prefix to use when listening for cities
@@ -1707,15 +1817,15 @@ async def help(interaction: discord.Interaction,setting: Literal['rules','comman
         `/ping`: shows bot latency
         `/block [user]`: blocks a certain user if they are purposefully ruining the chain
         `/unblock [user]`: unblocks a certain user
-        `/help [setting] ([show-everyone])`: sends this message
+        `/help [topic] ([show-everyone])`: sends this message
         `/about([show-everyone])`: about the bot """]
         embed.description=messages[0]
         await interaction.followup.send(embed=embed,view=Help(messages),ephemeral=(se=='no'))
-    elif setting == 'emojis':
+    elif topic == 'emojis':
         embed.description = '''**Emoji Guide**\n\n:white_check_mark: - valid addition to chain\n:ballot_box_with_check: - valid addition to chain, breaks server record\n:x: - invalid addition to chain\n:regional_indicator_a: - letter the city ends with\n\nIn addition, you can make the bot react to certain cities of your choosing using the `/add react` and `remove react` commands.'''
         await interaction.followup.send(embed=embed,ephemeral=(se=='no'))
-    elif setting == 'tips':
-        embed.description = '''**Tips**\n- When many people are playing, play cities that start and end with the same letter to avoid breaking the chain. \n- If you want to specify a different city than the one the bot interprets, you can use commas to specify provinces, states, or countries: \nExamples: \n:white_check_mark: Atlanta\n:white_check_mark: Atlanta, United States\n:white_check_mark: Atlanta, Georgia\n:white_check_mark: Atlanta, Fulton County\n:white_check_mark: Atlanta, Fulton County, Georgia, United States\nYou can specify a maximum of 2 administrative divisions, not including the country. \n- Remember, at the end of the day, it is just a game, and the game is supposed to be lighthearted and fun.'''
+    elif topic == 'tips':
+        embed.description = '''**Tips**\n- When many people are playing, play cities that start and end with the same letter to avoid breaking the chain. \n- If you want to specify a different city than the one the bot interprets, you can use commas to specify provinces, states, or countries: \nExamples: \n:white_check_mark: Atlanta\n:white_check_mark: Atlanta, United States\n:white_check_mark: Atlanta, Georgia\n:white_check_mark: Atlanta, Fulton County\n:white_check_mark: Atlanta, Fulton County, Georgia, United States\nYou can specify a maximum of 2 administrative divisions, not including the country. \n- Googling cities is allowed. \n- Remember, at the end of the day, it is just a game, and the game is supposed to be lighthearted and fun.'''
         await interaction.followup.send(embed=embed,ephemeral=(se=='no'))
 
 @tree.command(description="Information about the bot.")
