@@ -264,8 +264,8 @@ async def update_db():
     await owner.send("resolved nonexistent admin1/admin2 codes")
 
     # final table
-    citydata = raw_data[['asciiname','population','country code','admin1 code','admin2 code','cc2','latitude','longitude']]
-    citydata = citydata.assign(default=1).rename({'asciiname':'name'}, axis = 1)
+    final_table = raw_data[['asciiname','population','country code','admin1 code','admin2 code','cc2','latitude','longitude']]
+    final_table = final_table.assign(default=1).rename({'asciiname':'name'}, axis = 1)
 
     # individual rows for each altname (will remove duplicates later)
     alt_names = pd.DataFrame(raw_data['alternatenames'].str.split(',').tolist(),index=raw_data.index).stack().reset_index([0,'geonameid'])
@@ -277,66 +277,69 @@ async def update_db():
     alt_names=pd.concat([alt_names, name])
     # copy data for altnames
     for column in ('population','country code','admin1 code','admin2 code','cc2'):
-        alt_names[column] = alt_names['geonameid'].apply(lambda x: citydata.at[x, column])
+        alt_names[column] = alt_names['geonameid'].apply(lambda x: final_table.at[x, column])
     # add to df
-    citydata['geonameid'] = citydata.index
-    citydata = pd.concat([citydata,alt_names])
+    final_table['geonameid'] = final_table.index
+    final_table = pd.concat([final_table,alt_names])
 
     # deleted column
-    citydata['deleted'] = citydata['geonameid'].isin(deleted).astype(int)
-    citydata = citydata.rename({'cc2':'alt-country','country code':'country','admin1 code':'admin1','admin2 code':'admin2'}, axis = 1).sort_values(['deleted','country','geonameid','default','name'],ascending=[1,1,1,0,1]).drop_duplicates(subset=('geonameid','name'))
-    citydata['default'] = citydata['default'].fillna(0).astype(int)
-    citydata.index = range(len(citydata.index))
+    final_table['deleted'] = final_table['geonameid'].isin(deleted).astype(int)
+    final_table = final_table.rename({'cc2':'alt-country','country code':'country','admin1 code':'admin1','admin2 code':'admin2'}, axis = 1).sort_values(['deleted','country','geonameid','default','name'],ascending=[1,1,1,0,1]).drop_duplicates(subset=('geonameid','name'))
+    final_table['default'] = final_table['default'].fillna(0).astype(int)
+    final_table.index = range(len(final_table.index))
     await owner.send("table created")
     
     # apply romanization
     punctuation = r"[^\w\s]"
     letter_search = r'[a-zA-Z]'
-    citydata['name'] = citydata['name'].apply(lambda name: re.sub(r'\s+',' ',name).strip())
+    final_table['name'] = final_table['name'].apply(lambda name: re.sub(r'\s+',' ',name).strip())
 
     # generate lowercase column, add zipped geonameid,lower columns to set, check for membership when making new columns
-    citydata['lower']=citydata['name'].str.lower()
-    citydata=citydata.drop_duplicates(['geonameid','lower'])
-    lower_names = set(zip(citydata['geonameid'],citydata['lower']))
+    final_table['lower']=final_table['name'].str.lower()
+    final_table=final_table.drop_duplicates(['geonameid','lower'])
+    lower_names = set(zip(final_table['geonameid'],final_table['lower']))
 
-    citydata['decoded'] = citydata['name'].apply(lambda q: re.sub(r'\s+',' ',unidecode.unidecode(q)).strip())
-    citydata['punct-space'] = citydata['decoded'].apply(lambda q: re.sub(r'\s+',' ',(re.sub(punctuation,' ',q)).strip()))
-    citydata['punct-empty'] = citydata['decoded'].apply(lambda q: re.sub(r'\s+',' ',(re.sub(punctuation,'',q)).strip()))
-    citydata['first-letter'] = citydata['punct-space'].apply(lambda q: re.search(letter_search,q).group(0).lower() if re.search(letter_search,q) else None)
-    citydata['last-letter'] = citydata['punct-space'].apply(lambda q: re.search(letter_search,q[::-1]).group(0).lower() if re.search(letter_search,q[::-1]) else None)
+    final_table['decoded'] = final_table['name'].apply(lambda q: re.sub(r'\s+',' ',unidecode.unidecode(q)).strip())
+    final_table['punct-space'] = final_table['decoded'].apply(lambda q: re.sub(r'\s+',' ',(re.sub(punctuation,' ',q)).strip()))
+    final_table['punct-empty'] = final_table['decoded'].apply(lambda q: re.sub(r'\s+',' ',(re.sub(punctuation,'',q)).strip()))
+    final_table['first-letter'] = final_table['punct-space'].apply(lambda q: re.search(letter_search,q).group(0).lower() if re.search(letter_search,q) else None)
+    final_table['last-letter'] = final_table['punct-space'].apply(lambda q: re.search(letter_search,q[::-1]).group(0).lower() if re.search(letter_search,q[::-1]) else None)
 
     # the ones that couldnt be romanized
-    citydata = citydata[citydata['first-letter'].notna()]
+    final_table = final_table[final_table['first-letter'].notna()]
     await owner.send("finished romanization")
 
     # clean up now?
     # check for membership in other columns before removing duplicates
-    citydata['lower2'] = citydata['decoded'].str.lower()
-    citydata['zip2'] = list(zip(citydata['geonameid'],citydata['lower2']))
-    citydata['lower3'] = citydata['punct-space'].str.lower()
-    citydata['zip3'] = list(zip(citydata['geonameid'],citydata['lower3']))
-    citydata['lower4'] = citydata['punct-empty'].str.lower()
-    citydata['zip4'] = list(zip(citydata['geonameid'],citydata['lower4']))
+    final_table['lower2'] = final_table['decoded'].str.lower()
+    final_table['zip2'] = list(zip(final_table['geonameid'],final_table['lower2']))
+    final_table['lower3'] = final_table['punct-space'].str.lower()
+    final_table['zip3'] = list(zip(final_table['geonameid'],final_table['lower3']))
+    final_table['lower4'] = final_table['punct-empty'].str.lower()
+    final_table['zip4'] = list(zip(final_table['geonameid'],final_table['lower4']))
 
-    citydata['decoded'] = citydata['decoded'].where(~citydata['zip2'].isin(lower_names),None)
-    lower_names.update(citydata['zip2'])
-    citydata['punct-space'] = citydata['punct-space'].where(~citydata['zip3'].isin(lower_names),None)
-    lower_names.update(citydata['zip3'])
-    citydata['punct-empty'] = citydata['punct-empty'].where(~citydata['zip4'].isin(lower_names),None)
-    lower_names.update(citydata['zip4'])
+    final_table['decoded'] = final_table['decoded'].where(~final_table['zip2'].isin(lower_names),None)
+    lower_names.update(final_table['zip2'])
+    final_table['punct-space'] = final_table['punct-space'].where(~final_table['zip3'].isin(lower_names),None)
+    lower_names.update(final_table['zip3'])
+    final_table['punct-empty'] = final_table['punct-empty'].where(~final_table['zip4'].isin(lower_names),None)
+    lower_names.update(final_table['zip4'])
 
-    citydata['decoded'] = citydata['decoded'].where(~citydata['zip2'].duplicated(),None)
-    citydata['punct-space'] = citydata['punct-space'].where(~citydata['zip3'].duplicated(),None)
-    citydata['punct-empty'] = citydata['punct-empty'].where(~citydata['zip4'].duplicated(),None)
+    final_table['decoded'] = final_table['decoded'].where(~final_table['zip2'].duplicated(),None)
+    final_table['punct-space'] = final_table['punct-space'].where(~final_table['zip3'].duplicated(),None)
+    final_table['punct-empty'] = final_table['punct-empty'].where(~final_table['zip4'].duplicated(),None)
     await owner.send("cleaned up table")
 
     # sort columns and data
-    citydata = citydata[['geonameid','name','population','country','admin1','admin2','alt-country','default','latitude','longitude','decoded','punct-space','punct-empty','first-letter','last-letter','deleted']]
-    citydata=citydata.sort_values(['deleted','country','geonameid','default','name'],ascending=[1,1,1,0,1])
+    final_table = final_table[['geonameid','name','population','country','admin1','admin2','alt-country','default','latitude','longitude','decoded','punct-space','punct-empty','first-letter','last-letter','deleted']]
+    final_table=final_table.sort_values(['deleted','country','geonameid','default','name'],ascending=[1,1,1,0,1])
     await owner.send("sorted")
 
     # save to tsv
-    citydata.to_csv('cities.txt',index=0,sep='\t')
+    final_table.to_csv('cities.txt',index=0,sep='\t')
+    await owner.send("saved to csv")
+    global citydata
+    citydata = final_table
     await owner.send("updating completed\n-----------------")
 
 def generate_map(city_id_list):
@@ -642,7 +645,7 @@ async def population(interaction: discord.Interaction, population: app_commands.
                     set min_pop = ?
                     where server_id = ?''', data=(population,interaction.guild_id))
         conn.commit()
-        await interaction.followup.send('Minimum number of cities before repeating set to **%s**.'%f'{population:,}')
+        await interaction.followup.send('Minimum city population set to **%s**.'%f'{population:,}')
     else:
         await interaction.followup.send('Command can only be used after the chain has ended.')
 
@@ -1680,7 +1683,7 @@ async def cityinfo(interaction: discord.Interaction, city:str, province:Optional
     else:
         await interaction.followup.send('City not recognized. Please try again. ',ephemeral=eph)
 
-@tree.command(name='country-info',description='Gets information for a given city.')
+@tree.command(name='country-info',description='Gets information for a given country.')
 @app_commands.describe(country="The country to get information for",se='Yes to show everyone stats, no otherwise')
 @app_commands.rename(se='show-everyone')
 @app_commands.autocomplete(country=countrycomplete)
