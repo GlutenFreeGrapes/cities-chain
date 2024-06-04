@@ -874,9 +874,10 @@ async def on_message_delete(message:discord.Message):
             t = cur.fetchone()[0]
             if int(message.created_at.timestamp())==t and not minfo[3]:
                 cur.execute('''select name,valid from chain_info where message_id=?''',data=(message.id,))
-                (name,valid)=cur.fetchone()
-                if valid:
-                    await message.channel.send("<@%s> has deleted their city of `%s`. The next letter is `%s`."%(minfo[0],name,minfo[2]))
+                if cur.rowcount:
+                    (name,valid)=cur.fetchone()
+                    if valid:
+                        await message.channel.send("<@%s> has deleted their city of `%s`. The next letter is `%s`."%(minfo[0],name,minfo[2]))
 
 @client.event
 async def on_message_edit(message:discord.Message, after:discord.Message):
@@ -885,15 +886,15 @@ async def on_message_edit(message:discord.Message, after:discord.Message):
         cur.execute('''select last_user,channel_id,current_letter from server_info where server_id=?''',data=(guildid,))
         minfo=cur.fetchone()
         if ((message.author.id,message.channel.id)==minfo[:2]):
-            cur.execute('''select last_active from server_user_info where user_id=? and server_id=?''',data=(minfo[0],guildid))
-            t = cur.fetchone()[0]
-            if int(message.created_at.timestamp())==t and not message.edited_at:
-                cur.execute('''select name from chain_info where time_placed=? and user_id=? and server_id=?''',data=(t,minfo[0],guildid))
+            cur.execute('''select name from chain_info where message_id=? and server_id=?''',(message.id,guildid))
+            if cur.rowcount and not message.edited_at:
                 await message.channel.send("<@%s> has edited their city of `%s`. The next letter is `%s`."%(minfo[0],cur.fetchone()[0],minfo[2]))
 
 @client.event
 async def on_message(message:discord.Message):
+    content = message.content
     global processes
+    print(content)
     if message.author == owner and (message.content=='update-db') and isinstance(message.channel, discord.channel.DMChannel):
         await asyncio.create_task(update_db())
         return
@@ -907,17 +908,18 @@ async def on_message(message:discord.Message):
                     where server_id = ?''',data=(guildid,))
         channel_id, prefix=cur.fetchone()
         if message.channel.id==channel_id and not message.author.bot:
-            if message.content.strip().startswith(prefix) and message.content[len(prefix):].strip()!='':
+            if content.strip().startswith(prefix) and message.content[len(prefix):].strip()!='':
                 # IF THERE IS A CITY BEING PROCESSED, ADD IT TO THE QUEUE AND EVENTUALLY IT WILL BE REACHED. OTHERWISE PROCESS IMMEDIATELY WHILE KEEPING IN MIND THAT IT IS CURRENTLY BEING PROCESSED
+                msgref = discord.MessageReference.from_message(message,fail_if_not_exists=0)
                 if processes[guildid]: 
-                    processes[guildid].append((message,guildid,authorid))
+                    processes[guildid].append((message,guildid,authorid,content,msgref))
                 else:
-                    processes[guildid]=[(message,guildid,authorid)]
-                    await asyncio.create_task(chain(message,guildid,authorid))
+                    processes[guildid]=[(message,guildid,authorid,message.content,msgref)]
+                    await asyncio.create_task(chain(message,guildid,authorid,content,msgref))
             elif re.search(r"(?<!not )\b((mb)|(my bad)|(oop(s?))|(s(o?)(r?)ry))\b",message.content,re.I):
                 await message.reply("it's ok")
 
-async def chain(message:discord.Message,guildid,authorid):
+async def chain(message:discord.Message,guildid,authorid,original_content,ref):
     cur.execute('select user_id from bans where banned=?',data=(True,))
     bans={i[0] for i in cur}
     if authorid in bans:
@@ -953,7 +955,7 @@ async def chain(message:discord.Message,guildid,authorid):
         sinfo=cur.fetchone()
         cur.execute('''select city_id from chain_info where server_id = ? and round_number = ? order by count desc''',data=(guildid,sinfo[0]))
         citieslist=[i for (i,) in cur]
-        res=search_cities_chain(message.content[len(sinfo[10]):],0,sinfo[2],0)
+        res=search_cities_chain(original_content[len(sinfo[10]):],0,sinfo[2],0)
         if res:
             cur.execute('''select
                     round_number,
@@ -1025,23 +1027,23 @@ async def chain(message:discord.Message,guildid,authorid):
                                 cur.execute('''select reaction from react_info where server_id = ? and city_id = ?''', data=(guildid,res[0]))
                                 if cur.rowcount>0:
                                     await message.add_reaction(cur.fetchone()[0])
-                                if not ((res[2].replace(' ','').isalpha() and res[2].isascii() and message.content[len(sinfo[10]):].find(',')<0)):
+                                if not ((res[2].replace(' ','').isalpha() and res[2].isascii() and original_content[len(sinfo[10]):].find(',')<0)):
                                     await message.add_reaction(regionalindicators[letters[1]])
                             except:
                                 pass
                         else:
-                            await fail(message,"**No going twice.**",sinfo,citieslist,res,n,True)
+                            await fail(message,"**No going twice.**",sinfo,citieslist,res,n,True,ref)
                     else:
                         if sinfo[4]:
-                            await fail(message,"**No repeats within `%s` cities.**"%f"{sinfo[1]:,}",sinfo,citieslist,res,n,True)
+                            await fail(message,"**No repeats within `%s` cities.**"%f"{sinfo[1]:,}",sinfo,citieslist,res,n,True,ref)
                         else:
-                            await fail(message,"**No repeats.**",sinfo,citieslist,res,n,True)
+                            await fail(message,"**No repeats.**",sinfo,citieslist,res,n,True,ref)
                 else:
-                    await fail(message,"**City must have a population of at least `%s`.**"%f"{sinfo[2]:,}",sinfo,citieslist,res,n,True)
+                    await fail(message,"**City must have a population of at least `%s`.**"%f"{sinfo[2]:,}",sinfo,citieslist,res,n,True,ref)
             else:
-                await fail(message,"**Wrong letter.**",sinfo,citieslist,res,n,True)
+                await fail(message,"**Wrong letter.**",sinfo,citieslist,res,n,True,ref)
         else:
-            await fail(message,"**City not recognized.**",sinfo,citieslist,None,None,False)
+            await fail(message,"**City not recognized.**",sinfo,citieslist,None,None,False,ref)
         conn.commit()
 
     # remove this from the queue of messages to process
@@ -1078,7 +1080,7 @@ async def chain(message:discord.Message,guildid,authorid):
 #     conn.commit()
 #     await interaction.followup.send('done')
 
-async def fail(message:discord.Message,reason,sinfo,citieslist,res,n,cityfound):
+async def fail(message:discord.Message,reason,sinfo,citieslist,res,n,cityfound,msgref):
     guildid=message.guild.id
     authorid=message.author.id
     try:
@@ -1097,8 +1099,10 @@ async def fail(message:discord.Message,reason,sinfo,citieslist,res,n,cityfound):
         poss=allnames[allnames['population']>=sinfo[2]]
         newid=int(random.choice(poss.index))
         await message.channel.send('<@%s> RUINED IT AT **%s**!! Start again from `%s` (next letter `%s`). %s'%(authorid,f"{len(citieslist):,}",poss.at[newid,'name'],poss.at[newid,'last-letter'],reason))
+        # await message.reply('<@%s> RUINED IT AT **%s**!! Start again from `%s` (next letter `%s`). %s'%(authorid,f"{len(citieslist):,}",poss.at[newid,'name'],poss.at[newid,'last-letter'],reason), reference = message)
     else:
-        await message.channel.send('<@%s> RUINED IT AT **%s**!! %s'%(authorid,f"{len(citieslist):,}",reason))
+        # await message.channel.send('<@%s> RUINED IT AT **%s**!! %s'%(authorid,f"{len(citieslist):,}",reason))
+        await message.channel.send('<@%s> RUINED IT AT **%s**!! %s'%(authorid,f"{len(citieslist):,}",reason), reference = msgref)
     if cityfound:
         cur.execute('''insert into chain_info(server_id,user_id,round_number,count,city_id,name,admin1,country,country_code,alt_country,time_placed,valid,message_id) values (?,?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,res[0],n[0],n[2],n[1][0],n[1][1],n[3][0] if n[3] else None,int(message.created_at.timestamp()),False,message.id))
     else:
@@ -1177,15 +1181,18 @@ async def user(interaction: discord.Interaction, member:Optional[discord.Member]
                 citystring+=f":flag_{cityrow['country'].lower()}:"
                 if cityrow['alt-country']:
                     citystring+=f":flag_{cityrow['alt-country'].lower()}:"
-                favc.append(citystring+f' - **{i[1]}**')
+                favc.append(citystring+f' - **{i[1]:,}**')
         favcities.add_field(name='Cities',value='\n'.join([f"{n+1}. "+i for n,i in enumerate(favc)]))
         
         cur.execute('SELECT country_code, COUNT(*) AS use_count FROM chain_info WHERE server_id = ? AND user_id = ? AND valid = 1 GROUP BY country_code ORDER BY use_count DESC',data=(interaction.guild_id,member.id))
         countryuses = {i[0]:i[1] for i in cur}
         cur.execute('SELECT alt_country, COUNT(*) AS use_count FROM chain_info WHERE server_id = ? AND user_id = ? AND valid = 1 AND alt_country IS NOT NULL GROUP BY alt_country ORDER BY use_count DESC',data=(interaction.guild_id,member.id))
         for i in cur:
-            countryuses[i[0]]+=i[1]
-        fav_countries = [f"{j[1]} - **{j[0]}**" for j in sorted([(countryuses[i],iso2[i]) for i in countryuses],reverse=1)[:10]]
+            if i[0] in cur:
+                countryuses[i[0]]+=i[1]
+            else:
+                countryuses[i[0]]=i[1]
+        fav_countries = [f"{j[1]} - **{j[0]:,}**" for j in sorted([(countryuses[i],iso2[i]) for i in countryuses],reverse=1)[:10]]
         favcities.add_field(name='Countries',value='\n'.join([f"{n+1}. "+i for n,i in enumerate(fav_countries)]))
         if member.avatar:
             embed.set_author(name=member.name, icon_url=member.avatar.url)
@@ -1776,7 +1783,7 @@ async def unblock(interaction: discord.Interaction,member: discord.Member):
 @tree.command(description="Gets information about the bot and the game. ")
 @app_commands.describe(topic="The topic to get information for",se='Yes to show everyone stats, no otherwise')
 @app_commands.rename(se='show-everyone')
-async def help(interaction: discord.Interaction,topic: Literal['rules','commands','emojis','tips'],se:Optional[Literal['yes','no']]='no'):
+async def help(interaction: discord.Interaction,topic: Literal['rules','commands','emojis','tips','faq'],se:Optional[Literal['yes','no']]='no'):
     await interaction.response.defer(ephemeral=(se=='no'))
     embed=discord.Embed(color=GREEN)
     if topic=='rules':
@@ -1829,6 +1836,9 @@ async def help(interaction: discord.Interaction,topic: Literal['rules','commands
         await interaction.followup.send(embed=embed,ephemeral=(se=='no'))
     elif topic == 'tips':
         embed.description = '''**Tips**\n- When many people are playing, play cities that start and end with the same letter to avoid breaking the chain. \n- If you want to specify a different city than the one the bot interprets, you can use commas to specify provinces, states, or countries: \nExamples: \n:white_check_mark: Atlanta\n:white_check_mark: Atlanta, United States\n:white_check_mark: Atlanta, Georgia\n:white_check_mark: Atlanta, Fulton County\n:white_check_mark: Atlanta, Fulton County, Georgia, United States\nYou can specify a maximum of 2 administrative divisions, not including the country. \n- Googling cities is allowed. \n- Remember, at the end of the day, it is just a game, and the game is supposed to be lighthearted and fun.'''
+        await interaction.followup.send(embed=embed,ephemeral=(se=='no'))
+    elif topic=='faq':
+        embed.description = '''**Frequently Asked Questions**\n\n**Q: Some cities aren't recognized by the bot. Why?**\nA: The bot takes its data from Geonames, and only cities with a listed population (that is, greater than 0 people listed) are considered by the bot.\n\n**Q: I added some cities to Geonames, but they still aren't recognized by the bot. Why?**\nA: The Geonames dump updates the cities list daily, but the bot's record of cities is not updated on a regular basis, so it might take until I decide to update it again for those cities to show up.\n\n**Q: Why are some of the romanizations for cities incorrect?**\nA: That's a thing to do with the Python library I use to romanize the characters (`unidecode`) - characters are romanized one-by-one instead of with context. For example, `unidecode` will turn `广州` into `Yan Zhou`. I still haven't found a good way to match every foreign name to a perfect translation. \n\n**Q: How do I suggest feedback to the bot?**\nA: There is a support server and support channels listed in the `/about` command for this bot.'''
         await interaction.followup.send(embed=embed,ephemeral=(se=='no'))
 
 @tree.command(description="Information about the bot.")
