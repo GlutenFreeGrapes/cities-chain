@@ -31,7 +31,6 @@ cur = conn.cursor()
 
 cur.execute('create database if not exists ' + env["DB_NAME"])
 cur.execute('use ' + env["DB_NAME"])
-cur.execute("SET @@session.wait_timeout = 3600") # max 1hr timeout
 
 cur.execute('''create table if not exists server_info(
             server_id bigint, 
@@ -100,10 +99,14 @@ cur.execute('''create table if not exists chain_info(
             foreign key(server_id)
                 references server_info(server_id))''')
 
-cur.execute('''create table if not exists bans(
-            user_id bigint,
-            banned bool,
-            primary key(user_id))''')
+cur.execute('''drop table if exists bans''')
+
+cur.execute('''alter table global_user_info
+               add column if not exists blocked bool default 0''')
+cur.execute('''alter table server_user_info
+               add column if not exists blocked bool default 0''')
+cur.execute('''alter table chain_info
+               add column if not exists leaderboard_eligible bool default 1''')
 
 cur.execute('''create table if not exists count_info(
             server_id bigint,
@@ -130,6 +133,32 @@ iso2={i:allcountries[n] for n,i in enumerate(countrydefaults['country'])}
 iso3={i:allcountries[n] for n,i in enumerate(countrydefaults['iso3'])}
 allcountries=sorted(allcountries)
 regionalindicators={chr(97+i):chr(127462+i) for i in range(26)}
+flags = {i:regionalindicators[i[0].lower()]+regionalindicators[i[1].lower()] for i in iso2}
+
+def is_banned(user_id,guild_id):
+    cur.execute("select user_id,blocked from global_user_info where user_id=?",(user_id,))
+    if cur.fetchone()[1]:
+        return 1
+    cur.execute("select server_id,user_id,blocked from server_user_info where user_id=? and server_id=?",(user_id,guild_id))
+    return cur.fetchone()[2]
+
+def admin1name(country,admin1):
+    return admin1data[(admin1data['country']==country)&(admin1data['admin1']==admin1)&(admin1data['default']==1)].iloc[0]['name'] if admin1 else None
+
+def admin2name(country,admin1,admin2):
+    return admin2data[(admin2data['country']==country)&(admin2data['admin1']==admin1)&(admin2data['admin2']==admin2)&(admin2data['default']==1)].iloc[0]['name'] if admin2 else None
+
+def city_string(name,admin1,admin2,country,alt_country):
+    city_str = name
+    if country:
+        if admin1:
+            if admin2:
+                city_str+=f", {admin2}"
+            city_str+=f", {admin1}"
+        city_str+=f", {iso2[country]} {flags[country]}"
+        if alt_country:
+            city_str+=f"/{iso2[alt_country]} {flags[alt_country]}"
+    return city_str
 
 def search_cities(city,province,country,min_pop,include_deleted):
     city=re.sub(',$','',city.lower().strip())
@@ -230,118 +259,6 @@ def search_cities_chain(query, checkApostrophe,min_pop,include_deleted):
 
         return (int(r['geonameid']),r,r[s[r['match']]])
 
-async def update_db():
-    await owner.send("starting")
-    open('geobundle.tgz', 'wb').write(requests.get('https://cityguesser.dbots.net/geobundles/geobundle.tgz', allow_redirects=True).content)
-    tar = tarfile.open('geobundle.tgz')
-    tar.extractall()
-    tar.close()
-    deleted = set(json.load(open('geobundle/deleted.json','r')))
-    raw_data = pd.read_csv('geobundle/cities.tsv',sep='\t',dtype={'name':str,'asciiname':str,'alternatenames':str,'cc2':str,'admin1 code':str,'admin2 code':str,'admin3 code':str,'admin4 code':str,'population':int,'elevation':str},keep_default_na=False,na_values='',index_col=0,names=['geonameid','name','asciiname','alternatenames','latitude','longitude','feature class','feature code','country code','cc2','admin1 code','admin2 code','admin3 code','admin4 code','population','elevation','dem','timezone','modification date'])
-    await owner.send("loaded files")
-    # filling in asciinames that are nan
-    raw_data.loc[raw_data['asciiname'].isna(),'asciiname'] = raw_data.loc[raw_data['asciiname'].isna(),'name'].apply(unidecode.unidecode)
-
-    # resolve alt countries
-
-    # fill in na values for altnames
-    raw_data['alternatenames'] = raw_data['alternatenames'].fillna('')
-
-    # check consistency with admin1 and admin2 data
-    has_admin1 = raw_data[raw_data['admin1 code'].notna()]
-    has_admin2 = raw_data[raw_data['admin2 code'].notna()]
-    raw_adm1 = set(zip(has_admin1['country code'],has_admin1['admin1 code']))
-    raw_adm2 = set(zip(has_admin2['country code'],has_admin2['admin1 code'],has_admin2['admin2 code']))
-    all_adm1 = set(zip(admin1data['country'],admin1data['admin1']))
-    all_adm2 = set(zip(admin2data['country'],admin2data['admin1'],admin2data['admin2']))
-    nonexistent_adm1 = raw_adm1-all_adm1
-    nonexistent_adm2 = raw_adm2-all_adm2
-    for i in nonexistent_adm2:
-        raw_data.loc[(raw_data['admin2 code']==i[2])&(raw_data['admin1 code']==i[1])&(raw_data['country code']==i[0]),'admin2 code'] = None  
-
-    for i in nonexistent_adm1:
-        raw_data.loc[(raw_data['admin1 code']==i[1])&(raw_data['country code']==i[0]),'admin1 code'] = None
-    await owner.send("resolved nonexistent admin1/admin2 codes")
-
-    # final table
-    final_table = raw_data[['asciiname','population','country code','admin1 code','admin2 code','cc2','latitude','longitude']]
-    final_table = final_table.assign(default=1).rename({'asciiname':'name'}, axis = 1)
-
-    # individual rows for each altname (will remove duplicates later)
-    alt_names = pd.DataFrame(raw_data['alternatenames'].str.split(',').tolist(),index=raw_data.index).stack().reset_index([0,'geonameid'])
-    alt_names.columns = ['geonameid','name']
-    alt_names = alt_names[alt_names['name']!='']
-    # add in name 
-    name = raw_data[['name']]
-    name = name.rename_axis('geonameid').reset_index()
-    alt_names=pd.concat([alt_names, name])
-    # copy data for altnames
-    for column in ('population','country code','admin1 code','admin2 code','cc2'):
-        alt_names[column] = alt_names['geonameid'].apply(lambda x: final_table.at[x, column])
-    # add to df
-    final_table['geonameid'] = final_table.index
-    final_table = pd.concat([final_table,alt_names])
-
-    # deleted column
-    final_table['deleted'] = final_table['geonameid'].isin(deleted).astype(int)
-    final_table = final_table.rename({'cc2':'alt-country','country code':'country','admin1 code':'admin1','admin2 code':'admin2'}, axis = 1).sort_values(['deleted','country','geonameid','default','name'],ascending=[1,1,1,0,1]).drop_duplicates(subset=('geonameid','name'))
-    final_table['default'] = final_table['default'].fillna(0).astype(int)
-    final_table.index = range(len(final_table.index))
-    await owner.send("table created")
-    
-    # apply romanization
-    punctuation = r"[^\w\s]"
-    letter_search = r'[a-zA-Z]'
-    final_table['name'] = final_table['name'].apply(lambda name: re.sub(r'\s+',' ',name).strip())
-
-    # generate lowercase column, add zipped geonameid,lower columns to set, check for membership when making new columns
-    final_table['lower']=final_table['name'].str.lower()
-    final_table=final_table.drop_duplicates(['geonameid','lower'])
-    lower_names = set(zip(final_table['geonameid'],final_table['lower']))
-
-    final_table['decoded'] = final_table['name'].apply(lambda q: re.sub(r'\s+',' ',unidecode.unidecode(q)).strip())
-    final_table['punct-space'] = final_table['decoded'].apply(lambda q: re.sub(r'\s+',' ',(re.sub(punctuation,' ',q)).strip()))
-    final_table['punct-empty'] = final_table['decoded'].apply(lambda q: re.sub(r'\s+',' ',(re.sub(punctuation,'',q)).strip()))
-    final_table['first-letter'] = final_table['punct-space'].apply(lambda q: re.search(letter_search,q).group(0).lower() if re.search(letter_search,q) else None)
-    final_table['last-letter'] = final_table['punct-space'].apply(lambda q: re.search(letter_search,q[::-1]).group(0).lower() if re.search(letter_search,q[::-1]) else None)
-
-    # the ones that couldnt be romanized
-    final_table = final_table[final_table['first-letter'].notna()]
-    await owner.send("finished romanization")
-
-    # clean up now?
-    # check for membership in other columns before removing duplicates
-    final_table['lower2'] = final_table['decoded'].str.lower()
-    final_table['zip2'] = list(zip(final_table['geonameid'],final_table['lower2']))
-    final_table['lower3'] = final_table['punct-space'].str.lower()
-    final_table['zip3'] = list(zip(final_table['geonameid'],final_table['lower3']))
-    final_table['lower4'] = final_table['punct-empty'].str.lower()
-    final_table['zip4'] = list(zip(final_table['geonameid'],final_table['lower4']))
-
-    final_table['decoded'] = final_table['decoded'].where(~final_table['zip2'].isin(lower_names),None)
-    lower_names.update(final_table['zip2'])
-    final_table['punct-space'] = final_table['punct-space'].where(~final_table['zip3'].isin(lower_names),None)
-    lower_names.update(final_table['zip3'])
-    final_table['punct-empty'] = final_table['punct-empty'].where(~final_table['zip4'].isin(lower_names),None)
-    lower_names.update(final_table['zip4'])
-
-    final_table['decoded'] = final_table['decoded'].where(~final_table['zip2'].duplicated(),None)
-    final_table['punct-space'] = final_table['punct-space'].where(~final_table['zip3'].duplicated(),None)
-    final_table['punct-empty'] = final_table['punct-empty'].where(~final_table['zip4'].duplicated(),None)
-    await owner.send("cleaned up table")
-
-    # sort columns and data
-    final_table = final_table[['geonameid','name','population','country','admin1','admin2','alt-country','default','latitude','longitude','decoded','punct-space','punct-empty','first-letter','last-letter','deleted']]
-    final_table=final_table.sort_values(['deleted','country','geonameid','default','name'],ascending=[1,1,1,0,1])
-    await owner.send("sorted")
-
-    # save to tsv
-    final_table.to_csv('cities.txt',index=0,sep='\t')
-    await owner.send("saved to csv")
-    global citydata
-    citydata = final_table
-    await owner.send("updating completed\n-----------------")
-
 def generate_map(city_id_list):
     coords = [allnames.loc[city_id][['latitude','longitude']] for city_id in city_id_list]
     lats,lons = zip(*coords)
@@ -386,39 +303,30 @@ def generate_map(city_id_list):
         plt.clf()
         return discord.File(img_buf, filename='map.png')
 
-
+class Selector(discord.ui.Select):
+    def __init__(self,messages,options,placeholder):
+        self.messages=messages
+        super().__init__(placeholder=placeholder,max_values=1,min_values=1,options=options,disabled=1)
+    async def callback(self, interaction:discord.Interaction):
+        interaction.message.embeds[0].description=self.messages[int(self.values[0])] if len(self.values) else "Choose a command group."
+        await interaction.response.edit_message(embeds=interaction.message.embeds,view=self.view)
 
 class Help(discord.ui.View):
-    def __init__(self,messages):
+    def __init__(self,help_messages,command_messages):
         super().__init__(timeout=None)
-        self.children[0].disabled=True
-        self.messages=messages
-    async def updateembed(self,index,interaction):
-        await interaction.response.defer()
-        new=discord.Embed(color=GREEN,description=self.messages[index])
-        for i in self.children:
-            i.disabled=False
-        self.children[index].disabled=True
-        await interaction.message.edit(embed=new,view=self)
-        self.message=await interaction.original_response()
-
-    @discord.ui.button(label='Settings', style=discord.ButtonStyle.primary)
-    async def setButton(self, interaction, button):
-        await self.updateembed(0,interaction)
-
-    @discord.ui.button(label='Reactions/Repeats', style=discord.ButtonStyle.primary)
-    async def reactRepeatButton(self, interaction, button):
-        await self.updateembed(1,interaction)
-
-    @discord.ui.button(label='Stats', style=discord.ButtonStyle.primary)
-    async def statsButton(self, interaction, button):
-        await self.updateembed(2,interaction)
-
-    @discord.ui.button(label='Other Commands', style=discord.ButtonStyle.primary)
-    async def otherButton(self, interaction, button):
-        await self.updateembed(3,interaction)
-
-
+        self.command_messages=command_messages
+        self.help_messages=help_messages
+        self.add_item(Selector(command_messages,[discord.SelectOption(label="Settings",description="/set commands",value="0"),discord.SelectOption(label="Reactions/Repeats",description="/add and /remove commands",value="1"),discord.SelectOption(label="Stats",description="/stats commands",value="2"),discord.SelectOption(label="Other Commands",description="Other commands",value="3")],"Choose a command group"))
+    @discord.ui.select(placeholder="Choose a category",max_values=1,min_values=1,options=[discord.SelectOption(label="Rules",description="Rules of the game",value="0"),discord.SelectOption(label="Commands",description="Bot commands",value="1"),discord.SelectOption(label="Emojis",description="Meaning of emojis under messages",value="2"),discord.SelectOption(label="Tips",description="Tips on playing the game",value="3"),discord.SelectOption(label="FAQ",description="Frequently-asked questions",value="4")])
+    async def categoryMenu(self, interaction,select):
+        interaction.message.embeds[0].title = {"0":"Rules","1":"Commands Guide","2":"Emoji Guide","3":"Tips","4":"Frequently-Asked Questions"}[select.values[0]]
+        if select.values[0]=='1':
+            self.children[1].disabled=False
+            await self.children[1].callback(interaction)
+        else:
+            self.children[1].disabled=True
+            interaction.message.embeds[0].description=self.help_messages[int(select.values[0])]
+            await interaction.response.edit_message(embeds=interaction.message.embeds,view=self)
 
 class Paginator(discord.ui.View):
     def __init__(self,page,blist,title,lens,user):
@@ -497,6 +405,11 @@ class Paginator(discord.ui.View):
     async def back(self, interaction, button):
         self.page=self.lens
         await self.updateembed(interaction)
+    @discord.ui.button(label='🛑', style=discord.ButtonStyle.danger)
+    async def stop(self, interaction, button):
+        for i in self.children:
+            i.disabled=True
+        await interaction.response.edit_message(embeds=self.message.embeds,view=self, attachments=self.message.attachments)
 
 class Confirmation(discord.ui.View):
     def __init__(self,serverid):
@@ -564,7 +477,9 @@ async def on_ready():
 async def on_guild_join(guild:discord.Guild):
     global processes
     processes[guild.id]=None
-    cur.execute('''insert into server_info(server_id) VALUES (?)''',data=(guild.id,))
+    cur.execute('''select * from server_info where server_id = ?''',(guild.id))
+    if cur.rowcount==0:
+        cur.execute('''insert into server_info(server_id) VALUES (?)''',data=(guild.id,))
     for channel in guild.text_channels:
         if channel.permissions_for(guild.me).send_messages:
             await channel.send('Hi! use /help to get more information on how to use this bot. ')
@@ -579,9 +494,7 @@ assign = app_commands.Group(name="set", description="Set different things for th
 @app_commands.describe(channel="The channel where the cities chain will happen")
 async def channel(interaction: discord.Interaction, channel: discord.TextChannel|discord.Thread):
     await interaction.response.defer()
-    cur.execute('select user_id from bans where banned=?',data=(True,))
-    bans={i[0] for i in cur}
-    if interaction.user.id in bans:
+    if is_banned(interaction.user.id,interaction.guild_id):
         await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ")
         return
     cur.execute('''update server_info
@@ -595,9 +508,7 @@ async def channel(interaction: discord.Interaction, channel: discord.TextChannel
 @app_commands.describe(num="The minimum number of cities before they can repeat again, set to -1 to disallow any repeats")
 async def repeat(interaction: discord.Interaction, num: app_commands.Range[int,-1,None]):
     await interaction.response.defer()
-    cur.execute('select user_id from bans where banned=?',data=(True,))
-    bans={i[0] for i in cur}
-    if interaction.user.id in bans:
+    if is_banned(interaction.user.id,interaction.guild_id):
         await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ")
         return
     cur.execute('''select chain_end from server_info
@@ -632,9 +543,7 @@ async def repeat(interaction: discord.Interaction, num: app_commands.Range[int,-
 @app_commands.describe(population="The minimum population of cities in the chain")
 async def population(interaction: discord.Interaction, population: app_commands.Range[int,1,None]):
     await interaction.response.defer()
-    cur.execute('select user_id from bans where banned=?',data=(True,))
-    bans={i[0] for i in cur}
-    if interaction.user.id in bans:
+    if is_banned(interaction.user.id,interaction.guild_id):
         await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ")
         return
     cur.execute('''select chain_end from server_info
@@ -654,9 +563,7 @@ async def population(interaction: discord.Interaction, population: app_commands.
 @app_commands.describe(prefix="Prefix that all cities to be chained must begin with")
 async def prefix(interaction: discord.Interaction, prefix: Optional[app_commands.Range[str,0,10]]=''):
     await interaction.response.defer()
-    cur.execute('select user_id from bans where banned=?',data=(True,))
-    bans={i[0] for i in cur}
-    if interaction.user.id in bans:
+    if is_banned(interaction.user.id,interaction.guild_id):
         await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ")
         return
     cur.execute('''select chain_end from server_info
@@ -679,9 +586,7 @@ async def prefix(interaction: discord.Interaction, prefix: Optional[app_commands
 @app_commands.describe(option="on to let the bot choose the next city, off otherwise")
 async def choosecity(interaction: discord.Interaction, option:Literal["on","off"]):
     await interaction.response.defer()
-    cur.execute('select user_id from bans where banned=?',data=(True,))
-    bans={i[0] for i in cur}
-    if interaction.user.id in bans:
+    if is_banned(interaction.user.id,interaction.guild_id):
         await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ")
         return
     guildid=interaction.guild_id
@@ -697,7 +602,7 @@ async def choosecity(interaction: discord.Interaction, option:Literal["on","off"
                 newid=int(random.choice(poss.index))
                 entr=allnames.loc[(newid)]
                 nname=poss.at[newid,'name']
-                n=(nname,iso2[entr['country']],entr['country'],admin1data[(admin1data['country']==entr['country'])&(admin1data['admin1']==entr['admin1'])&(admin1data['default']==1)]['name'].iloc[0] if entr['admin1'] else None,(entr['alt-country'],))
+                n=(nname,iso2[entr['country']],entr['country'],admin1name(entr['country'],entr['admin1']) if entr['admin1'] else None,(entr['alt-country'],))
                 cur.execute('''update server_info
                             set choose_city = ?,
                                 current_letter = ?
@@ -733,9 +638,7 @@ add = app_commands.Group(name='add', description="Adds reactions/repeats for the
 @app_commands.autocomplete(country=countrycomplete)
 async def react(interaction: discord.Interaction, city:str, province:Optional[str]=None, country:Optional[str]=None):
     await interaction.response.defer()
-    cur.execute('select user_id from bans where banned=?',data=(True,))
-    bans={i[0] for i in cur}
-    if interaction.user.id in bans:
+    if is_banned(interaction.user.id,interaction.guild_id):
         await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ")
         return
     
@@ -779,9 +682,7 @@ async def react(interaction: discord.Interaction, city:str, province:Optional[st
 @app_commands.autocomplete(country=countrycomplete)
 async def repeat(interaction: discord.Interaction, city:str, province:Optional[str]=None, country:Optional[str]=None):
     await interaction.response.defer()
-    cur.execute('select user_id from bans where banned=?',data=(True,))
-    bans={i[0] for i in cur}
-    if interaction.user.id in bans:
+    if is_banned(interaction.user.id,interaction.guild_id):
         await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ")
         return
 
@@ -813,9 +714,7 @@ remove = app_commands.Group(name='remove', description="Removes reactions/repeat
 @app_commands.autocomplete(country=countrycomplete)
 async def react(interaction: discord.Interaction, city:str, province:Optional[str]=None, country:Optional[str]=None):
     await interaction.response.defer()
-    cur.execute('select user_id from bans where banned=?',data=(True,))
-    bans={i[0] for i in cur}
-    if interaction.user.id in bans:
+    if is_banned(interaction.user.id,interaction.guild_id):
         await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ")
         return
     
@@ -840,9 +739,7 @@ async def react(interaction: discord.Interaction, city:str, province:Optional[st
 @app_commands.autocomplete(country=countrycomplete)
 async def repeat(interaction: discord.Interaction, city:str, province:Optional[str]=None, country:Optional[str]=None):
     await interaction.response.defer()
-    cur.execute('select user_id from bans where banned=?',data=(True,))
-    bans={i[0] for i in cur}
-    if interaction.user.id in bans:
+    if is_banned(interaction.user.id,interaction.guild_id):
         await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ")
         return
 
@@ -894,10 +791,6 @@ async def on_message_edit(message:discord.Message, after:discord.Message):
 async def on_message(message:discord.Message):
     content = message.content
     global processes
-    print(content)
-    if message.author == owner and (message.content=='update-db') and isinstance(message.channel, discord.channel.DMChannel):
-        await asyncio.create_task(update_db())
-        return
     authorid=message.author.id
     if message.guild and authorid!=client.user.id:
         guildid=message.guild.id
@@ -920,9 +813,7 @@ async def on_message(message:discord.Message):
                 await message.reply("it's ok")
 
 async def chain(message:discord.Message,guildid,authorid,original_content,ref):
-    cur.execute('select user_id from bans where banned=?',data=(True,))
-    bans={i[0] for i in cur}
-    if authorid in bans:
+    if is_banned(authorid,guildid):
         await message.add_reaction('\N{NO PEDESTRIANS}')
     else:
         cur.execute('''select round_number,
@@ -955,6 +846,8 @@ async def chain(message:discord.Message,guildid,authorid,original_content,ref):
         sinfo=cur.fetchone()
         cur.execute('''select city_id from chain_info where server_id = ? and round_number = ? order by count desc''',data=(guildid,sinfo[0]))
         citieslist=[i for (i,) in cur]
+        cur.execute('''select leaderboard_eligible from chain_info where server_id = ? and round_number = ? order by count desc''',data=(guildid,sinfo[0]))
+        l_eligible=cur.fetchone()[0]
         res=search_cities_chain(original_content[len(sinfo[10]):],0,sinfo[2],0)
         if res:
             cur.execute('''select
@@ -975,11 +868,8 @@ async def chain(message:discord.Message,guildid,authorid,original_content,ref):
             j=allnames.loc[(res[0])]
             name,adm1,country,altcountry=j['name'],j['admin1'],j['country'],j['alt-country']
             if adm1:
-                adm1=admin1data[(admin1data['country']==country)&(admin1data['admin1']==adm1)&(admin1data['default']==1)]['name'].iloc[0]
-            if not ((res[2].replace(' ','').isalpha() and res[2].isascii()) or res[1]['default']==1):
-                n=(res[2]+' ('+name+')',(iso2[country],country),adm1,(altcountry,))
-            else:
-                n=(res[2],(iso2[country],country),adm1,(altcountry,))
+                adm1=admin1name(country,adm1)
+            n=(res[2]+(' ('+name+')'if not ((res[2].replace(' ','').isalpha() and res[2].isascii()) or res[1]['default']==1) else ""),(iso2[country],country),adm1,(altcountry,))
             letters=(res[1]['first-letter'],res[1]['last-letter'])
             if (sinfo[7]=='-' or sinfo[7]==letters[0]):
                 if sinfo[2]<=res[1]['population']:
@@ -997,7 +887,7 @@ async def chain(message:discord.Message,guildid,authorid,original_content,ref):
                             uinfo=cur.fetchone()
                             cur.execute('''update global_user_info set correct = ?, score = ?, last_active = ? where user_id = ?''',data=(uinfo[0]+1,uinfo[1]+1,int(message.created_at.timestamp()),authorid))
                             cur.execute('''update server_info set last_user = ?, current_letter = ? where server_id = ?''',data=(authorid,letters[1],guildid))
-                            cur.execute('''insert into chain_info(server_id,user_id,round_number,count,city_id,name,admin1,country,country_code,alt_country,time_placed,valid,message_id) values (?,?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,res[0],n[0],n[2],n[1][0],n[1][1],n[3][0] if n[3] else None,int(message.created_at.timestamp()),True,message.id))
+                            cur.execute('''insert into chain_info(server_id,user_id,round_number,count,city_id,name,admin1,country,country_code,alt_country,time_placed,valid,message_id,leaderboard_eligible) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,res[0],n[0],n[2],n[1][0],n[1][1],n[3][0] if n[3] else None,int(message.created_at.timestamp()),True,message.id,l_eligible))
                             
                             cur.execute('''select count from count_info where server_id = ? and city_id = ?''',data=(guildid,res[0]))
                             if cur.rowcount==0:
@@ -1007,6 +897,10 @@ async def chain(message:discord.Message,guildid,authorid,original_content,ref):
                                 citycount = cur.fetchone()[0]
                                 cur.execute('''update count_info set count=? where server_id=? and city_id=?''',data=(citycount+1,guildid,res[0]))
                             
+                            # IF CITY APPEARS MORE THAN ONCE IN 50 CITIES, THE ROUND IS NOT ELIGIBLE FOR ALL LEADERBOARDS
+                            if res[0] in set(citieslist[:50]):
+                                cur.execute('''update chain_info set leaderboard_eligible=? where server_id=? and round_number=?''',(False,guildid,sinfo[0]))
+
                             try:
                                 if sinfo[9]<(len(citieslist)+1):
                                     cur.execute('''update server_info set max_chain = ?,last_best = ? where server_id = ?''',data=(len(citieslist)+1,int(message.created_at.timestamp()),guildid))
@@ -1053,32 +947,32 @@ async def chain(message:discord.Message,guildid,authorid,original_content,ref):
         processes[guildid]=None
     else:
         await asyncio.create_task(chain(*processes[guildid][0]))
-        
-# @tree.command(name="fix-count-info")
-# @app_commands.check(owner_modcheck)
-# async def fixci(interaction:discord.Interaction):
-#     await interaction.response.send_message("starting")
-#     cur.execute('''select distinct(city_id) from count_info''')
-#     all_city_ids = {i for (i,) in cur}
-#     # for every city id, iterate, get id and state, update properly
-#     default_admin1 = admin1data[admin1data['default']==1]
-#     for n,city_id in enumerate(all_city_ids):
-#         # city info
-#         city_info = allnames.loc[city_id]
-#         # admin1 default name
-#         if city_info['admin1']!=None:
-#             try:
-#                 admin1_name = default_admin1[(default_admin1['admin1']==city_info['admin1'])&(default_admin1['country']==city_info['country'])].iloc[0]['name']
-#             except:
-#                 admin1_name = None
-#         else:
-#             admin1_name=None
-#         cur.execute('''update count_info set name=?, admin1=? where city_id=?''',(city_info['name'],admin1_name,city_id))   
-#         if (n+1)%100==0:
-#             m = await interaction.original_response()
-#             await m.edit(content=f"{n+1}/{len(all_city_ids)} ({(n+1)/len(all_city_ids)*100}%)")
-#     conn.commit()
-#     await interaction.followup.send('done')
+
+@tree.command(name="fix-leaderboard")
+@app_commands.check(owner_modcheck)
+async def fixle(interaction:discord.Interaction):
+    await interaction.response.send_message("starting")
+    # select all rounds with <=50, count distinct ones for each one
+    cur.execute('select * from (select server_id,round_number,max(count) as max_count from chain_info group by server_id,round_number) as x where max_count>50 order by max_count desc')
+    rounds = [i for i in cur]
+    # update rounds less than 50
+    cur.execute('update chain_info inner join (select server_id,round_number,distinct_cities,max_count,case when distinct_cities=max_count then 1 else 0 end as le from (select server_id,round_number,count(distinct(city_id)) as distinct_cities,max(count) as max_count from chain_info where valid=1 group by server_id,round_number) as x where max_count<=50) as y on chain_info.server_id=y.server_id and chain_info.round_number=y.round_number set leaderboard_eligible = y.le ')
+    for n_,(server,rnd,_) in enumerate(rounds):
+        cur.execute('select city_id from chain_info where valid = 1 and server_id = ? and round_number = ? order by count asc',(server,rnd))
+        citieslist = cur.fetchall()
+        cll=len(citieslist)
+        if len(set(citieslist))!=cll:
+            # go through list and check
+            for n,i in enumerate(citieslist):
+                if (n+50)<=cll:
+                    if len(set(citieslist[n:n+50]))!=50:
+                        cur.execute('update chain_info set leaderboard_eligible=? where server_id=? and round_number=?',(False,server,rnd))
+                        break
+        if (n_+1)%50==0:
+            conn.commit()
+            await interaction.channel.send(content=f"{n_+1}/{len(rounds)} ({(n_+1)/len(rounds)*100}%)")
+    conn.commit()
+    await interaction.channel.send(content=f"{len(rounds)}/{len(rounds)} (100%)")
 
 async def fail(message:discord.Message,reason,sinfo,citieslist,res,n,cityfound,msgref):
     guildid=message.guild.id
@@ -1098,20 +992,20 @@ async def fail(message:discord.Message,reason,sinfo,citieslist,res,n,cityfound,m
     if sinfo[3]:
         poss=allnames[allnames['population']>=sinfo[2]]
         newid=int(random.choice(poss.index))
-        await message.channel.send('<@%s> RUINED IT AT **%s**!! Start again from `%s` (next letter `%s`). %s'%(authorid,f"{len(citieslist):,}",poss.at[newid,'name'],poss.at[newid,'last-letter'],reason))
-        # await message.reply('<@%s> RUINED IT AT **%s**!! Start again from `%s` (next letter `%s`). %s'%(authorid,f"{len(citieslist):,}",poss.at[newid,'name'],poss.at[newid,'last-letter'],reason), reference = message)
+        await message.channel.send('<@%s> RUINED IT AT **%s**!! Start again from `%s` (next letter `%s`). %s'%(authorid,f"{len(citieslist):,}",poss.at[newid,'name'],poss.at[newid,'last-letter'],reason), reference = msgref)
     else:
-        # await message.channel.send('<@%s> RUINED IT AT **%s**!! %s'%(authorid,f"{len(citieslist):,}",reason))
         await message.channel.send('<@%s> RUINED IT AT **%s**!! %s'%(authorid,f"{len(citieslist):,}",reason), reference = msgref)
+    cur.execute('''select leaderboard_eligible from chain_info where server_id = ? and round_number = ? order by count desc''',data=(guildid,sinfo[0]))
+    l_eligible=cur.fetchone()[0]
     if cityfound:
-        cur.execute('''insert into chain_info(server_id,user_id,round_number,count,city_id,name,admin1,country,country_code,alt_country,time_placed,valid,message_id) values (?,?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,res[0],n[0],n[2],n[1][0],n[1][1],n[3][0] if n[3] else None,int(message.created_at.timestamp()),False,message.id))
+        cur.execute('''insert into chain_info(server_id,user_id,round_number,count,city_id,name,admin1,country,country_code,alt_country,time_placed,valid,message_id,leaderboard_eligible) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,res[0],n[0],n[2],n[1][0],n[1][1],n[3][0] if n[3] else None,int(message.created_at.timestamp()),False,message.id,l_eligible))
     else:
-        cur.execute('''insert into chain_info(server_id,user_id,round_number,count,name,time_placed,valid,message_id) values (?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,message.content[len(sinfo[10]):],int(message.created_at.timestamp()),False,message.id))
+        cur.execute('''insert into chain_info(server_id,user_id,round_number,count,name,time_placed,valid,message_id,leaderboard_eligible) values (?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,message.content[len(sinfo[10]):],int(message.created_at.timestamp()),False,message.id,l_eligible))
     cur.execute('''update server_info set chain_end = ?, current_letter = ?, last_user = ? where server_id = ?''',data=(True,'-',None,guildid))
     if sinfo[3]:
         entr=allnames.loc[(newid)]
         nname=poss.at[newid,'name']
-        n=(nname,iso2[entr['country']],entr['country'],admin1data[(admin1data['country']==entr['country'])&(admin1data['admin1']==entr['admin1'])&(admin1data['default']==1)]['name'].iloc[0] if entr['admin1'] else None,(entr['alt-country'],))
+        n=(nname,iso2[entr['country']],entr['country'],admin1name(entr['country'],entr['admin1']) if entr['admin1'] else None,(entr['alt-country'],))
         cur.execute('''update server_info
                     set choose_city = ?,
                         current_letter = ?
@@ -1174,14 +1068,7 @@ async def user(interaction: discord.Interaction, member:Optional[discord.Member]
                 break
             if i[0] in allnames.index:
                 cityrow = allnames.loc[i[0]]
-                citystring = cityrow['name']+", "
-                if cityrow['admin1']:
-                    adm1 = admin1data[(admin1data['admin1']==cityrow['admin1']) & (admin1data['country']==cityrow['country']) & (admin1data['default']==1)]
-                    citystring+=adm1.iloc[0]['name']+", "
-                citystring+=f":flag_{cityrow['country'].lower()}:"
-                if cityrow['alt-country']:
-                    citystring+=f":flag_{cityrow['alt-country'].lower()}:"
-                favc.append(citystring+f' - **{i[1]:,}**')
+                favc.append(city_string(cityrow['name'],admin1name(cityrow['country'],cityrow['admin1']),admin2name(cityrow['country'],cityrow['admin1'],cityrow['admin2']),cityrow['country'],cityrow['alt-country'])+f' - **{i[1]:,}**')
         favcities.add_field(name='Cities',value='\n'.join([f"{n+1}. "+i for n,i in enumerate(favc)]))
         
         cur.execute('SELECT country_code, COUNT(*) AS use_count FROM chain_info WHERE server_id = ? AND user_id = ? AND valid = 1 GROUP BY country_code ORDER BY use_count DESC',data=(interaction.guild_id,member.id))
@@ -1192,7 +1079,7 @@ async def user(interaction: discord.Interaction, member:Optional[discord.Member]
                 countryuses[i[0]]+=i[1]
             else:
                 countryuses[i[0]]=i[1]
-        fav_countries = [f"{j[1]} - **{j[0]:,}**" for j in sorted([(countryuses[i],iso2[i]) for i in countryuses],reverse=1)[:10]]
+        fav_countries = [f"{j[1]} {j[2]} - **{j[0]:,}**" for j in sorted([(countryuses[i],iso2[i],flags[i]) for i in countryuses],reverse=1)[:10]]
         favcities.add_field(name='Countries',value='\n'.join([f"{n+1}. "+i for n,i in enumerate(fav_countries)]))
         if member.avatar:
             embed.set_author(name=member.name, icon_url=member.avatar.url)
@@ -1224,37 +1111,12 @@ async def cities(interaction: discord.Interaction,order:Literal['sequential','al
         for i in cur:
             if i[6]:
                 cityids.append(i[5])
-            if i[1] and i[4]:
-                cutoff.append(((i[0],(i[2],i[3]),i[1],(i[4],)), i[5] in repeated,i[6]))
-            elif i[1]:
-                cutoff.append(((i[0],(i[2],i[3]),i[1]), i[5] in repeated,i[6]))
-            elif i[4]:
-                cutoff.append(((i[0],(i[2],i[3]),(i[4],)), i[5] in repeated,i[6]))
-            else:
-                cutoff.append(((i[0],(i[2],i[3])), i[5] in repeated,i[6]))
+            cutoff.append((city_string(i[0],i[1],None,i[3],i[4])+(' :repeat:' if i[5] in repeated else ''),i[6]))
         if s[1] and cit.startswith("N"):
             cutoff=cutoff[:s[2]]
             cityids=cityids[:s[2]]
-        fmt=[]
-        for i,j,k in cutoff:
-            if len(i)==4:
-                fmt.append(i[0]+', '+i[2]+' :flag_'+i[1][1].lower()+':'+''.join(':flag_'+j.lower()+':' for j in i[3])+(' :repeat:' if j else ''))
-            elif len(i)==2:
-                if i[1][1]:
-                    fmt.append(i[0]+' :flag_'+i[1][1].lower()+':'+(' :repeat:' if j else ''))
-                else:
-                    fmt.append(i[0])
-            elif type(i[2])==tuple:
-                fmt.append(i[0]+' :flag_'+i[1][1].lower()+':'+''.join(':flag_'+j.lower()+':' for j in i[2])+(' :repeat:' if j else ''))
-            else:
-                fmt.append(i[0]+', '+i[2]+' :flag_'+i[1][1].lower()+':'+(' :repeat:' if j else ''))
-            if not k:
-                fmt[-1]=":x:"+fmt[-1]
-        if s[3]:
-            seq=[i for i in fmt if i.startswith(":x:")]+['%s. %s'%(n+1,i) for n,i in enumerate([j for j in fmt if not j.startswith(":x:")])]
-        else:
-            seq=['%s. %s'%(n+1,fmt[n]) for n,i in enumerate(cutoff)]
-        alph=['- '+fmt[i[1]] for i in sorted(zip(cutoff,range(len(cutoff)))) if not fmt[i[1]].startswith(":x:")]
+        seq=[':x: %s'%i[0] for i in cutoff if not i[1]]+['%s. %s'%(n+1,i[0]) for n,i in enumerate([j for j in cutoff if j[1]])]
+        alph=['- '+i[0] for i in sorted(cutoff) if i[1]]
         
         embed=discord.Embed(title=title, color=GREEN)
         if order.startswith('s'):
@@ -1282,7 +1144,7 @@ async def roundinfo(interaction: discord.Interaction,round_num:app_commands.Rang
     if round_num<=0:
         round_num=s[0]+round_num
 
-    cur.execute('''select name,admin1,country,country_code,alt_country,city_id,valid from chain_info where server_id = ? and round_number = ? order by count asc''',data=(guildid,round_num))
+    cur.execute('''select name,admin1,country,country_code,alt_country,city_id,valid,count from chain_info where server_id = ? and round_number = ? order by count asc''',data=(guildid,round_num))
     if 1<=round_num<=s[0]:
         cutoff=[]
 
@@ -1291,45 +1153,13 @@ async def roundinfo(interaction: discord.Interaction,round_num:app_commands.Rang
         for i in cur:
             if i[6]:
                 cityids.append(i[5])
-            if i[5]==-1:
-                cutoff.append((i[0],i[6]))
-            else:
-                if i[1] and i[4]:
-                    cutoff.append((i[0],i[6],(i[2],i[3]),i[1],(i[4],)))
-                elif i[1]:
-                    cutoff.append((i[0],i[6],(i[2],i[3]),i[1]))
-                elif i[4]:
-                    cutoff.append((i[0],i[6],(i[2],i[3]),(i[4],)))
-                else:
-                    cutoff.append((i[0],i[6],(i[2],i[3])))
-        fmt=[]
-        for n,i in enumerate(cutoff):
-            if i[1]:
-                if len(i)==5:
-                    fmt.append(str(n+1)+'. '+i[0]+', '+i[3]+' :flag_'+i[2][1].lower()+':'+''.join(':flag_'+j.lower()+':' for j in i[4]))
-                elif len(i)==3:
-                    fmt.append(str(n+1)+'. '+i[0]+' :flag_'+i[2][1].lower()+':')
-                elif type(i[3])==tuple:
-                    fmt.append(str(n+1)+'. '+i[0]+' :flag_'+i[2][1].lower()+':'+''.join(':flag_'+j.lower()+':' for j in i[3]))
-                else:
-                    fmt.append(str(n+1)+'. '+i[0]+', '+i[3]+' :flag_'+i[2][1].lower()+':')
-            else:
-                if len(i)==2:
-                    fmt.append(':x: '+i[0])
-                elif len(i)==5:
-                    fmt.append(':x: '+i[0]+', '+i[3]+' :flag_'+i[2][1].lower()+':'+''.join(':flag_'+j.lower()+':' for j in i[4]))
-                elif len(i)==3:
-                    fmt.append(':x: '+i[0]+' :flag_'+i[2][1].lower()+':')
-                elif type(i[3])==tuple:
-                    fmt.append(':x: '+i[0]+' :flag_'+i[2][1].lower()+':'+''.join(':flag_'+j.lower()+':' for j in i[3]))
-                else:
-                    fmt.append(':x: '+i[0]+', '+i[3]+' :flag_'+i[2][1].lower()+':')        
-        embed=discord.Embed(title="Round %s"%(f'{round_num:,}'), color=GREEN,description='\n'.join(fmt[:25]))
+            cutoff.append(('%s. '%i[7]if i[6] else ':x: ') + city_string(i[0],i[1],None,i[3],i[4]))
+        embed=discord.Embed(title="Round %s"%(f'{round_num:,}'), color=GREEN,description='\n'.join(cutoff[:25]))
         if interaction.guild.icon:
             embed.set_author(name=interaction.guild.name, icon_url=interaction.guild.icon.url)
         else:
             embed.set_author(name=interaction.guild.name)
-        view=Paginator(1,fmt,"Round %s"%(f'{round_num:,}'),math.ceil(len(fmt)/25),interaction.user.id)
+        view=Paginator(1,cutoff,"Round %s"%(f'{round_num:,}'),math.ceil(len(cutoff)/25),interaction.user.id)
         await interaction.followup.send(embed=embed,view=view,ephemeral=eph,files=[generate_map(cityids)] if showmap=='yes' else [])
         view.message=await interaction.original_response()
     else:
@@ -1363,7 +1193,7 @@ async def lb(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='
     eph=(se=='no')
     await interaction.response.defer(ephemeral=eph)
     embed=discord.Embed(title=f"HIGH SCORES",color=GREEN)
-    cur.execute('''select server_id,max_chain from server_info order by max_chain desc''')
+    cur.execute('SELECT server_id,MAX(count) AS mc FROM chain_info WHERE valid=1 AND leaderboard_eligible=1 GROUP BY `server_id` ORDER BY mc DESC')
     if cur.rowcount>0:
         top=[]
         counter=0
@@ -1377,6 +1207,7 @@ async def lb(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='
         embed.description='\n'.join(top)
     else:
         embed.description='```null```'
+    embed.set_footer(text="In order for a server's run to be eligible for the leaderboard, no city (including repeat exceptions) can be said within 50 cities of itself.")
     await interaction.followup.send(embed=embed,ephemeral=eph)
 
 @stats.command(description="Displays global user leaderboard.")
@@ -1405,21 +1236,10 @@ async def react(interaction: discord.Interaction,se:Optional[Literal['yes','no']
         fmt=[]
         for (i,r) in cur:
             j=allnames.loc[(i)]
-            k,l,m,n=j['name'],admin1data[(admin1data['country']==j['country'])&(admin1data['admin1']==j['admin1'])&(admin1data['default']==1)]['name'].iloc[0] if j['admin1'] else None,j['country'],j['alt-country']
-            if l:
-                if n:
-                    loctuple=(k,l,m+'/'+n)
-                else:
-                    loctuple=(k,l,m)
-            else:
-                if n:
-                    loctuple=(k,m+'/'+n)
-                else:
-                    loctuple=(k,m)
-            fmt.append(('- '+', '.join(loctuple),r))
+            fmt.append(f"- {city_string(j['name'],admin1name(j['country'],j['admin1']),admin2name(j['country'],j['admin1'],j['admin2']),j['country'],j['alt-country'])} - {r}")
         fmt=sorted(fmt)
-        embed.description='\n'.join([i[0]+' '+i[1] for i in fmt[:25]])
-        view=Paginator(1,[i[0]+' '+i[1] for i in fmt],"Cities With Reactions",math.ceil(len(fmt)/25),interaction.user.id)
+        embed.description='\n'.join(fmt[:25])
+        view=Paginator(1,fmt,"Cities With Reactions",math.ceil(len(fmt)/25),interaction.user.id)
         await interaction.followup.send(embed=embed,view=view,ephemeral=eph)
         view.message=await interaction.original_response()
     else:
@@ -1438,18 +1258,7 @@ async def repeat(interaction: discord.Interaction,se:Optional[Literal['yes','no'
         fmt=[]
         for (i,) in cur:
             j=allnames.loc[(i)]
-            k,l,m,n=j['name'],admin1data[(admin1data['country']==j['country'])&(admin1data['admin1']==j['admin1'])&(admin1data['default']==1)]['name'].iloc[0] if j['admin1'] else None,j['country'],j['alt-country']
-            if l:
-                if n:
-                    loctuple=(k,l,m+'/'+n)
-                else:
-                    loctuple=(k,l,m)
-            else:
-                if n:
-                    loctuple=(k,m+'/'+n)
-                else:
-                    loctuple=(k,m)
-            fmt.append('- '+', '.join(loctuple))
+            fmt.append(f"- {city_string(j['name'],admin1name(j['country'],j['admin1']),admin2name(j['country'],j['admin1'],j['admin2']),j['country'],j['alt-country'])}")
         fmt=sorted(fmt)
         embed.description='\n'.join(fmt[:25])
         view=Paginator(1,fmt,"Repeats Rule Exceptions",math.ceil(len(fmt)/25),interaction.user.id)
@@ -1480,18 +1289,7 @@ async def popular(interaction: discord.Interaction,se:Optional[Literal['yes','no
             cur.execute('''select count from count_info where server_id = ? and city_id = ?''',data=(interaction.guild_id,i[0]))
             c=cur.fetchone()[0]
             j=allnames.loc[(i[0])]
-            k,l,m,n=j['name'],admin1data[(admin1data['country']==j['country'])&(admin1data['admin1']==j['admin1'])&(admin1data['default']==1)]['name'].iloc[0] if j['admin1'] else None,i[1],i[2]
-            if l:
-                if n:
-                    loctuple=(k,l,f":flag_{m.lower()}::flag_{n.lower()}:")
-                else:
-                    loctuple=(k,l,f":flag_{m.lower()}:")
-            else:
-                if n:
-                    loctuple=(k,f":flag_{m.lower()}::flag_{n.lower()}:")
-                else:
-                    loctuple=(k,f":flag_{m.lower()}:")
-            fmt.append((c,', '.join(loctuple)+(' :repeat:' if i[0] in repeated else '')))
+            fmt.append((c,city_string(j['name'],admin1name(j['country'],j['admin1']),admin2name(j['country'],j['admin1'],j['admin2']),i[1],i[2])+(' :repeat:' if i[0] in repeated else '')))
         fmt=sorted(fmt,key = lambda x:(-x[0],x[1]))
         embed.add_field(name='Cities',value='\n'.join(['%s. %s - **%s**' %(n+1,i[1],f"{i[0]:,}") for (n,i) in enumerate(fmt)]))
         fmt=[]
@@ -1505,9 +1303,9 @@ async def popular(interaction: discord.Interaction,se:Optional[Literal['yes','no
             if cur.rowcount!=0:
                 countries[i] = cur.fetchone()[0]
         for i in countries:
-            fmt.append((int(countries[i]),iso2[i]))
+            fmt.append((int(countries[i]),iso2[i],flags[i]))
         fmt=sorted(fmt,key = lambda x:(-x[0],x[1]))[:10]
-        embed.add_field(name='Countries',value='\n'.join(['%s. %s - **%s**' %(n+1,i[1],f"{i[0]:,}") for (n,i) in enumerate(fmt)]))
+        embed.add_field(name='Countries',value='\n'.join(['%s. %s %s - **%s**' %(n+1,i[1],i[2],f"{i[0]:,}") for (n,i) in enumerate(fmt)]))
     else:
         embed.add_field(name='Cities',value='```null```')
         embed.add_field(name='Countries',value='```null```')
@@ -1548,60 +1346,13 @@ async def bestrds(interaction: discord.Interaction,se:Optional[Literal['yes','no
                 b=[]
                 for j in (b1,b2):
                     o=allnames.loc[(j[0])]
-                    k,l,m,n=o['name'],j[2],j[3],j[4]
-                    
-                    if j[1]==k:
-                        if l:
-                            if n:
-                                loctuple=(j[1],l,m+'/'+n)
-                            else:
-                                loctuple=(j[1],l,m)
-                        else:
-                            if n:
-                                loctuple=(j[1],m+'/'+n)
-                            else:
-                                loctuple=(j[1],m)
-                    else:
-                        if l:
-                            if n:
-                                loctuple=(j[1]+' (%s)'%k,l,m+'/'+n)
-                            else:
-                                loctuple=(j[1]+' (%s)'%k,l,m)
-                        else:
-                            if n:
-                                loctuple=(j[1]+' (%s)'%k,m+'/'+n)
-                            else:
-                                loctuple=(j[1]+' (%s)'%k,m)
-                    b.append(', '.join(loctuple))
+                    b.append(city_string(j[1]+(f" ({o['name']})" if o['name']!=j[1] else ""),j[2],admin2name(j[1],j[2],o['admin2']),j[3],j[4]))
                 fmt.append((maxc,i[1],part,tuple(b),("<t:%s:f>"%b1[5],i[2] if type(i[2])==str else "<t:%s:f>"%i[2])))
             elif maxc==1:
                 cur.execute('''select city_id,name,admin1,country,alt_country,time_placed from chain_info where server_id = ? and round_number = ? and count = ?''',data=(interaction.guild_id,i[1],1))
                 j=cur.fetchone()
                 o=allnames.loc[(j[0])]
-                k,l,m,n=o['name'],j[2],j[3],j[4]
-                if j[1]==k:
-                    if l:
-                        if n:
-                            loctuple=(j[1],l,m+'/'+n)
-                        else:
-                            loctuple=(j[1],l,m)
-                    else:
-                        if n:
-                            loctuple=(j[1],m+'/'+n)
-                        else:
-                            loctuple=(j[1],m)
-                else:
-                    if l:
-                        if n:
-                            loctuple=(j[1]+' (%s)'%k,l,m+'/'+n)
-                        else:
-                            loctuple=(j[1]+' (%s)'%k,l,m)
-                    else:
-                        if n:
-                            loctuple=(j[1]+' (%s)'%k,m+'/'+n)
-                        else:
-                            loctuple=(j[1]+' (%s)'%k,m)
-                fmt.append((maxc,i[1],part,(', '.join(loctuple),),("<t:%s:f>"%j[5],i[2] if type(i[2])==str else "<t:%s:f>"%i[2])))
+                fmt.append((maxc,i[1],part,(city_string(j[1]+(f" ({o['name']})" if o['name']!=j[1] else ""),j[2],admin2name(j[1],j[2],o['admin2']),j[3],j[4]),),("<t:%s:f>"%j[5],i[2] if type(i[2])==str else "<t:%s:f>"%i[2])))
             else:
                 fmt.append((0,i[1],1,("None","None"),(i[2] if type(i[2])==str else "<t:%s:f>"%i[2],i[2] if type(i[2])==str else "<t:%s:f>"%i[2])))
         for i in fmt:
@@ -1621,16 +1372,18 @@ async def bestrds(interaction: discord.Interaction,se:Optional[Literal['yes','no
 async def blocked(interaction:discord.Interaction,se:Optional[Literal['yes','no']]='no'):
     eph=(se=='no')
     await interaction.response.defer(ephemeral=eph)
-    cur.execute('select user_id from bans where banned=?',data=(True,))
-    bans={i[0] for i in cur}
+    cur.execute('select user_id from server_user_info where blocked=? and server_id=?',data=(True,interaction.guild_id))
+    blocks={i[0] for i in cur}
+    cur.execute('select user_id from global_user_info where blocked=?',(True,))
+    blocks.update({i for (i,) in cur})
     members={i.id for i in interaction.guild.members}
-    bans=bans.intersection(members)
+    blocks=blocks.intersection(members)
     embed=discord.Embed(title='Banned Users',color=GREEN)
     cur.execute('''select city_id from repeat_info where server_id = ?''', data=(interaction.guild_id,))
-    if len(bans)>0:
-        fmt=[f"- <@{i}>" for i in bans]
+    if len(blocks)>0:
+        fmt=[f"- <@{i}>" for i in blocks]
         embed.description='\n'.join(fmt[:25])
-        view=Paginator(1,fmt,"Banned Users",math.ceil(len(fmt)/25),interaction.user.id)
+        view=Paginator(1,fmt,"Blocked Users",math.ceil(len(fmt)/25),interaction.user.id)
         await interaction.followup.send(embed=embed,view=view,ephemeral=eph)
         view.message=await interaction.original_response()
     else:
@@ -1677,7 +1430,11 @@ async def cityinfo(interaction: discord.Interaction, city:str, province:Optional
         else:
             embed.add_field(name='',value='',inline=False)
         if default['admin1']:
-            embed.add_field(name='Administrative Division',value=admin1data[(admin1data['country']==default['country'])&(admin1data['admin1']==default['admin1'])&(admin1data['default']==1)]['name'].iloc[0],inline=True)
+            if default['admin2']:
+                embed.add_field(name='Administrative Divisions',value=f"1. {admin1name(default['country'],default['admin1'])}\n2. {admin2name(default['country'],default['admin1'],default['admin2'])}",inline=True)
+            else:
+                embed.add_field(name='Administrative Division',value=admin1name(default['country'],default['admin1']),inline=True)
+
         if default['alt-country']:
             embed.add_field(name='Countries',value=':flag_'+default['country'].lower()+': '+iso2[default['country']]+' ('+default['country']+')\n'+':flag_'+default['alt-country'].lower()+': '+iso2[default['alt-country']]+' ('+default['alt-country']+')',inline=True)
         else:
@@ -1750,96 +1507,87 @@ async def deletestats(interaction: discord.Interaction):
 async def ping(interaction: discord.Interaction):
     await interaction.response.send_message('Pong! `%s ms`'%(client.latency*1000))
 
-@tree.command(description="Blocks a user. ")
+@tree.command(name="block-server",description="Blocks a user from using the bot in the server. ")
 @app_commands.check(owner_modcheck)
-async def block(interaction: discord.Interaction,member: discord.Member):
+async def serverblock(interaction: discord.Interaction,member: discord.Member):
     if member!=owner and not member.bot:
-        cur.execute('select user_id from bans where banned=?',data=(True,))
-        bans={i[0] for i in cur}
-        if interaction.user.id in bans:
+        if is_banned(interaction.user.id,interaction.guild_id):
             await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
             return
-        if member.id not in bans:
-            cur.execute('''insert into bans(user_id,banned) values (?,?)''',data=(member.id,True))
-        else:
-            cur.execute('''update bans set banned=? where user_id=?''',data=(True,member.id))
+        cur.execute('''update server_user_info set blocked=? where user_id=? and server_id=?''',data=(True,member.id,interaction.guild_id))
         conn.commit()
-        await interaction.response.send_message(f"<@{member.id}> has been blocked from using this bot. ")
+        await interaction.response.send_message(f"<@{member.id}> has been blocked from using this bot in the server. ")
     else:
         await interaction.response.send_message(f"Nice try, bozo")
 
-@tree.command(description="Unblocks a user. ")
+@tree.command(name="unblock-server",description="Unblocks a user from using the bot in the server. ")
 @app_commands.check(owner_modcheck)
-async def unblock(interaction: discord.Interaction,member: discord.Member):
-    cur.execute('select user_id from bans where banned=?',data=(True,))
-    bans={i[0] for i in cur}
-    if interaction.user.id in bans:
+async def serverunblock(interaction: discord.Interaction,member: discord.Member):
+    if is_banned(interaction.user.id,interaction.guild_id):
         await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
         return
-    cur.execute('''update bans set banned=? where user_id=?''',data=(False,member.id))
+    cur.execute('''select blocked from global_user_info where user_id=?''',(member.id,))
+    if cur.fetchone()[0]:
+        await interaction.response.send_message(f":no_entry: <@{member.id}> cannot be unblocked. ")
+    else:
+        cur.execute('''update server_user_info set blocked=? where user_id=? and server_id=?''',data=(False,member.id,interaction.guild_id))
+        conn.commit()
+        await interaction.response.send_message(f"<@{member.id}> has been unblocked from using this bot in the server. ")
+
+from discord.ext import commands
+
+@tree.command(name="block-global",description="Blocks a user from using the bot. ")
+@commands.is_owner()
+async def globalblock(interaction: discord.Interaction,user: discord.User):
+    if user!=owner and not user.bot:
+        if is_banned(interaction.user.id,interaction.guild_id):
+            await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
+            return
+        cur.execute('''update global_user_info set blocked=? where user_id=?''',data=(True,user.id))
+        conn.commit()
+        await interaction.response.send_message(f"<@{user.id}> has been blocked from using this bot in the server. ")
+    else:
+        await interaction.response.send_message(f"Nice try, bozo")
+
+@tree.command(name="unblock-global",description="Unblocks a user from using the bot. ")
+@app_commands.check(owner_modcheck)
+async def globalunblock(interaction: discord.Interaction,user: discord.User):
+    if is_banned(interaction.user.id,interaction.guild_id):
+        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
+        return
+    cur.execute('''update global_user_info set blocked=? where user_id=?''',data=(False,user.id))
     conn.commit()
-    await interaction.response.send_message(f"<@{member.id}> has been unblocked. ")
+    await interaction.response.send_message(f"<@{user.id}> has been unblocked from using this bot. ")
 
 @tree.command(description="Gets information about the bot and the game. ")
-@app_commands.describe(topic="The topic to get information for",se='Yes to show everyone stats, no otherwise')
+@app_commands.describe(se='Yes to show everyone stats, no otherwise')
 @app_commands.rename(se='show-everyone')
-async def help(interaction: discord.Interaction,topic: Literal['rules','commands','emojis','tips','faq'],se:Optional[Literal['yes','no']]='no'):
+async def help(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
     await interaction.response.defer(ephemeral=(se=='no'))
     embed=discord.Embed(color=GREEN)
-    if topic=='rules':
-        embed.description='''**Rules**\nOne person chooses a city, then the next person must choose a city beginning with the last letter of the previous city. \nExamples: \nLondo**n** --> **N**ew Yor**k** --> **K**arachi\nLondo**n** --> **N**anjin**g** --> **G**uadalajara\n\nThe chain can be broken in a few different ways, such as the next city not starting with the last letter, the next city not existing, the next city having too small of a population, the next user going twice, or putting down a city that has been said before. The settings for some of those can be changed, but here are some examples:\n**User A**: New Haven\n**User B**: London (city starts with wrong letter)\n\n**User A**: New Haven\n**User A**: Nagoya (user went twice in a row)\n\n**User A**: New Haven\n**User B**: New Kent (city's population is below 1000, if 1000 is the minimum population set)\n\n**User A**: New Haven\n**User B**: New Haven (same city repeated)\n\n**User A**: New Haven\n**User B**: Never Gonna Give You Up (city does not exist)\n\nCities must be prefixed by the server's given prefix in order to be counted towards the chain (by default it's **!**, but this can be changed).'''
-        await interaction.followup.send(embed=embed,ephemeral=(se=='no'))
-    elif topic=='commands':
-        messages=["""**Set commands (requires mod perms):**
-        `/set channel [channel]`: sets the channel the bot will listen to
-        `/set prefix ([prefix])`: sets prefix to use when listening for cities
-        `/set choose-city [option]`: if turned on, allows bot to choose the city that begins the next chain
-        `/set population`: sets minimum population for cities
-        `/set repeat [num]`: sets number of different cities that have to be said before a city can be repeated again. If set to -1, repeating is disallowed
-        """,
-        """
-        **Reaction/Repeat commands (requires mod perms):**
-        `/add react [city] ([administrative-division][country])`: bot autoreacts an emoji when a given city is said
-        `/remove react [city] ([administrative-division][country])`: bot removes autoreact for given city
-        `/add repeat [city] ([administrative-division][country])`: bot will ignore no repeats rule for given city
-        `/remove repeat [city] ([administrative-division][country])`: bot removes repeating exception for given city
-        """,
-        """
-        **Stats commands:**
-        `/stats cities ([order][cities][map][show-everyone])`: displays list of cities
-        `/stats server ([show-everyone])`: displays server stats
-        `/stats user ([member][show-everyone])`: displays user stats
-        `/stats slb ([show-everyone])`: displays server user leaderboard
-        `/stats lb ([show-everyone])`: displays global server leaderboard
-        `/stats ulb ([show-everyone])`: displays global user leaderboard
-        `/stats best-rounds ([show-everyone])`: displays 5 longest chains
-        `/stats popular-cities ([show-everyone])`: displays 10 most popular cities and countries in the chain
-        `/stats round [round]([map][show-everyone])`: gets list of cities for a specific round
-        `/stats react ([show-everyone])`: gets all cities with reactions
-        `/stats repeat ([show-everyone])`: gets all cities that can be repeated anytime
-        `/stats blocked-users ([show-everyone])`: gets the list of users in the server blocked from using the bot
-        """,
-        """
-        **Other commands:**
-        `/city-info [city] ([administrative-division][country][show-everyone])`: gets information about the given city
-        `/country-info [country] ([show-everyone])`: gets information about the given countries
-        `/delete-stats`: deletes stats for your server
-        `/ping`: shows bot latency
-        `/block [user]`: blocks a certain user if they are purposefully ruining the chain
-        `/unblock [user]`: unblocks a certain user
-        `/help [topic] ([show-everyone])`: sends this message
-        `/about([show-everyone])`: about the bot """]
-        embed.description=messages[0]
-        await interaction.followup.send(embed=embed,view=Help(messages),ephemeral=(se=='no'))
-    elif topic == 'emojis':
-        embed.description = '''**Emoji Guide**\n\n:white_check_mark: - valid addition to chain\n:ballot_box_with_check: - valid addition to chain, breaks server record\n:x: - invalid addition to chain\n:regional_indicator_a: - letter the city ends with\n\nIn addition, you can make the bot react to certain cities of your choosing using the `/add react` and `remove react` commands.'''
-        await interaction.followup.send(embed=embed,ephemeral=(se=='no'))
-    elif topic == 'tips':
-        embed.description = '''**Tips**\n- When many people are playing, play cities that start and end with the same letter to avoid breaking the chain. \n- If you want to specify a different city than the one the bot interprets, you can use commas to specify provinces, states, or countries: \nExamples: \n:white_check_mark: Atlanta\n:white_check_mark: Atlanta, United States\n:white_check_mark: Atlanta, Georgia\n:white_check_mark: Atlanta, Fulton County\n:white_check_mark: Atlanta, Fulton County, Georgia, United States\nYou can specify a maximum of 2 administrative divisions, not including the country. \n- Googling cities is allowed. \n- Remember, at the end of the day, it is just a game, and the game is supposed to be lighthearted and fun.'''
-        await interaction.followup.send(embed=embed,ephemeral=(se=='no'))
-    elif topic=='faq':
-        embed.description = '''**Frequently Asked Questions**\n\n**Q: Some cities aren't recognized by the bot. Why?**\nA: The bot takes its data from Geonames, and only cities with a listed population (that is, greater than 0 people listed) are considered by the bot.\n\n**Q: I added some cities to Geonames, but they still aren't recognized by the bot. Why?**\nA: The Geonames dump updates the cities list daily, but the bot's record of cities is not updated on a regular basis, so it might take until I decide to update it again for those cities to show up.\n\n**Q: Why are some of the romanizations for cities incorrect?**\nA: That's a thing to do with the Python library I use to romanize the characters (`unidecode`) - characters are romanized one-by-one instead of with context. For example, `unidecode` will turn `广州` into `Yan Zhou`. I still haven't found a good way to match every foreign name to a perfect translation. \n\n**Q: How do I suggest feedback to the bot?**\nA: There is a support server and support channels listed in the `/about` command for this bot.'''
-        await interaction.followup.send(embed=embed,ephemeral=(se=='no'))
+
+    command_messages=[[],[],[],[]]
+    commands = tree.get_commands()
+    for i in commands:
+        if isinstance(i,discord.app_commands.Group):
+            for j in i.commands:
+                optional_params = [k.display_name for k in j.parameters if not k.required]
+                if i.name=='set':
+                    index=0
+                elif i.name=='add' or i.name=='remove':
+                    index=1
+                elif i.name=='stats':
+                    index=2
+                command_messages[index].append(f'''`/{i.name} {j.name} {''.join([f'[{k.display_name}]' for k in j.parameters if k.required])}{('(' if len(optional_params) else '')+''.join([f'[{k}]' for k in optional_params])+(')' if len(optional_params) else '')}`: {j.description}''')
+        else:
+            optional_params = [j.display_name for j in i.parameters if not j.required]
+            command_messages[3].append(f'''`/{i.name} {''.join([f'[{j.display_name}]' for j in i.parameters if j.required])}{('(' if len(optional_params) else '')+''.join([f'[{j}]' for j in optional_params])+(')' if len(optional_params) else '')}`: {i.description}''')
+    headers = ['**Set Commands:**','**Reaction/Repeat Commands:**','**Stats Commands:**','**Other Commands:**']
+    for n in range(len(command_messages)):
+        command_messages[n]=headers[n]+'\n\n'+'\n'.join(command_messages[n])
+    
+    embed.description="Choose a topic."
+    await interaction.followup.send(embed=embed,view=Help(['''One person chooses a city, then the next person must choose a city beginning with the last letter of the previous city. \nExamples: \nLondo**n** --> **N**ew Yor**k** --> **K**arachi\nLondo**n** --> **N**anjin**g** --> **G**uadalajara\n\nThe chain can be broken in a few different ways, such as the next city not starting with the last letter, the next city not existing, the next city having too small of a population, the next user going twice, or putting down a city that has been said before. The settings for some of those can be changed, but here are some examples:\n**User A**: New Haven\n**User B**: London (city starts with wrong letter)\n\n**User A**: New Haven\n**User A**: Nagoya (user went twice in a row)\n\n**User A**: New Haven\n**User B**: New Kent (city's population is below 1000, if 1000 is the minimum population set)\n\n**User A**: New Haven\n**User B**: New Haven (same city repeated)\n\n**User A**: New Haven\n**User B**: Never Gonna Give You Up (city does not exist)\n\nCities must be prefixed by the server's given prefix in order to be counted towards the chain (by default it's **!**, but this can be changed).\n\nDo note that cities with alternate names will start and end with the first and last letters of those names, but will be counted as the same city. \nFor example, The Hague starts with `t` and ends with `e`, while Den Haag starts with `d` and ends with `g`, but both are considered the same city. ''',None,''':white_check_mark: - valid addition to chain\n:ballot_box_with_check: - valid addition to chain, breaks server record\n:x: - invalid addition to chain\n:regional_indicator_a: - letter the city ends with\n\nIn addition, you can make the bot react to certain cities of your choosing using the `/add react` and `remove react` commands.''','''- When many people are playing, play cities that start and end with the same letter to avoid breaking the chain. \n- If you want to specify a different city than the one the bot interprets, you can use commas to specify provinces, states, or countries: \nExamples: \n:white_check_mark: Atlanta\n:white_check_mark: Atlanta, United States\n:white_check_mark: Atlanta, Georgia\n:white_check_mark: Atlanta, Fulton County\n:white_check_mark: Atlanta, Fulton County, Georgia, United States\nYou can specify a maximum of 2 administrative divisions, not including the country. \n- Googling cities is allowed. \n- Remember, at the end of the day, it is just a game, and the game is supposed to be lighthearted and fun.''','''**Q: Some cities aren't recognized by the bot. Why?**\nA: The bot takes its data from Geonames, and only cities with a listed population (that is, greater than 0 people listed) are considered by the bot.\n\n**Q: I added some cities to Geonames, but they still aren't recognized by the bot. Why?**\nA: The Geonames dump updates the cities list daily, but the bot's record of cities is not updated on a regular basis, so it might take until I decide to update it again for those cities to show up.\n\n**Q: Why are some of the romanizations for cities incorrect?**\nA: That's a thing to do with the Python library I use to romanize the characters (`unidecode`) - characters are romanized one-by-one instead of with context. For example, `unidecode` will turn `广州` into `Yan Zhou`. I still haven't found a good way to match every foreign name to a perfect translation. \n\n**Q: How do I suggest feedback to the bot?**\nA: There is a support server and support channels listed in the `/about` command for this bot.'''],command_messages),ephemeral=(se=='no'))
 
 @tree.command(description="Information about the bot.")
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
