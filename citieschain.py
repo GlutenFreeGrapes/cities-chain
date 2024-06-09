@@ -1,5 +1,6 @@
 import discord, re, pandas as pd, random, math, mariadb, numpy as np, tarfile, requests, unidecode, json, asyncio, io
 from discord import app_commands
+from discord.ext import commands
 from typing import Optional,Literal
 from os import environ as env
 from dotenv import load_dotenv
@@ -31,6 +32,7 @@ cur = conn.cursor()
 
 cur.execute('create database if not exists ' + env["DB_NAME"])
 cur.execute('use ' + env["DB_NAME"])
+cur.execute("SET @@session.wait_timeout = 3600") # max 1hr timeout
 
 cur.execute('''create table if not exists server_info(
             server_id bigint, 
@@ -135,12 +137,20 @@ allcountries=sorted(allcountries)
 regionalindicators={chr(97+i):chr(127462+i) for i in range(26)}
 flags = {i:regionalindicators[i[0].lower()]+regionalindicators[i[1].lower()] for i in iso2}
 
-def is_banned(user_id,guild_id):
+def is_blocked(user_id,guild_id):
     cur.execute("select user_id,blocked from global_user_info where user_id=?",(user_id,))
-    if cur.fetchone()[1]:
-        return 1
+    g = cur.fetchone()
+    if g:
+        if g[1]:
+            return 1
+    else:
+        return 0
     cur.execute("select server_id,user_id,blocked from server_user_info where user_id=? and server_id=?",(user_id,guild_id))
-    return cur.fetchone()[2]
+    g = cur.fetchone()
+    if g:
+        return g[2]
+    else:
+        return 0
 
 def admin1name(country,admin1):
     return admin1data[(admin1data['country']==country)&(admin1data['admin1']==admin1)&(admin1data['default']==1)].iloc[0]['name'] if admin1 else None
@@ -494,7 +504,7 @@ assign = app_commands.Group(name="set", description="Set different things for th
 @app_commands.describe(channel="The channel where the cities chain will happen")
 async def channel(interaction: discord.Interaction, channel: discord.TextChannel|discord.Thread):
     await interaction.response.defer()
-    if is_banned(interaction.user.id,interaction.guild_id):
+    if is_blocked(interaction.user.id,interaction.guild_id):
         await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ")
         return
     cur.execute('''update server_info
@@ -508,7 +518,7 @@ async def channel(interaction: discord.Interaction, channel: discord.TextChannel
 @app_commands.describe(num="The minimum number of cities before they can repeat again, set to -1 to disallow any repeats")
 async def repeat(interaction: discord.Interaction, num: app_commands.Range[int,-1,None]):
     await interaction.response.defer()
-    if is_banned(interaction.user.id,interaction.guild_id):
+    if is_blocked(interaction.user.id,interaction.guild_id):
         await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ")
         return
     cur.execute('''select chain_end from server_info
@@ -543,7 +553,7 @@ async def repeat(interaction: discord.Interaction, num: app_commands.Range[int,-
 @app_commands.describe(population="The minimum population of cities in the chain")
 async def population(interaction: discord.Interaction, population: app_commands.Range[int,1,None]):
     await interaction.response.defer()
-    if is_banned(interaction.user.id,interaction.guild_id):
+    if is_blocked(interaction.user.id,interaction.guild_id):
         await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ")
         return
     cur.execute('''select chain_end from server_info
@@ -563,7 +573,7 @@ async def population(interaction: discord.Interaction, population: app_commands.
 @app_commands.describe(prefix="Prefix that all cities to be chained must begin with")
 async def prefix(interaction: discord.Interaction, prefix: Optional[app_commands.Range[str,0,10]]=''):
     await interaction.response.defer()
-    if is_banned(interaction.user.id,interaction.guild_id):
+    if is_blocked(interaction.user.id,interaction.guild_id):
         await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ")
         return
     cur.execute('''select chain_end from server_info
@@ -586,7 +596,7 @@ async def prefix(interaction: discord.Interaction, prefix: Optional[app_commands
 @app_commands.describe(option="on to let the bot choose the next city, off otherwise")
 async def choosecity(interaction: discord.Interaction, option:Literal["on","off"]):
     await interaction.response.defer()
-    if is_banned(interaction.user.id,interaction.guild_id):
+    if is_blocked(interaction.user.id,interaction.guild_id):
         await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ")
         return
     guildid=interaction.guild_id
@@ -638,7 +648,7 @@ add = app_commands.Group(name='add', description="Adds reactions/repeats for the
 @app_commands.autocomplete(country=countrycomplete)
 async def react(interaction: discord.Interaction, city:str, province:Optional[str]=None, country:Optional[str]=None):
     await interaction.response.defer()
-    if is_banned(interaction.user.id,interaction.guild_id):
+    if is_blocked(interaction.user.id,interaction.guild_id):
         await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ")
         return
     
@@ -682,7 +692,7 @@ async def react(interaction: discord.Interaction, city:str, province:Optional[st
 @app_commands.autocomplete(country=countrycomplete)
 async def repeat(interaction: discord.Interaction, city:str, province:Optional[str]=None, country:Optional[str]=None):
     await interaction.response.defer()
-    if is_banned(interaction.user.id,interaction.guild_id):
+    if is_blocked(interaction.user.id,interaction.guild_id):
         await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ")
         return
 
@@ -714,7 +724,7 @@ remove = app_commands.Group(name='remove', description="Removes reactions/repeat
 @app_commands.autocomplete(country=countrycomplete)
 async def react(interaction: discord.Interaction, city:str, province:Optional[str]=None, country:Optional[str]=None):
     await interaction.response.defer()
-    if is_banned(interaction.user.id,interaction.guild_id):
+    if is_blocked(interaction.user.id,interaction.guild_id):
         await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ")
         return
     
@@ -739,7 +749,7 @@ async def react(interaction: discord.Interaction, city:str, province:Optional[st
 @app_commands.autocomplete(country=countrycomplete)
 async def repeat(interaction: discord.Interaction, city:str, province:Optional[str]=None, country:Optional[str]=None):
     await interaction.response.defer()
-    if is_banned(interaction.user.id,interaction.guild_id):
+    if is_blocked(interaction.user.id,interaction.guild_id):
         await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ")
         return
 
@@ -813,7 +823,7 @@ async def on_message(message:discord.Message):
                 await message.reply("it's ok")
 
 async def chain(message:discord.Message,guildid,authorid,original_content,ref):
-    if is_banned(authorid,guildid):
+    if is_blocked(authorid,guildid):
         await message.add_reaction('\N{NO PEDESTRIANS}')
     else:
         cur.execute('''select round_number,
@@ -846,8 +856,11 @@ async def chain(message:discord.Message,guildid,authorid,original_content,ref):
         sinfo=cur.fetchone()
         cur.execute('''select city_id from chain_info where server_id = ? and round_number = ? order by count desc''',data=(guildid,sinfo[0]))
         citieslist=[i for (i,) in cur]
-        cur.execute('''select leaderboard_eligible from chain_info where server_id = ? and round_number = ? order by count desc''',data=(guildid,sinfo[0]))
-        l_eligible=cur.fetchone()[0]
+        if len(citieslist):
+            cur.execute('''select leaderboard_eligible from chain_info where server_id = ? and round_number = ? order by count desc''',data=(guildid,sinfo[0]))
+            l_eligible=cur.fetchone()[0]
+        else:
+            l_eligible=1
         res=search_cities_chain(original_content[len(sinfo[10]):],0,sinfo[2],0)
         if res:
             cur.execute('''select
@@ -948,8 +961,8 @@ async def chain(message:discord.Message,guildid,authorid,original_content,ref):
     else:
         await asyncio.create_task(chain(*processes[guildid][0]))
 
-@tree.command(name="fix-leaderboard")
-@app_commands.check(owner_modcheck)
+@tree.command(name="fix-leaderboard",description="Fixes leaderboard stats, determines leaderboard eligible runs")
+@commands.is_owner()
 async def fixle(interaction:discord.Interaction):
     await interaction.response.send_message("starting")
     # select all rounds with <=50, count distinct ones for each one
@@ -1020,6 +1033,9 @@ stats = app_commands.Group(name='stats',description="description")
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
 async def server(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
     eph=(se=='no')
+    if is_blocked(interaction.user.id,interaction.guild_id):
+        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ",ephemeral=eph)
+        return
     await interaction.response.defer(ephemeral=eph)
     guildid=interaction.guild_id
     embed=discord.Embed(title="Server Stats", color=GREEN)
@@ -1038,6 +1054,9 @@ async def server(interaction: discord.Interaction,se:Optional[Literal['yes','no'
 @app_commands.describe(member="The user to get statistics for.",se='Yes to show everyone stats, no otherwise')
 async def user(interaction: discord.Interaction, member:Optional[discord.Member]=None,se:Optional[Literal['yes','no']]='no'):
     eph=(se=='no')
+    if is_blocked(interaction.user.id,interaction.guild_id):
+        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ",ephemeral=eph)
+        return
     await interaction.response.defer(ephemeral=eph)
     if not member:
         member=interaction.user
@@ -1094,6 +1113,9 @@ async def user(interaction: discord.Interaction, member:Optional[discord.Member]
 @app_commands.describe(order='The order in which the cities are presented, sequential or alphabetical',cities='Whether to show all cities or only the ones that cannot be repeated',showmap='Whether to show a map of cities',se='Yes to show everyone stats, no otherwise')
 async def cities(interaction: discord.Interaction,order:Literal['sequential','alphabetical'],cities:Literal['all','non-repeatable'],showmap:Optional[Literal['yes','no']]='no',se:Optional[Literal['yes','no']]='no'):
     eph=(se=='no')
+    if is_blocked(interaction.user.id,interaction.guild_id):
+        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ",ephemeral=eph)
+        return
     cit=cities.capitalize()+" Cities"
     title=f"{cit} - {order.capitalize()}"
     await interaction.response.defer(ephemeral=eph)
@@ -1116,7 +1138,7 @@ async def cities(interaction: discord.Interaction,order:Literal['sequential','al
             cutoff=cutoff[:s[2]]
             cityids=cityids[:s[2]]
         seq=[':x: %s'%i[0] for i in cutoff if not i[1]]+['%s. %s'%(n+1,i[0]) for n,i in enumerate([j for j in cutoff if j[1]])]
-        alph=['- '+i[0] for i in sorted(cutoff) if i[1]]
+        alph=['- '+i[0] for i in sorted(cutoff,key=lambda x:x[0].lower()) if i[1]]
         
         embed=discord.Embed(title=title, color=GREEN)
         if order.startswith('s'):
@@ -1136,6 +1158,9 @@ async def cities(interaction: discord.Interaction,order:Literal['sequential','al
 @app_commands.describe(round_num='Round to retrieve information from (0 = current round, -1 = previous round)',showmap='Whether to show a map of cities',se='Yes to show everyone stats, no otherwise')
 async def roundinfo(interaction: discord.Interaction,round_num:app_commands.Range[int,-1,None],showmap:Optional[Literal['yes','no']]='no',se:Optional[Literal['yes','no']]='no'):
     eph=(se=='no')
+    if is_blocked(interaction.user.id,interaction.guild_id):
+        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ",ephemeral=eph)
+        return
     await interaction.response.defer(ephemeral=eph)
     guildid=interaction.guild_id
     cur.execute('''select round_number from server_info where server_id = ?''',data=(guildid,))
@@ -1173,6 +1198,9 @@ async def roundinfo(interaction: discord.Interaction,round_num:app_commands.Rang
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
 async def slb(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
     eph=(se=='no')
+    if is_blocked(interaction.user.id,interaction.guild_id):
+        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ",ephemeral=eph)
+        return
     await interaction.response.defer(ephemeral=eph)
     embed=discord.Embed(title=f"TOP USERS IN ```{interaction.guild.name}```",color=GREEN)
     if interaction.guild.icon:
@@ -1191,6 +1219,9 @@ async def slb(interaction: discord.Interaction,se:Optional[Literal['yes','no']]=
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
 async def lb(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
     eph=(se=='no')
+    if is_blocked(interaction.user.id,interaction.guild_id):
+        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ",ephemeral=eph)
+        return
     await interaction.response.defer(ephemeral=eph)
     embed=discord.Embed(title=f"HIGH SCORES",color=GREEN)
     cur.execute('SELECT server_id,MAX(count) AS mc FROM chain_info WHERE valid=1 AND leaderboard_eligible=1 GROUP BY `server_id` ORDER BY mc DESC')
@@ -1215,6 +1246,9 @@ async def lb(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
 async def ulb(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
     eph=(se=='no')
+    if is_blocked(interaction.user.id,interaction.guild_id):
+        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ",ephemeral=eph)
+        return
     await interaction.response.defer(ephemeral=eph)
     embed=discord.Embed(title=f"TOP USERS",color=GREEN)
     cur.execute('''select user_id,score from global_user_info order by score desc limit 10''',data=(interaction.guild_id,))
@@ -1229,6 +1263,9 @@ async def ulb(interaction: discord.Interaction,se:Optional[Literal['yes','no']]=
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
 async def react(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
     eph=(se=='no')
+    if is_blocked(interaction.user.id,interaction.guild_id):
+        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ",ephemeral=eph)
+        return
     await interaction.response.defer(ephemeral=eph)
     embed=discord.Embed(title='Cities With Reactions',color=GREEN)
     cur.execute('''select city_id,reaction from react_info where server_id = ?''', data=(interaction.guild_id,))
@@ -1251,6 +1288,9 @@ async def react(interaction: discord.Interaction,se:Optional[Literal['yes','no']
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
 async def repeat(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
     eph=(se=='no')
+    if is_blocked(interaction.user.id,interaction.guild_id):
+        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ",ephemeral=eph)
+        return
     await interaction.response.defer(ephemeral=eph)
     embed=discord.Embed(title='Repeats Rule Exceptions',color=GREEN)
     cur.execute('''select city_id from repeat_info where server_id = ?''', data=(interaction.guild_id,))
@@ -1273,6 +1313,9 @@ async def repeat(interaction: discord.Interaction,se:Optional[Literal['yes','no'
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
 async def popular(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
     eph=(se=='no')
+    if is_blocked(interaction.user.id,interaction.guild_id):
+        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ",ephemeral=eph)
+        return
     await interaction.response.defer(ephemeral=eph)
     cur.execute('''select distinct city_id,country_code,alt_country from count_info where server_id = ? order by count desc''',data=(interaction.guild_id,))
     cities=[i for i in cur]
@@ -1316,6 +1359,9 @@ async def popular(interaction: discord.Interaction,se:Optional[Literal['yes','no
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
 async def bestrds(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
     eph=(se=='no')
+    if is_blocked(interaction.user.id,interaction.guild_id):
+        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ",ephemeral=eph)
+        return
     await interaction.response.defer(ephemeral=eph)
     cur.execute('''select round_number,chain_end from server_info where server_id = ?''',data=(interaction.guild_id,))
     bb=cur.fetchone()
@@ -1371,6 +1417,9 @@ async def bestrds(interaction: discord.Interaction,se:Optional[Literal['yes','no
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
 async def blocked(interaction:discord.Interaction,se:Optional[Literal['yes','no']]='no'):
     eph=(se=='no')
+    if is_blocked(interaction.user.id,interaction.guild_id):
+        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ",ephemeral=eph)
+        return
     await interaction.response.defer(ephemeral=eph)
     cur.execute('select user_id from server_user_info where blocked=? and server_id=?',data=(True,interaction.guild_id))
     blocks={i[0] for i in cur}
@@ -1378,7 +1427,7 @@ async def blocked(interaction:discord.Interaction,se:Optional[Literal['yes','no'
     blocks.update({i for (i,) in cur})
     members={i.id for i in interaction.guild.members}
     blocks=blocks.intersection(members)
-    embed=discord.Embed(title='Banned Users',color=GREEN)
+    embed=discord.Embed(title='Blocked Users',color=GREEN)
     cur.execute('''select city_id from repeat_info where server_id = ?''', data=(interaction.guild_id,))
     if len(blocks)>0:
         fmt=[f"- <@{i}>" for i in blocks]
@@ -1396,8 +1445,10 @@ async def blocked(interaction:discord.Interaction,se:Optional[Literal['yes','no'
 @app_commands.autocomplete(country=countrycomplete)
 async def cityinfo(interaction: discord.Interaction, city:str, province:Optional[str]=None, country:Optional[str]=None,include_deletes:Optional[Literal['yes','no']]='no',se:Optional[Literal['yes','no']]='no'):
     eph=(se=='no')
+    if is_blocked(interaction.user.id,interaction.guild_id):
+        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ",ephemeral=eph)
+        return
     await interaction.response.defer(ephemeral=eph)
-
     cur.execute('select min_pop from server_info where server_id=?',data=(interaction.guild_id,))
     minimum_population = cur.fetchone()[0]
     res=search_cities(city,province,country,minimum_population,(include_deletes=='yes'))
@@ -1453,6 +1504,9 @@ async def cityinfo(interaction: discord.Interaction, city:str, province:Optional
 @app_commands.autocomplete(country=countrycomplete)
 async def countryinfo(interaction: discord.Interaction, country:str,se:Optional[Literal['yes','no']]='no'):
     eph=(se=='no')
+    if is_blocked(interaction.user.id,interaction.guild_id):
+        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ",ephemeral=eph)
+        return
     await interaction.response.defer(ephemeral=eph)
     countrysearch=country.lower().strip()
     res=countriesdata[((countriesdata['name'].str.lower()==countrysearch)|(countriesdata['country'].str.lower()==countrysearch))]
@@ -1498,6 +1552,9 @@ async def countryinfo(interaction: discord.Interaction, country:str,se:Optional[
 @tree.command(name='delete-stats',description='Deletes server stats.')
 @app_commands.check(owner_modcheck)
 async def deletestats(interaction: discord.Interaction):
+    if is_blocked(interaction.user.id,interaction.guild_id):
+        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
+        return
     embed=discord.Embed(color=RED,title='Are you sure?',description='This action is irreversible.')
     view=Confirmation(interaction.guild_id)
     await interaction.response.send_message(embed=embed,view=view)
@@ -1511,7 +1568,7 @@ async def ping(interaction: discord.Interaction):
 @app_commands.check(owner_modcheck)
 async def serverblock(interaction: discord.Interaction,member: discord.Member):
     if member!=owner and not member.bot:
-        if is_banned(interaction.user.id,interaction.guild_id):
+        if is_blocked(interaction.user.id,interaction.guild_id):
             await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
             return
         cur.execute('''update server_user_info set blocked=? where user_id=? and server_id=?''',data=(True,member.id,interaction.guild_id))
@@ -1523,7 +1580,7 @@ async def serverblock(interaction: discord.Interaction,member: discord.Member):
 @tree.command(name="unblock-server",description="Unblocks a user from using the bot in the server. ")
 @app_commands.check(owner_modcheck)
 async def serverunblock(interaction: discord.Interaction,member: discord.Member):
-    if is_banned(interaction.user.id,interaction.guild_id):
+    if is_blocked(interaction.user.id,interaction.guild_id):
         await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
         return
     cur.execute('''select blocked from global_user_info where user_id=?''',(member.id,))
@@ -1540,7 +1597,7 @@ from discord.ext import commands
 @commands.is_owner()
 async def globalblock(interaction: discord.Interaction,user: discord.User):
     if user!=owner and not user.bot:
-        if is_banned(interaction.user.id,interaction.guild_id):
+        if is_blocked(interaction.user.id,interaction.guild_id):
             await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
             return
         cur.execute('''update global_user_info set blocked=? where user_id=?''',data=(True,user.id))
@@ -1550,9 +1607,9 @@ async def globalblock(interaction: discord.Interaction,user: discord.User):
         await interaction.response.send_message(f"Nice try, bozo")
 
 @tree.command(name="unblock-global",description="Unblocks a user from using the bot. ")
-@app_commands.check(owner_modcheck)
+@commands.is_owner()
 async def globalunblock(interaction: discord.Interaction,user: discord.User):
-    if is_banned(interaction.user.id,interaction.guild_id):
+    if is_blocked(interaction.user.id,interaction.guild_id):
         await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
         return
     cur.execute('''update global_user_info set blocked=? where user_id=?''',data=(False,user.id))
@@ -1563,9 +1620,12 @@ async def globalunblock(interaction: discord.Interaction,user: discord.User):
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
 @app_commands.rename(se='show-everyone')
 async def help(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
-    await interaction.response.defer(ephemeral=(se=='no'))
+    eph=(se=='no')
+    if is_blocked(interaction.user.id,interaction.guild_id):
+        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ",ephemeral=eph)
+        return
+    await interaction.response.defer(ephemeral=eph)
     embed=discord.Embed(color=GREEN)
-
     command_messages=[[],[],[],[]]
     commands = tree.get_commands()
     for i in commands:
@@ -1593,13 +1653,17 @@ async def help(interaction: discord.Interaction,se:Optional[Literal['yes','no']]
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
 @app_commands.rename(se='show-everyone')
 async def about(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
+    eph=(se=='no')
+    if is_blocked(interaction.user.id,interaction.guild_id):
+        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ",ephemeral=eph)
+        return
     embed = discord.Embed(color=GREEN,title="About Cities Chain Bot")
     embed.add_field(name="Ping",value=f"{int(client.latency*1000)} ms")
     embed.add_field(name="Support Server",value="[here](https://discord.gg/xTERJGpx5d)")
     embed.add_field(name="Suggestions Channel",value="<#1231870769454125129>\n<#1221861912657006612>")
     embed.add_field(name="Data Source",value="[Geonames](https://geonames.org) - [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)")
     embed.add_field(name="GitHub Repository",value="[here](https://github.com/GlutenFreeGrapes/cities-chain)")
-    await interaction.response.send_message(embed=embed,ephemeral=se=='no')
+    await interaction.response.send_message(embed=embed,ephemeral=eph)
 
 import traceback,datetime
 @client.event
