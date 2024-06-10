@@ -110,6 +110,8 @@ cur.execute('''alter table server_user_info
 cur.execute('''alter table chain_info
                add column if not exists leaderboard_eligible bool default 1''')
 
+cur.execute('alter table chain_info add column if not exists admin2 varchar(100) default null after name')
+
 cur.execute('''create table if not exists count_info(
             server_id bigint,
             city_id int,
@@ -122,6 +124,7 @@ cur.execute('''create table if not exists count_info(
             primary key(server_id,city_id))
             ''')
 
+cur.execute('alter table count_info add column if not exists admin2 varchar(100) default null after name')
 
 client = discord.Client(intents=intents)
 tree=app_commands.tree.CommandTree(client)
@@ -487,7 +490,7 @@ async def on_ready():
 async def on_guild_join(guild:discord.Guild):
     global processes
     processes[guild.id]=None
-    cur.execute('''select * from server_info where server_id = ?''',(guild.id))
+    cur.execute('''select * from server_info where server_id = ?''',(guild.id,))
     if cur.rowcount==0:
         cur.execute('''insert into server_info(server_id) VALUES (?)''',data=(guild.id,))
     for channel in guild.text_channels:
@@ -987,6 +990,23 @@ async def fixle(interaction:discord.Interaction):
     conn.commit()
     await interaction.channel.send(content=f"{len(rounds)}/{len(rounds)} (100%)")
 
+@tree.command(name="fix-names",description="Fixes admin1/admin2 names in chain and count info")
+@commands.is_owner()
+async def fixnames(interaction:discord.Interaction):
+    await interaction.response.send_message("starting")
+    cur.execute('select distinct city_id from chain_info where city_id!=-1 order by city_id asc')
+    cities = [i for (i,) in cur]
+    print(len(cities))
+    for n,i in enumerate(cities):
+        c_info = allnames.loc[i]
+        a1n,a2n=admin1name(c_info['country'],c_info['admin1']),admin2name(c_info['country'],c_info['admin1'],c_info['admin2'])
+        cur.execute('update count_info set name=?,admin1=?,admin2=?,country=?,country_code=?,alt_country=? where city_id=?',(c_info['name'],a1n,a2n,iso2[c_info['country']],c_info['country'],c_info['alt-country'],i))
+        cur.execute('update chain_info set admin1=?,admin2=?,country=?,country_code=?,alt_country=? where city_id=?',(a1n,a2n,iso2[c_info['country']],c_info['country'],c_info['alt-country'],i))
+        if (n+1)%250==0:
+            conn.commit()
+            await interaction.channel.send(content=f"{n+1}/{len(cities)} ({(n+1)/len(cities)*100}%)")
+    conn.commit()
+    await interaction.channel.send(content=f"{len(cities)}/{len(cities)} (100%)")
 async def fail(message:discord.Message,reason,sinfo,citieslist,res,n,cityfound,msgref):
     guildid=message.guild.id
     authorid=message.author.id
@@ -1009,7 +1029,10 @@ async def fail(message:discord.Message,reason,sinfo,citieslist,res,n,cityfound,m
     else:
         await message.channel.send('<@%s> RUINED IT AT **%s**!! %s'%(authorid,f"{len(citieslist):,}",reason), reference = msgref)
     cur.execute('''select leaderboard_eligible from chain_info where server_id = ? and round_number = ? order by count desc''',data=(guildid,sinfo[0]))
-    l_eligible=cur.fetchone()[0]
+    if cur.rowcount:
+        l_eligible=cur.fetchone()[0]
+    else:
+        l_eligible=1
     if cityfound:
         cur.execute('''insert into chain_info(server_id,user_id,round_number,count,city_id,name,admin1,country,country_code,alt_country,time_placed,valid,message_id,leaderboard_eligible) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,res[0],n[0],n[2],n[1][0],n[1][1],n[3][0] if n[3] else None,int(message.created_at.timestamp()),False,message.id,l_eligible))
     else:
@@ -1487,9 +1510,9 @@ async def cityinfo(interaction: discord.Interaction, city:str, province:Optional
                 embed.add_field(name='Administrative Division',value=admin1name(default['country'],default['admin1']),inline=True)
 
         if default['alt-country']:
-            embed.add_field(name='Countries',value=':flag_'+default['country'].lower()+': '+iso2[default['country']]+' ('+default['country']+')\n'+':flag_'+default['alt-country'].lower()+': '+iso2[default['alt-country']]+' ('+default['alt-country']+')',inline=True)
+            embed.add_field(name='Countries',value=flags[default['country']]+' '+iso2[default['country']]+' ('+default['country']+')\n'+flags[default['alt-country']]+' '+iso2[default['alt-country']]+' ('+default['alt-country']+')',inline=True)
         else:
-            embed.add_field(name='Country',value=':flag_'+default['country'].lower()+': '+iso2[default['country']]+' ('+default['country']+')',inline=True)
+            embed.add_field(name='Country',value=flags[default['country']]+' '+iso2[default['country']]+' ('+default['country']+')',inline=True)
         embed.add_field(name='Population',value=f"{default['population']:,}",inline=True)
         if secondEmbed:
             await interaction.followup.send(embeds=[embed,embed2],ephemeral=eph)
@@ -1517,7 +1540,7 @@ async def countryinfo(interaction: discord.Interaction, country:str,se:Optional[
         aname=countriesdata[(countriesdata['geonameid']==res['geonameid'])]
         default=aname[aname['default']==1].iloc[0]
         dname=default['name']
-        embed=discord.Embed(title='Information - :flag_%s: %s (%s) - Count: %s'%(res['country'].lower(),dname,res['country'],f"{count:,}" if count else 0),color=GREEN)
+        embed=discord.Embed(title='Information - %s %s (%s) - Count: %s'%(flags[res['country']],dname,res['country'],f"{count:,}" if count else 0),color=GREEN)
         alts=aname[(aname['default']==0)]['name']
         if alts.shape[0]!=0:
             joinednames='`'+'`,`'.join(alts)+'`'
@@ -1530,10 +1553,10 @@ async def countryinfo(interaction: discord.Interaction, country:str,se:Optional[
                 embed2=discord.Embed(color=GREEN)
                 embed2.description=joinednames[commaindex:]
                 tosend=[embed,embed2]
-            topcities=discord.Embed(title=f'''Popular Cities - :flag_{res['country'].lower()}: {dname} ({res['country']})''',color=GREEN)
-            cur.execute('''select name,admin1,count from count_info where server_id=? and country_code=? order by count desc limit 10''',data=(interaction.guild_id,res['country']))
+            topcities=discord.Embed(title=f'''Popular Cities - {flags[res['country']]} {dname} ({res['country']})''',color=GREEN)
+            cur.execute('''select name,admin1,count from count_info where server_id=? and (country_code=? or alt_country=?) order by count desc limit 10''',data=(interaction.guild_id,res['country'],res['country']))
             if cur.rowcount>0:
-                citylist=[f'''{n+1}. {i[0]}, {i[1]} - **{i[2]}**''' if i[1] else f'''{n+1}. {i[0]} - **{i[2]}**''' for n,i in enumerate(cur)]
+                citylist=[f'''{n+1}. {i[0]}, {i[1]} - **{i[2]:,}**''' if i[1] else f'''{n+1}. {i[0]} - **{i[2]:,}**''' for n,i in enumerate(cur)]
                 topcities.description='\n'.join(citylist)
                 tosend.append(topcities)
             embed_sizes = [sum([len(j) for j in (i.title if i.title else '',i.description)]) for i in tosend]
