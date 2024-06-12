@@ -1069,7 +1069,7 @@ async def fail(message:discord.Message,reason,sinfo,citieslist,res,n,cityfound,m
                         current_letter = ?
                     where server_id = ?''', data=(True,entr['last-letter'],guildid))
         cur.execute('''insert into chain_info(server_id,city_id,round_number,count,name,admin2,admin1,country,country_code,alt_country,time_placed,valid)
-                    values (?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,int(newid),sinfo[0]+1,1,n[0],n[4],n[3],n[1],n[2],n[5],int(message.created_at.timestamp()),True))
+                    values (?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,int(newid),sinfo[0]+1,1,n[0],n[4],n[3],n[1],n[2],n[5],int(message.created_at.timestamp()),True))
     conn.commit()
 
 stats = app_commands.Group(name='stats',description="description")
@@ -1280,11 +1280,10 @@ async def lb(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='
             if server_from_id:
                 counter+=1
                 top.append(f'{counter}. {server_from_id.name} - **{f"{i[1]:,}"}**') 
-        embed.description='\n'.join(top)
+        embed.description='\n'.join(top)+"\nIn order for a server's run to be eligible for the leaderboard, no city (including repeat exceptions) can be said within 50 cities of itself."
         await interaction.followup.send(embed=embed,view=Paginator(1,top,embed.title,math.ceil(len(top)/25),interaction.user.id,embed),ephemeral=eph)
     else:
-        embed.description='```null```'
-    # embed.set_footer(text="In order for a server's run to be eligible for the leaderboard, no city (including repeat exceptions) can be said within 50 cities of itself.")
+        embed.description='```null```'+"\nIn order for a server's run to be eligible for the leaderboard, no city (including repeat exceptions) can be said within 50 cities of itself."
         await interaction.followup.send(embed=embed,ephemeral=eph)
 
 @stats.command(description="Displays global user leaderboard.")
