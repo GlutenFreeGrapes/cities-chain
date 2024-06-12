@@ -1280,7 +1280,7 @@ async def lb(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='
             if server_from_id:
                 counter+=1
                 top.append(f'{counter}. {server_from_id.name} - **{f"{i[1]:,}"}**') 
-        embed.description='\n'.join(top)+"\nIn order for a server's run to be eligible for the leaderboard, no city (including repeat exceptions) can be said within 50 cities of itself."
+        embed.description='\n'.join(top[:25])+"\nIn order for a server's run to be eligible for the leaderboard, no city (including repeat exceptions) can be said within 50 cities of itself."
         await interaction.followup.send(embed=embed,view=Paginator(1,top,embed.title,math.ceil(len(top)/25),interaction.user.id,embed),ephemeral=eph)
     else:
         embed.description='```null```'+"\nIn order for a server's run to be eligible for the leaderboard, no city (including repeat exceptions) can be said within 50 cities of itself."
