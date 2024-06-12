@@ -1381,7 +1381,7 @@ async def popular(interaction: discord.Interaction,se:Optional[Literal['yes','no
             j=allnames.loc[(i[0])]
             fmt.append((c,city_string(j['name'],admin1name(j['country'],j['admin1']),admin2name(j['country'],j['admin1'],j['admin2']),i[1],i[2])+(f'{":no_entry:" if j["deleted"] else ""}{":repeat:" if i[0] in repeated else ""}')))
         fmt=sorted(fmt,key = lambda x:(-x[0],x[1]))
-        embed.add_field(name='Cities',value='\n'.join(['%s. %s %s - **%s**' %(n+1,i[1],f"{i[0]:,}") for (n,i) in enumerate(fmt)]))
+        embed.add_field(name='Cities',value='\n'.join(['%s. %s - **%s**' %(n+1,i[1],f"{i[0]:,}") for (n,i) in enumerate(fmt)]))
         fmt=[]
         cur.execute('''select distinct country_code from count_info where server_id = ?''',data=(interaction.guild_id,))
         countrylist = {i[0] for i in cur}
