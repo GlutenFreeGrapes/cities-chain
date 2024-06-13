@@ -11,7 +11,6 @@ load_dotenv()
 
 intents = discord.Intents.default()
 intents.message_content = True
-intents.members = True
 
 citydata,countriesdata,admin1data,admin2data=pd.read_csv('cities.txt',sep='\t',keep_default_na=False,na_values='',dtype={'admin1':str,'admin2':str,'alt-country':str}),pd.read_csv('countries.txt',sep='\t',keep_default_na=False,na_values=''),pd.read_csv('admin1.txt',sep='\t',keep_default_na=False,na_values='',dtype={'admin1':str}),pd.read_csv('admin2.txt',sep='\t',keep_default_na=False,na_values='',dtype={'admin1':str,'admin2':str,})
 citydata=citydata.fillna(np.nan).replace([np.nan], [None])
@@ -393,24 +392,24 @@ class Paginator(discord.ui.View):
         await interaction.response.edit_message(embed=self.embed,view=self, attachments=interaction.message.attachments)
         self.message=await interaction.original_response()
         
-    @discord.ui.button(label='⏮', style=discord.ButtonStyle.primary)
+    @discord.ui.button(emoji=discord.PartialEmoji.from_str('⏮️'), style=discord.ButtonStyle.primary)
     async def front(self, interaction, button):
         self.page=1
         await self.updateembed(interaction)
-    @discord.ui.button(label='⏴', style=discord.ButtonStyle.primary)
+    @discord.ui.button(emoji=discord.PartialEmoji.from_str('◀️'), style=discord.ButtonStyle.primary)
     async def prev(self, interaction, button):
         self.page=self.page-1
         await self.updateembed(interaction)
-    @discord.ui.button(label='🛑', style=discord.ButtonStyle.danger)
+    @discord.ui.button(emoji=discord.PartialEmoji.from_str('🛑'), style=discord.ButtonStyle.danger)
     async def stop(self, interaction, button):
         for i in self.children:
             i.disabled=True
         await interaction.response.edit_message(embeds=self.message.embeds,view=self, attachments=self.message.attachments)
-    @discord.ui.button(label='⏵', style=discord.ButtonStyle.primary)
+    @discord.ui.button(emoji=discord.PartialEmoji.from_str('▶️'), style=discord.ButtonStyle.primary)
     async def next(self, interaction, button):
         self.page=self.page+1
         await self.updateembed(interaction)
-    @discord.ui.button(label='⏭', style=discord.ButtonStyle.primary)
+    @discord.ui.button(emoji=discord.PartialEmoji.from_str('⏭️'), style=discord.ButtonStyle.primary)
     async def back(self, interaction, button):
         self.page=self.lens
         await self.updateembed(interaction)
@@ -1022,13 +1021,14 @@ async def fixnames(interaction:discord.Interaction):
         # cur.execute('update count_info set name=?,admin1=?,admin2=?,country=?,country_code=?,alt_country=? where city_id=?',(c_info['name'],a1n,a2n,iso2[c],c,c_info['alt-country'],i))
         # cur.execute('update chain_info set admin1=?,admin2=?,country=?,country_code=?,alt_country=? where city_id=?',(a1n,a2n,iso2[c],c,c_info['alt-country'],i))
         if (n+1)%500==0:
+            cur.executemany('update count_info set name=?,admin1=?,admin2=?,country=?,country_code=?,alt_country=? where city_id=?',[(name,admin1,admin2,iso2[country],country,alt_country,c_id) for c_id,name,country,admin1,admin2,alt_country in cits])
+            cur.executemany('update chain_info set admin1=?,admin2=?,country=?,country_code=?,alt_country=? where city_id=?',[(admin1,admin2,iso2[country],country,alt_country,c_id) for c_id,name,country,admin1,admin2,alt_country in cits])
+            cits=[]
             await interaction.channel.send(content=f"{n+1}/{len(cities)} ({(n+1)/len(cities)*100}%)")
     await interaction.channel.send(content=f"{len(cities)}/{len(cities)} (100%)")
-    cur.executemany('update count_info set name=?,admin1=?,admin2=?,country=?,country_code=?,alt_country=? where city_id=?',[(name,admin1,admin2,iso2[country],country,alt_country,c_id) for c_id,name,country,admin1,admin2,alt_country in cits])
-    await interaction.channel.send(content='updated count_info')
-    cur.executemany('update chain_info set admin1=?,admin2=?,country=?,country_code=?,alt_country=? where city_id=?',[(admin1,admin2,iso2[country],country,alt_country,c_id) for c_id,name,country,admin1,admin2,alt_country in cits])
-    await interaction.channel.send(content='updated chain_info')
+    # await interaction.channel.send(content='updated count_info')
     conn.commit()
+    await interaction.channel.send(content='committed')
 async def fail(message:discord.Message,reason,sinfo,citieslist,res,n,cityfound,msgref):
     guildid=message.guild.id
     authorid=message.author.id
@@ -1112,46 +1112,54 @@ async def user(interaction: discord.Interaction, member:Optional[discord.Member]
         else:
             await interaction.followup.send(embed=discord.Embed(color=RED,description=f'<@{member.id}> has no Cities Chain stats. '),ephemeral=eph)
     else:
+        embedslist=[]
         uinfo=cur.fetchone()
         embed=discord.Embed(title="User Stats", color=GREEN)
-        
-        if (uinfo[0]+uinfo[1])>0:
-            embed.add_field(name='Global Stats',value=f"Correct: **{f'{uinfo[0]:,}'}**\nIncorrect: **{f'{uinfo[1]:,}'}**\nCorrect Rate: **{round(uinfo[0]/(uinfo[0]+uinfo[1])*10000)/100}%**\nScore: **{f'{uinfo[2]:,}'}**\nLast Active: <t:{uinfo[3]}:R>",inline=True)
-        cur.execute('select correct,incorrect,score,last_active from server_user_info where user_id = ? and server_id = ?',data=(member.id,interaction.guild_id))
-        if cur.rowcount>0:
-            uinfo=cur.fetchone()
-            embed.add_field(name='Stats for ```%s```'%interaction.guild.name,value=f"Correct: **{f'{uinfo[0]:,}'}**\nIncorrect: **{f'{uinfo[1]:,}'}**\nCorrect Rate: **{round(uinfo[0]/(uinfo[0]+uinfo[1])*10000)/100}%**\nScore: **{f'{uinfo[2]:,}'}**\nLast Active: <t:{uinfo[3]}:R>",inline=True)
-        
-    
-        favcities = discord.Embed(title=f"Favorite Cities/Countries", color=GREEN)
-        favc = []
-        # (THANKS MARENS FOR SQL CODE)
-        cur.execute('SELECT city_id, COUNT(*) AS use_count FROM chain_info WHERE server_id = ? AND user_id = ? AND valid = 1 GROUP BY city_id ORDER BY use_count DESC',data=(interaction.guild_id,member.id))
-        for i in cur:
-            if len(favc)==10:
-                break
-            if i[0] in allnames.index:
-                cityrow = allnames.loc[i[0]]
-                favc.append(city_string(cityrow['name'],admin1name(cityrow['country'],cityrow['admin1']),admin2name(cityrow['country'],cityrow['admin1'],cityrow['admin2']),cityrow['country'],cityrow['alt-country'])+f' - **{i[1]:,}**')
-        favcities.add_field(name='Cities',value='\n'.join([f"{n+1}. "+i for n,i in enumerate(favc)]))
-        
-        cur.execute('SELECT country_code, COUNT(*) AS use_count FROM chain_info WHERE server_id = ? AND user_id = ? AND valid = 1 GROUP BY country_code ORDER BY use_count DESC',data=(interaction.guild_id,member.id))
-        countryuses = {i[0]:i[1] for i in cur}
-        cur.execute('SELECT alt_country, COUNT(*) AS use_count FROM chain_info WHERE server_id = ? AND user_id = ? AND valid = 1 AND alt_country IS NOT NULL GROUP BY alt_country ORDER BY use_count DESC',data=(interaction.guild_id,member.id))
-        for i in cur:
-            if i[0] in cur:
-                countryuses[i[0]]+=i[1]
-            else:
-                countryuses[i[0]]=i[1]
-        fav_countries = [f"{j[1]} {j[2]} - **{j[0]:,}**" for j in sorted([(countryuses[i],iso2[i],flags[i]) for i in countryuses],reverse=1)[:10]]
-        favcities.add_field(name='Countries',value='\n'.join([f"{n+1}. "+i for n,i in enumerate(fav_countries)]))
         if member.avatar:
             embed.set_author(name=member.name, icon_url=member.avatar.url)
-            favcities.set_author(name=member.name, icon_url=member.avatar.url)
         else:
             embed.set_author(name=member.name)
-            favcities.set_author(name=member.name)
-        await interaction.followup.send(embeds=[embed,favcities],ephemeral=eph)
+
+        embedslist.append(embed)
+        
+        if (uinfo[0]+uinfo[1])>0:
+            embed.add_field(name='Global Stats',value=f"Correct: **{f'{uinfo[0]:,}'}**\nIncorrect: **{f'{uinfo[1]:,}'}**\nCorrect Rate: **{round(uinfo[0]/(uinfo[0]+uinfo[1])*10000)/100 if uinfo[0]+uinfo[1]>0 else 0.0}%**\nScore: **{f'{uinfo[2]:,}'}**\nLast Active: <t:{uinfo[3]}:R>",inline=True)
+        cur.execute('select correct,incorrect,score,last_active from server_user_info where user_id = ? and server_id = ?',data=(member.id,interaction.guild_id))
+        uinfo=cur.fetchone()
+        if (uinfo[0]+uinfo[1])>0:
+            
+            embed.add_field(name='Stats for ```%s```'%interaction.guild.name,value=f"Correct: **{f'{uinfo[0]:,}'}**\nIncorrect: **{f'{uinfo[1]:,}'}**\nCorrect Rate: **{round(uinfo[0]/(uinfo[0]+uinfo[1])*10000)/100 if uinfo[0]+uinfo[1]>0 else 0.0}%**\nScore: **{f'{uinfo[2]:,}'}**\nLast Active: <t:{uinfo[3]}:R>",inline=True)
+        
+            
+            favcities = discord.Embed(title=f"Favorite Cities/Countries", color=GREEN)
+            favc = []
+            # (THANKS MARENS FOR SQL CODE)
+            cur.execute('SELECT city_id, COUNT(*) AS use_count FROM chain_info WHERE server_id = ? AND user_id = ? AND valid = 1 GROUP BY city_id ORDER BY use_count DESC',data=(interaction.guild_id,member.id))
+            for i in cur:
+                if len(favc)==10:
+                    break
+                if i[0] in allnames.index:
+                    cityrow = allnames.loc[i[0]]
+                    favc.append(city_string(cityrow['name'],admin1name(cityrow['country'],cityrow['admin1']),admin2name(cityrow['country'],cityrow['admin1'],cityrow['admin2']),cityrow['country'],cityrow['alt-country'])+f' - **{i[1]:,}**')
+            favcities.add_field(name='Cities',value='\n'.join([f"{n+1}. "+i for n,i in enumerate(favc)]))
+            
+            cur.execute('SELECT country_code, COUNT(*) AS use_count FROM chain_info WHERE server_id = ? AND user_id = ? AND valid = 1 GROUP BY country_code ORDER BY use_count DESC',data=(interaction.guild_id,member.id))
+            countryuses = {i[0]:i[1] for i in cur}
+            cur.execute('SELECT alt_country, COUNT(*) AS use_count FROM chain_info WHERE server_id = ? AND user_id = ? AND valid = 1 AND alt_country IS NOT NULL GROUP BY alt_country ORDER BY use_count DESC',data=(interaction.guild_id,member.id))
+            for i in cur:
+                if i[0] in cur:
+                    countryuses[i[0]]+=i[1]
+                else:
+                    countryuses[i[0]]=i[1]
+            fav_countries = [f"{j[1]} {j[2]} - **{j[0]:,}**" for j in sorted([(countryuses[i],iso2[i],flags[i]) for i in countryuses],reverse=1)[:10]]
+            favcities.add_field(name='Countries',value='\n'.join([f"{n+1}. "+i for n,i in enumerate(fav_countries)]))
+           
+            if member.avatar:
+                favcities.set_author(name=member.name, icon_url=member.avatar.url)
+            else:
+                favcities.set_author(name=member.name)
+            embedslist.append(favcities)
+        await interaction.followup.send(embeds=embedslist,ephemeral=eph)
 
 @stats.command(description="Displays list of cities.")
 @app_commands.rename(se='show-everyone',showmap='map')
@@ -1470,10 +1478,8 @@ async def blocked(interaction:discord.Interaction,se:Optional[Literal['yes','no'
     await interaction.response.defer(ephemeral=eph)
     cur.execute('select user_id from server_user_info where blocked=? and server_id=?',data=(True,interaction.guild_id))
     blocks={i[0] for i in cur}
-    cur.execute('select user_id from global_user_info where blocked=?',(True,))
+    cur.execute('select global_user_info.user_id from global_user_info inner join (select server_user_info.user_id from server_user_info where server_id=?) as b on global_user_info.user_id=b.user_id where blocked=? ',(interaction.guild_id,True,))
     blocks.update({i for (i,) in cur})
-    members={i.id for i in interaction.guild.members}
-    blocks=blocks.intersection(members)
     embed=discord.Embed(title='Blocked Users',color=GREEN)
     cur.execute('''select city_id from repeat_info where server_id = ?''', data=(interaction.guild_id,))
     if len(blocks)>0:
@@ -1621,7 +1627,11 @@ async def serverblock(interaction: discord.Interaction,member: discord.Member):
         if is_blocked(interaction.user.id,interaction.guild_id):
             await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
             return
-        cur.execute('''update server_user_info set blocked=? where user_id=? and server_id=?''',data=(True,member.id,interaction.guild_id))
+        cur.execute("select user_id from server_user_info where user_id=? and server_id=?",data=(member.id,interaction.guild_id))
+        if cur.rowcount:
+            cur.execute('''update server_user_info set blocked=? where user_id=? and server_id=?''',data=(True,member.id,interaction.guild_id))
+        else:
+            cur.execute('insert into server_user_info(server_id,user_id,blocked) values(?,?,?)',data=(interaction.guild_id,member.id,True))
         conn.commit()
         await interaction.response.send_message(f"<@{member.id}> has been blocked from using this bot in the server. ")
     else:
@@ -1650,9 +1660,16 @@ async def globalblock(interaction: discord.Interaction,user: discord.User):
         if is_blocked(interaction.user.id,interaction.guild_id):
             await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
             return
+        cur.execute("select user_id from global_user_info where user_id=?",data=(user.id,))
+        if cur.rowcount:
+            cur.execute('''update global_user_info set blocked=? where user_id=?''',data=(True,user.id))
+        else:
+            cur.execute('insert into global_user_info(user_id,blocked) values(?,?)',data=(user.id,True))
+            cur.execute('insert into server_user_info(server_id,user_id,blocked) values(?,?,?)',data=(interaction.guild_id,user.id,True))
+
         cur.execute('''update global_user_info set blocked=? where user_id=?''',data=(True,user.id))
         conn.commit()
-        await interaction.response.send_message(f"<@{user.id}> has been blocked from using this bot in the server. ")
+        await interaction.response.send_message(f"<@{user.id}> has been blocked from using this bot. ")
     else:
         await interaction.response.send_message(f"Nice try, bozo")
 
