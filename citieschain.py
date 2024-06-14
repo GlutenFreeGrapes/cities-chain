@@ -486,7 +486,7 @@ async def on_ready():
             channel=cur.fetchone()[1]
             c = client.get_channel(channel)
             if c:
-                await c.send("Sorry bot was down for so long, was busy updating admin1 and admin2 names in the database for each city. if there are comments/concerns/feedback to give to the bot, there is a support discord server in the /about command\n-the developer")
+                await c.send("Sorry bot was down for so long, was busy updating admin1 and admin2 names in the database for each city. If there are comments/concerns/feedback to give to the bot, there is a support discord server in the /about command\n-the developer")
             
         
 
@@ -1008,6 +1008,7 @@ for n,i in enumerate(cities):
         cur.executemany('update chain_info set admin1=?,admin2=?,country=?,country_code=?,alt_country=? where city_id=?',[(admin1,admin2,iso2[country],country,alt_country,c_id) for c_id,name,country,admin1,admin2,alt_country in cits])
         cits=[]
         print(n+1)
+    conn.commit()
 conn.commit()
 
 async def fail(message:discord.Message,reason,sinfo,citieslist,res,n,cityfound,msgref):
