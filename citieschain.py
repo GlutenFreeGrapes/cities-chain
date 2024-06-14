@@ -479,6 +479,17 @@ async def on_ready():
     for i in empty:
         cur.execute('''insert into server_info(server_id) VALUES (?)''',data=(i,))
     conn.commit()
+    
+    for i in client.guilds:
+        cur.execute('select server_id,channel_id from server_info where server_id=? and channel_id!=-1',data=(i.id,))
+        if cur.rowcount:
+            channel=cur.fetchone()[1]
+            c = client.get_channel(channel)
+            if c:
+                await c.send("Sorry bot was down for so long, was busy updating admin1 and admin2 names in the database for each city. if there are comments/concerns/feedback to give to the bot, there is a support discord server in the /about command\n-the developer")
+            
+        
+
     print(f'Logged in as {client.user} (ID: {client.user.id})\n------')
 
 @client.event
@@ -619,7 +630,7 @@ async def choosecity(interaction: discord.Interaction, option:Literal["on","off"
                             where server_id = ?''', data=(True,entr['last-letter'],guildid))
                 cur.execute('''insert into chain_info(server_id,city_id,round_number,count,name,admin2,admin1,country,country_code,alt_country,time_placed,valid)
                             values (?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,newid,c[2]+1,1,n[0],n[4],n[3],n[1],n[2],n[5],int(interaction.created_at.timestamp()),True))
-                await interaction.followup.send('Choose_city set to **ON**. Next city is `%s`.'%nname)
+                await interaction.followup.send('Choose_city set to **ON**. Next city is `%s` (next letter `%s`).'%(nname,entr['last-letter']))
         else:
             cur.execute('''update server_info
                         set choose_city = ?,
@@ -963,74 +974,42 @@ async def chain(message:discord.Message,guildid,authorid,original_content,ref):
     else:
         await asyncio.create_task(chain(*processes[guildid][0]))
 
-@tree.command(name="fix-leaderboard",description="Fixes leaderboard stats, determines leaderboard eligible runs")
-@app_commands.check(is_owner)
-async def fixle(interaction:discord.Interaction):
-    await interaction.response.send_message("starting")
-    # select all rounds with <=50, count distinct ones for each one
-    cur.execute('select * from (select server_id,round_number,max(count) as max_count from chain_info group by server_id,round_number) as x where max_count>50 order by max_count desc')
-    rounds = [i for i in cur]
-    # update rounds less than 50
-    cur.execute('update chain_info inner join (select server_id,round_number,distinct_cities,max_count,case when distinct_cities=max_count then 1 else 0 end as le from (select server_id,round_number,count(distinct(city_id)) as distinct_cities,max(count) as max_count from chain_info where valid=1 group by server_id,round_number) as x where max_count<=50) as y on chain_info.server_id=y.server_id and chain_info.round_number=y.round_number set leaderboard_eligible = y.le ')
-    for n_,(server,rnd,_) in enumerate(rounds):
-        cur.execute('select city_id from chain_info where valid = 1 and server_id = ? and round_number = ? order by count asc',(server,rnd))
-        citieslist = cur.fetchall()
-        cll=len(citieslist)
-        if len(set(citieslist))!=cll:
-            # go through list and check
-            for n,i in enumerate(citieslist):
-                if (n+50)<=cll:
-                    if len(set(citieslist[n:n+50]))!=50:
-                        cur.execute('update chain_info set leaderboard_eligible=? where server_id=? and round_number=?',(False,server,rnd))
-                        break
-        if (n_+1)%50==0:
-            conn.commit()
-            await interaction.channel.send(content=f"{n_+1}/{len(rounds)} ({(n_+1)/len(rounds)*100}%)")
-    conn.commit()
-    await interaction.channel.send(content=f"{len(rounds)}/{len(rounds)} (100%)")
-
-@tree.command(name="fix-names",description="Fixes admin1/admin2 names in chain and count info")
-@app_commands.check(is_owner)
-async def fixnames(interaction:discord.Interaction):
-    await interaction.response.defer()
-    await interaction.followup.send("starting")
-    cur.execute('select distinct city_id from chain_info where city_id!=-1 order by country_code,city_id asc')
-    cities = [i for (i,) in cur]
-    a1s={}
-    a2s={}
-    cits=[]
-    for n,i in enumerate(cities):
-        c_info = allnames.loc[i]
-        c,a1,a2,ac=c_info['country'],c_info['admin1'],c_info['admin2'],c_info['alt-country']
-        if a1:
-            if f'''{c}.{a1}''' in a1s:
-                a1n=a1s[f'''{c}.{a1}''']
-            else:
-                a1n=admin1name(c,a1)
-                a1s[f'''{c}.{a1}''']=a1n
-            if a2:
-                if f'''{c}.{a1}.{a2}''' in a2s:
-                    a2n=a2s[f'''{c}.{a1}.{a2}''']
-                else:
-                    a2n=admin2name(c,a1,a2)
-                    a2s[f'''{c}.{a1}.{a2}''']=a2n
-            else:
-                a2n=None
+# REMOVE LATER. 
+cur.execute('select distinct city_id from chain_info where city_id!=-1 order by country_code,city_id asc')
+cities = [i for (i,) in cur]
+a1s={}
+a2s={}
+cits=[]
+for n,i in enumerate(cities):
+    c_info = allnames.loc[i]
+    c,a1,a2,ac=c_info['country'],c_info['admin1'],c_info['admin2'],c_info['alt-country']
+    if a1:
+        if f'''{c}.{a1}''' in a1s:
+            a1n=a1s[f'''{c}.{a1}''']
         else:
-            a1n,a2n=None,None
-            # cur.exe
-        cits.append((i,c_info['name'],c,a1n,a2n,c_info['alt-country']))
-        # cur.execute('update count_info set name=?,admin1=?,admin2=?,country=?,country_code=?,alt_country=? where city_id=?',(c_info['name'],a1n,a2n,iso2[c],c,c_info['alt-country'],i))
-        # cur.execute('update chain_info set admin1=?,admin2=?,country=?,country_code=?,alt_country=? where city_id=?',(a1n,a2n,iso2[c],c,c_info['alt-country'],i))
-        if (n+1)%500==0:
-            cur.executemany('update count_info set name=?,admin1=?,admin2=?,country=?,country_code=?,alt_country=? where city_id=?',[(name,admin1,admin2,iso2[country],country,alt_country,c_id) for c_id,name,country,admin1,admin2,alt_country in cits])
-            cur.executemany('update chain_info set admin1=?,admin2=?,country=?,country_code=?,alt_country=? where city_id=?',[(admin1,admin2,iso2[country],country,alt_country,c_id) for c_id,name,country,admin1,admin2,alt_country in cits])
-            cits=[]
-            await interaction.channel.send(content=f"{n+1}/{len(cities)} ({(n+1)/len(cities)*100}%)")
-    await interaction.channel.send(content=f"{len(cities)}/{len(cities)} (100%)")
-    # await interaction.channel.send(content='updated count_info')
-    conn.commit()
-    await interaction.channel.send(content='committed')
+            a1n=admin1name(c,a1)
+            a1s[f'''{c}.{a1}''']=a1n
+        if a2:
+            if f'''{c}.{a1}.{a2}''' in a2s:
+                a2n=a2s[f'''{c}.{a1}.{a2}''']
+            else:
+                a2n=admin2name(c,a1,a2)
+                a2s[f'''{c}.{a1}.{a2}''']=a2n
+        else:
+            a2n=None
+    else:
+        a1n,a2n=None,None
+        # cur.exe
+    cits.append((i,c_info['name'],c,a1n,a2n,c_info['alt-country']))
+    # cur.execute('update count_info set name=?,admin1=?,admin2=?,country=?,country_code=?,alt_country=? where city_id=?',(c_info['name'],a1n,a2n,iso2[c],c,c_info['alt-country'],i))
+    # cur.execute('update chain_info set admin1=?,admin2=?,country=?,country_code=?,alt_country=? where city_id=?',(a1n,a2n,iso2[c],c,c_info['alt-country'],i))
+    if (n+1)%500==0:
+        cur.executemany('update count_info set name=?,admin1=?,admin2=?,country=?,country_code=?,alt_country=? where city_id=?',[(name,admin1,admin2,iso2[country],country,alt_country,c_id) for c_id,name,country,admin1,admin2,alt_country in cits])
+        cur.executemany('update chain_info set admin1=?,admin2=?,country=?,country_code=?,alt_country=? where city_id=?',[(admin1,admin2,iso2[country],country,alt_country,c_id) for c_id,name,country,admin1,admin2,alt_country in cits])
+        cits=[]
+        print(n+1)
+conn.commit()
+
 async def fail(message:discord.Message,reason,sinfo,citieslist,res,n,cityfound,msgref):
     guildid=message.guild.id
     authorid=message.author.id
@@ -1716,7 +1695,7 @@ async def help(interaction: discord.Interaction,se:Optional[Literal['yes','no']]
         command_messages[n]=headers[n]+'\n\n'+'\n'.join(command_messages[n])
     
     embed.description="Choose a topic."
-    await interaction.followup.send(embed=embed,view=Help(['''1. Find a channel that you want to use the bot in, and use `/set channel` to designate it as such.\n2. Using the `/set` commands listed in the Commands section of this help page, change around settings to your liking.\n3. Happy playing!''','''One person chooses a city, then the next person must choose a city beginning with the last letter of the previous city. \nExamples: \n- Londo**n** --> **N**ew Yor**k** --> **K**arachi\n- Londo**n** --> **N**anjin**g** --> **G**uadalajara\n\nThe chain can be broken in a few different ways, such as the next city not starting with the last letter, the next city not existing, the next city having too small of a population, the next user going twice, or putting down a city that has been said before. The settings for some of those can be changed, but here are some examples:\n- **User A**: New Haven\n- **User B**: London (city starts with wrong letter)\n\n- **User A**: New Haven\n- **User A**: Nagoya (user went twice in a row)\n\n- **User A**: New Haven\n- **User B**: New Kent (city's population is below 1000, if 1000 is the minimum population set)\n\n- **User A**: New Haven\n- **User B**: New Haven (same city repeated)\n\n- **User A**: New Haven\n- **User B**: Never Gonna Give You Up (city does not exist)\n\nCities must be prefixed by the server's given prefix in order to be counted towards the chain (by default it's **!**, but this can be changed).\n\nDo note that cities with alternate names will start and end with the first and last letters of those names, but will be counted as the same city. \nFor example, The Hague starts with `t` and ends with `e`, while Den Haag starts with `d` and ends with `g`, but both are considered the same city. \n\nRuining the chain deliberately is considered a bannable offense, as is creating alternate accounts to sidestep bans.''',None,''':white_check_mark: - valid addition to chain\n:ballot_box_with_check: - valid addition to chain, breaks server record\n:x: - invalid addition to chain\n:regional_indicator_a: - letter the city ends with\n\nIn addition, you can make the bot react to certain cities of your choosing using the `/add react` and `remove react` commands.''','''- When many people are playing, play cities that start and end with the same letter to avoid breaking the chain. \n- If you want to specify a different city than the one the bot interprets, you can use commas to specify provinces, states, or countries: \nExamples: \n:white_check_mark: Atlanta\n:white_check_mark: Atlanta, United States\n:white_check_mark: Atlanta, Georgia\n:white_check_mark: Atlanta, Fulton County\n:white_check_mark: Atlanta, Fulton County, Georgia, United States\nYou can specify a maximum of 2 administrative divisions, not including the country. \n- Googling cities is allowed. \n- Remember, at the end of the day, it is just a game, and the game is supposed to be lighthearted and fun.''','''**Q: Some cities aren't recognized by the bot. Why?**\nA: The bot takes its data from Geonames, and only cities with a listed population (that is, greater than 0 people listed) are considered by the bot.\n\n**Q: I added some cities to Geonames, but they still aren't recognized by the bot. Why?**\nA: The Geonames dump updates the cities list daily, but the bot's record of cities is not updated on a regular basis, so it might take until I decide to update it again for those cities to show up.\n\n**Q: Why does the bot go down sometimes for a few seconds before coming back up?**\nA: Usually, this is because I have just updated the bot. The way this is set up, the bot will check every 15 minutes whethere there is a new update, and if so, will restart. Just to be safe, when this happens, use `/stats server` to check what the next letter is.\n\n**Q: Why are some of the romanizations for cities incorrect?**\nA: That's a thing to do with the Python library I use to romanize the characters (`unidecode`) - characters are romanized one-by-one instead of with context. For example, `unidecode` will turn `广州` into `Yan Zhou`. I still haven't found a good way to match every foreign name to a perfect translation. \n\n**Q: How do I suggest feedback to the bot?**\nA: There is a support server and support channels listed in the `/about` command for this bot.'''],command_messages,interaction.user.id),ephemeral=(se=='no'))
+    await interaction.followup.send(embed=embed,view=Help(['''1. Find a channel that you want to use the bot in, and use `/set channel` to designate it as such.\n2. Using the `/set` commands listed in the Commands section of this help page, change around settings to your liking.\n3. Happy playing!''','''One person chooses a city, then the next person must choose a city beginning with the last letter of the previous city. \nExamples: \n- Londo**n** --> **N**ew Yor**k** --> **K**arachi\n- Londo**n** --> **N**anjin**g** --> **G**uadalajara\n\nThe chain can be broken in a few different ways, such as the next city not starting with the last letter, the next city not existing, the next city having too small of a population, the next user going twice, or putting down a city that has been said before. The settings for some of those can be changed, but here are some examples:\n- **User A**: New Haven\n- **User B**: London (city starts with wrong letter)\n\n- **User A**: New Haven\n- **User A**: Nagoya (user went twice in a row)\n\n- **User A**: New Haven\n- **User B**: New Kent (city's population is below 1000, if 1000 is the minimum population set)\n\n- **User A**: New Haven\n- **User B**: New Haven (same city repeated)\n\n- **User A**: New Haven\n- **User B**: Never Gonna Give You Up (city does not exist)\n\nCities must be prefixed by the server's given prefix in order to be counted towards the chain (by default it's **!**, but this can be changed).\n\nDo note that cities with alternate names will start and end with the first and last letters of those names, but will be counted as the same city. \nFor example, The Hague starts with `t` and ends with `e`, while Den Haag starts with `d` and ends with `g`, but both are considered the same city. \n\nRuining the chain deliberately is considered a bannable offense, as is creating alternate accounts to sidestep bans.''',None,''':white_check_mark: - valid addition to chain\n:ballot_box_with_check: - valid addition to chain, breaks server record\n:x: - invalid addition to chain\n:regional_indicator_a: - letter the city ends with\n\nIn addition, you can make the bot react to certain cities of your choosing using the `/add react` and `/remove react` commands.''','''- When many people are playing, play cities that start and end with the same letter to avoid breaking the chain. \n- If you want to specify a different city than the one the bot interprets, you can use commas to specify provinces, states, or countries: \nExamples: \n:white_check_mark: Atlanta\n:white_check_mark: Atlanta, United States\n:white_check_mark: Atlanta, Georgia\n:white_check_mark: Atlanta, Fulton County\n:white_check_mark: Atlanta, Fulton County, Georgia, United States\nYou can specify a maximum of 2 administrative divisions, not including the country. \n- Googling cities is allowed. \n- Remember, at the end of the day, it is just a game, and the game is supposed to be lighthearted and fun.''','''**Q: Some cities aren't recognized by the bot. Why?**\nA: The bot takes its data from Geonames, and only cities with a listed population (that is, greater than 0 people listed) are considered by the bot.\n\n**Q: I added some cities to Geonames, but they still aren't recognized by the bot. Why?**\nA: The Geonames dump updates the cities list daily, but the bot's record of cities is not updated on a regular basis, so it might take until I decide to update it again for those cities to show up.\n\n**Q: Why does the bot go down sometimes for a few seconds before coming back up?**\nA: Usually, this is because I have just updated the bot. The way this is set up, the bot will check every 15 minutes whethere there is a new update, and if so, will restart. Just to be safe, when this happens, use `/stats server` to check what the next letter is.\n\n**Q: Why are some of the romanizations for cities incorrect?**\nA: That's a thing to do with the Python library I use to romanize the characters (`unidecode`) - characters are romanized one-by-one instead of with context. For example, `unidecode` will turn `广州` into `Yan Zhou`. I still haven't found a good way to match every foreign name to a perfect translation. \n\n**Q: How do I suggest feedback to the bot?**\nA: There is a support server and support channels listed in the `/about` command for this bot.'''],command_messages,interaction.user.id),ephemeral=(se=='no'))
 
 @tree.command(description="Information about the bot.")
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
