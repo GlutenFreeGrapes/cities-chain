@@ -495,6 +495,8 @@ async def on_guild_join(guild:discord.Guild):
 
 async def owner_modcheck(interaction: discord.Interaction):
     return interaction.permissions.moderate_members or interaction.user==owner
+async def is_owner(interaction: discord.Interaction):
+    return interaction.user==owner
 
 assign = app_commands.Group(name="set", description="Set different things for the chain.",)
 @app_commands.check(owner_modcheck)
@@ -962,7 +964,7 @@ async def chain(message:discord.Message,guildid,authorid,original_content,ref):
         await asyncio.create_task(chain(*processes[guildid][0]))
 
 @tree.command(name="fix-leaderboard",description="Fixes leaderboard stats, determines leaderboard eligible runs")
-@commands.is_owner()
+@app_commands.check(is_owner)
 async def fixle(interaction:discord.Interaction):
     await interaction.response.send_message("starting")
     # select all rounds with <=50, count distinct ones for each one
@@ -988,7 +990,7 @@ async def fixle(interaction:discord.Interaction):
     await interaction.channel.send(content=f"{len(rounds)}/{len(rounds)} (100%)")
 
 @tree.command(name="fix-names",description="Fixes admin1/admin2 names in chain and count info")
-@commands.is_owner()
+@app_commands.check(is_owner)
 async def fixnames(interaction:discord.Interaction):
     await interaction.response.defer()
     await interaction.followup.send("starting")
@@ -1654,7 +1656,7 @@ async def serverunblock(interaction: discord.Interaction,member: discord.Member)
 from discord.ext import commands
 
 @tree.command(name="block-global",description="Blocks a user from using the bot. ")
-@commands.is_owner()
+@app_commands.check(is_owner)
 async def globalblock(interaction: discord.Interaction,user: discord.User):
     if user!=owner and not user.bot:
         if is_blocked(interaction.user.id,interaction.guild_id):
@@ -1674,7 +1676,7 @@ async def globalblock(interaction: discord.Interaction,user: discord.User):
         await interaction.response.send_message(f"Nice try, bozo")
 
 @tree.command(name="unblock-global",description="Unblocks a user from using the bot. ")
-@commands.is_owner()
+@app_commands.check(is_owner)
 async def globalunblock(interaction: discord.Interaction,user: discord.User):
     if is_blocked(interaction.user.id,interaction.guild_id):
         await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
