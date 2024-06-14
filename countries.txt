@@ -190,7 +190,6 @@ geonameid	country	iso3	name	default
 290557	AE	ARE	Orílẹ́ède Ẹmirate ti Awọn Arabu	0
 290557	AE	ARE	Os Emiratos Árabes Unidos	0
 290557	AE	ARE	Ovttastuvvan Arábaemiráhtat	0
-290557	AE	ARE	Ovttastuvvan arábaemiráhtat	0
 290557	AE	ARE	Pennternasedh Unys Arabek	0
 290557	AE	ARE	Sameindu Emirríkini	0
 290557	AE	ARE	Sameinuðu arabísku furstadæmin	0
@@ -200,6 +199,7 @@ geonameid	country	iso3	name	default
 290557	AE	ARE	Tlacetilīlli Arabiaemiryōtl	0
 290557	AE	ARE	Trucial States	0
 290557	AE	ARE	UAE	0
+290557	AE	ARE	Uae	0
 290557	AE	ARE	Ujedinjeni Arapski Emirati	0
 290557	AE	ARE	Uni Emirat Arab	0
 290557	AE	ARE	Uni Émirat Arab	0
@@ -1815,7 +1815,6 @@ geonameid	country	iso3	name	default
 661882	AX	ALA	Ålandi	0
 661882	AX	ALA	Ålandinselen	0
 661882	AX	ALA	Ålandinseln	0
-661882	AX	ALA	Ålands Län	0
 661882	AX	ALA	Ålands län	0
 661882	AX	ALA	Ålandski otoci	0
 661882	AX	ALA	Ålandski otoki	0
@@ -2737,7 +2736,6 @@ geonameid	country	iso3	name	default
 2361809	BF	BFA	Burkina Fasô	0
 2361809	BF	BFA	Burkina Paso	0
 2361809	BF	BFA	Burkina Phasu	0
-2361809	BF	BFA	Burkina faso	0
 2361809	BF	BFA	Burkina-Faso	0
 2361809	BF	BFA	Burkinaa Faaso	0
 2361809	BF	BFA	Burkinaa Faasoo	0
@@ -4949,7 +4947,6 @@ geonameid	country	iso3	name	default
 203312	CD	COD	Républik Démokratik Kongo	0
 203312	CD	COD	République Démocratique du Congo	0
 203312	CD	COD	République du Zaïre	0
-203312	CD	COD	République démocratique du Congo	0
 203312	CD	COD	Tagduda Tamegdayt n Kungu	0
 203312	CD	COD	Tetã Jekopytyjoja Kongo	0
 203312	CD	COD	Tlācatlahtohcāyōtl Tlācatēpacholiztli in Congo	0
@@ -4965,7 +4962,6 @@ geonameid	country	iso3	name	default
 203312	CD	COD	Бүгэдэ Найрамдаха Арадшалһан Конго Улас	0
 203312	CD	COD	Демократин Республика Конго	0
 203312	CD	COD	Демократическая Республика Конго	0
-203312	CD	COD	Демократична Республіка Конго	0
 203312	CD	COD	Демократична република Конго	0
 203312	CD	COD	Демократична республіка Конго	0
 203312	CD	COD	Демократиядин Республика Конго	0
@@ -5795,14 +5791,12 @@ geonameid	country	iso3	name	default
 1899402	CK	COK	Kuk Adaları	0
 1899402	CK	COK	Kuk Taqim Aralliri	0
 1899402	CK	COK	Kuk adalary	0
-1899402	CK	COK	Kuk adaları	0
 1899402	CK	COK	Kuk atawları	0
 1899402	CK	COK	Kuk orollari	0
 1899402	CK	COK	Kuka salas	0
 1899402	CK	COK	Kuki Airani	0
 1899402	CK	COK	Kuki Gun	0
 1899402	CK	COK	Kukinsuloj	0
-1899402	CK	COK	Kuko Salos	0
 1899402	CK	COK	Kuko salos	0
 1899402	CK	COK	Kukova Ostrva	0
 1899402	CK	COK	Kūki 'Āirani	0
@@ -5811,7 +5805,6 @@ geonameid	country	iso3	name	default
 1899402	CK	COK	Oileáin Cook	0
 1899402	CK	COK	Pulo-pulo Cook	0
 1899402	CK	COK	Quần Đảo Cook	0
-1899402	CK	COK	Quần đảo Cook	0
 1899402	CK	COK	Tsibiran Kuku	0
 1899402	CK	COK	Visiwa vya Cook	0
 1899402	CK	COK	Wyspy Cooka	0
@@ -6204,7 +6197,6 @@ geonameid	country	iso3	name	default
 1814991	CN	CHN	Китайська Народна Республіка	0
 1814991	CN	CHN	Кытай	0
 1814991	CN	CHN	Кітай	0
-1814991	CN	CHN	Народна Република Кина	0
 1814991	CN	CHN	Народна република Кина	0
 1814991	CN	CHN	Хитой	0
 1814991	CN	CHN	Хятад	0
@@ -9366,7 +9358,6 @@ geonameid	country	iso3	name	default
 2622320	FO	FRO	Фарерські Острови	0
 2622320	FO	FRO	Фарерын арлууд	0
 2622320	FO	FRO	Фарска Острва	0
-2622320	FO	FRO	Фарска острва	0
 2622320	FO	FRO	Фарски Острови	0
 2622320	FO	FRO	Фарьорски О-ви	0
 2622320	FO	FRO	Фарьорски острови	0
@@ -12926,7 +12917,6 @@ geonameid	country	iso3	name	default
 1282588	IO	IOT	IOT	0
 1282588	IO	IOT	Indiako Ozeanoko lurralde britainiarra	0
 1282588	IO	IOT	Indijas okeāna Britu teritorija	0
-1282588	IO	IOT	Indijos Vandenyno Britų Sritis	0
 1282588	IO	IOT	Indijos vandenyno britų sritis	0
 1282588	IO	IOT	Intara y’Ubwongereza yo mu birwa by’Abahindi	0
 1282588	IO	IOT	Keeriindi britaani to maayo enndo	0
@@ -14446,7 +14436,6 @@ geonameid	country	iso3	name	default
 921929	KM	COM	Коморские о-ва	0
 921929	KM	COM	Коморскі острови	0
 921929	KM	COM	Коморські Острови	0
-921929	KM	COM	Коморські острови	0
 921929	KM	COM	Коморы	0
 921929	KM	COM	Коморын арлууд	0
 921929	KM	COM	Ҷазираҳои Комор	0
@@ -15196,7 +15185,6 @@ geonameid	country	iso3	name	default
 3580718	KY	CYM	Kaaimanseilande	0
 3580718	KY	CYM	Kaiman Eilunen	0
 3580718	KY	CYM	Kaiman Uharteak	0
-3580718	KY	CYM	Kaiman uharteak	0
 3580718	KY	CYM	Kaimaninselen	0
 3580718	KY	CYM	Kaimaninseln	0
 3580718	KY	CYM	Kaimanisaared	0
@@ -15205,9 +15193,7 @@ geonameid	country	iso3	name	default
 3580718	KY	CYM	Kajmana Insularo	0
 3580718	KY	CYM	Kajmanie ostrovy	0
 3580718	KY	CYM	Kajmanska Ostrva	0
-3580718	KY	CYM	Kajmanska ostrva	0
 3580718	KY	CYM	Kajmanski Otoci	0
-3580718	KY	CYM	Kajmanski otoci	0
 3580718	KY	CYM	Kajmanski otoki	0
 3580718	KY	CYM	Kajmanské ostrovy	0
 3580718	KY	CYM	Kajmany	0
@@ -15220,7 +15206,6 @@ geonameid	country	iso3	name	default
 3580718	KY	CYM	Kapuropud-an Cayman	0
 3580718	KY	CYM	Kayman Adaları	0
 3580718	KY	CYM	Kayman Isles	0
-3580718	KY	CYM	Kayman adaları	0
 3580718	KY	CYM	Kayman orollari	0
 3580718	KY	CYM	Kayman ƒudomekpowo nutome	0
 3580718	KY	CYM	Kaýman adalary	0
@@ -15233,7 +15218,6 @@ geonameid	country	iso3	name	default
 3580718	KY	CYM	Nosy Kayman	0
 3580718	KY	CYM	Oileáin Cayman	0
 3580718	KY	CYM	Quần Đảo Cayman	0
-3580718	KY	CYM	Quần đảo Cayman	0
 3580718	KY	CYM	Tsibiran Kaiman	0
 3580718	KY	CYM	Visiwa vya Cayman	0
 3580718	KY	CYM	Visiwa vya Kayman	0
@@ -19981,7 +19965,6 @@ geonameid	country	iso3	name	default
 2110425	NR	NRU	Republic of Nauru	0
 2110425	NR	NRU	Trust Territory of Nauru	0
 2110425	NR	NRU	i-Nauru	0
-2110425	NR	NRU	nauru	0
 2110425	NR	NRU	Ναουρού	0
 2110425	NR	NRU	Ναούρου	0
 2110425	NR	NRU	Наоуроу	0
@@ -22607,12 +22590,10 @@ geonameid	country	iso3	name	default
 2103350	SB	SLB	Saalomoni Saared	0
 2103350	SB	SLB	Salamon-szigetek	0
 2103350	SB	SLB	Salamunovi Otoci	0
-2103350	SB	SLB	Saliamono Salos	0
 2103350	SB	SLB	Saliamono salos	0
 2103350	SB	SLB	Saliamuona Salas	0
 2103350	SB	SLB	Salomo Gun	0
 2103350	SB	SLB	Salomon	0
-2103350	SB	SLB	Salomon Uharteak	0
 2103350	SB	SLB	Salomon uharteak	0
 2103350	SB	SLB	Salomon-sullot	0
 2103350	SB	SLB	Salomone	0
@@ -22645,7 +22626,6 @@ geonameid	country	iso3	name	default
 2103350	SB	SLB	Solomon Gùng-dō̤	0
 2103350	SB	SLB	Solomon Khiùn-tó	0
 2103350	SB	SLB	Solomon adalary	0
-2103350	SB	SLB	Solomon adaları	0
 2103350	SB	SLB	Solomon orollari	0
 2103350	SB	SLB	Solomon ƒudomekpowo nutome	0
 2103350	SB	SLB	Solomon-Inseln	0
@@ -23549,7 +23529,6 @@ geonameid	country	iso3	name	default
 3057568	SK	SVK	Slovensko	0
 3057568	SK	SVK	Slovenská Republika	0
 3057568	SK	SVK	Slovenská Socialistická Republika	0
-3057568	SK	SVK	Slovenská republika	0
 3057568	SK	SVK	Slovenské Kraje	0
 3057568	SK	SVK	Slovákia	0
 3057568	SK	SVK	Slovākija	0
@@ -27641,7 +27620,6 @@ geonameid	country	iso3	name	default
 3577718	VG	VGB	Birjina uharte britainiarrak	0
 3577718	VG	VGB	Bisanga bya Vierzi ya Angɛlɛtɛ́lɛ	0
 3577718	VG	VGB	Bizinga ebya Virigini ebitwalibwa Bungereza	0
-3577718	VG	VGB	Bresku Jómfrúaeyjar	0
 3577718	VG	VGB	Bresku Jómfrúreyjar	0
 3577718	VG	VGB	Bresku jómfrúaeyjar	0
 3577718	VG	VGB	Brit Virgin-szigetek	0
@@ -27683,7 +27661,6 @@ geonameid	country	iso3	name	default
 3577718	VG	VGB	Colony of the Virgin Islands	0
 3577718	VG	VGB	De britiske jomfruøer	0
 3577718	VG	VGB	De britiske jomfruøyene	0
-3577718	VG	VGB	Dei britiske Jomfruøyane	0
 3577718	VG	VGB	Dei britiske jomfruøyane	0
 3577718	VG	VGB	Didžiosios Britanijos Mergelių salos	0
 3577718	VG	VGB	Duni Virgin	0
@@ -27708,7 +27685,6 @@ geonameid	country	iso3	name	default
 3577718	VG	VGB	Islas Vírgenes Británicas	0
 3577718	VG	VGB	Isoe Vergini Britanneghe	0
 3577718	VG	VGB	Isole Vergini Britanniche	0
-3577718	VG	VGB	Isole Vergini britanniche	0
 3577718	VG	VGB	Kapuloan Virgin Britania	0
 3577718	VG	VGB	Kapuloan Virgin Britania Raya	0
 3577718	VG	VGB	Kapuluan ng Birheng Britaniko	0
@@ -28563,7 +28539,6 @@ geonameid	country	iso3	name	default
 953987	ZA	ZAF	Afrik Disid	0
 953987	ZA	ZAF	Afrik bŋ Worgo	0
 953987	ZA	ZAF	Afrik di Sid	0
-953987	ZA	ZAF	Afrik disid	0
 953987	ZA	ZAF	Afrika Anaafo	0
 953987	ZA	ZAF	Afrika Atsimo	0
 953987	ZA	ZAF	Afrika Borwa	0
@@ -28650,7 +28625,6 @@ geonameid	country	iso3	name	default
 953987	ZA	ZAF	Süüdafrika	0
 953987	ZA	ZAF	Sūðaffrica	0
 953987	ZA	ZAF	Timog Aprika	0
-953987	ZA	ZAF	UMzantsi Afrika	0
 953987	ZA	ZAF	Unie van Suid-Afrika	0
 953987	ZA	ZAF	Union of South Africa	0
 953987	ZA	ZAF	Worodugu Afriki	0
