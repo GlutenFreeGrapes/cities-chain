@@ -240,7 +240,7 @@ def search_cities_chain(query, checkApostrophe,min_pop,include_deleted):
     elif len(p)>3:
         admin2=p[1]
         admin1=p[2]
-        country=p[3]
+        country=', '.join(p[3:])
         cchoice=countriesdata[(countriesdata['name'].str.lower()==country)|(countriesdata['country'].str.lower()==country)]
         c=set(cchoice['country'])
         a1choice=admin1data[(admin1data['name'].str.lower()==admin1)|(admin1data['admin1'].str.lower()==admin1)&(admin1data['country'].isin(c))]
@@ -480,13 +480,13 @@ async def on_ready():
         cur.execute('''insert into server_info(server_id) VALUES (?)''',data=(i,))
     conn.commit()
     
-    for i in client.guilds:
-        cur.execute('select server_id,channel_id from server_info where server_id=? and channel_id!=-1',data=(i.id,))
-        if cur.rowcount:
-            channel=cur.fetchone()[1]
-            c = client.get_channel(channel)
-            if c:
-                await c.send("Sorry bot was down for so long, was busy updating admin1 and admin2 names in the database for each city. If there are comments/concerns/feedback to give to the bot, there is a support discord server in the /about command\n-the developer")
+    # for i in client.guilds:
+    #     cur.execute('select server_id,channel_id from server_info where server_id=? and channel_id!=-1',data=(i.id,))
+    #     if cur.rowcount:
+    #         channel=cur.fetchone()[1]
+    #         c = client.get_channel(channel)
+    #         if c:
+    #             await c.send("Sorry bot was down for so long, was busy updating admin1 and admin2 names in the database for each city. If there are comments/concerns/feedback to give to the bot, there is a support discord server in the /about command\n-the developer")
             
         
 
@@ -797,16 +797,25 @@ async def on_message_delete(message:discord.Message):
                     if valid:
                         await message.channel.send("<@%s> has deleted their city of `%s`. The next letter is `%s`."%(minfo[0],name,minfo[2]))
 
+# @client.event
+# async def on_raw_message_edit(payload:discord.RawMessageUpdateEvent):
+#     print(payload.cached_message.content)
+
 @client.event
 async def on_message_edit(message:discord.Message, after:discord.Message):
     if message.guild:
         guildid = message.guild.id
-        cur.execute('''select last_user,channel_id,current_letter from server_info where server_id=?''',data=(guildid,))
+        cur.execute('''select last_user,channel_id,current_letter,chain_end from server_info where server_id=?''',data=(guildid,))
         minfo=cur.fetchone()
         if ((message.author.id,message.channel.id)==minfo[:2]):
-            cur.execute('''select name from chain_info where message_id=? and server_id=?''',(message.id,guildid))
-            if cur.rowcount and not message.edited_at:
-                await message.channel.send("<@%s> has edited their city of `%s`. The next letter is `%s`."%(minfo[0],cur.fetchone()[0],minfo[2]))
+            cur.execute('''select last_active from server_user_info where user_id=? and server_id=?''',data=(minfo[0],guildid))
+            t = cur.fetchone()[0]
+            if int(message.created_at.timestamp())==t and not minfo[3]:
+                cur.execute('''select name,valid from chain_info where message_id=?''',data=(message.id,))
+                if cur.rowcount:
+                    (name,valid)=cur.fetchone()
+                    if valid:
+                        await message.channel.send("<@%s> has edited their city of `%s`. The next letter is `%s`."%(minfo[0],name,minfo[2]))
 
 @client.event
 async def on_message(message:discord.Message):
@@ -973,43 +982,6 @@ async def chain(message:discord.Message,guildid,authorid,original_content,ref):
         processes[guildid]=None
     else:
         await asyncio.create_task(chain(*processes[guildid][0]))
-
-# REMOVE LATER. 
-cur.execute('select distinct city_id from chain_info where city_id!=-1 order by country_code,city_id asc')
-cities = [i for (i,) in cur]
-a1s={}
-a2s={}
-cits=[]
-for n,i in enumerate(cities):
-    c_info = allnames.loc[i]
-    c,a1,a2,ac=c_info['country'],c_info['admin1'],c_info['admin2'],c_info['alt-country']
-    if a1:
-        if f'''{c}.{a1}''' in a1s:
-            a1n=a1s[f'''{c}.{a1}''']
-        else:
-            a1n=admin1name(c,a1)
-            a1s[f'''{c}.{a1}''']=a1n
-        if a2:
-            if f'''{c}.{a1}.{a2}''' in a2s:
-                a2n=a2s[f'''{c}.{a1}.{a2}''']
-            else:
-                a2n=admin2name(c,a1,a2)
-                a2s[f'''{c}.{a1}.{a2}''']=a2n
-        else:
-            a2n=None
-    else:
-        a1n,a2n=None,None
-        # cur.exe
-    cits.append((i,c_info['name'],c,a1n,a2n,c_info['alt-country']))
-    # cur.execute('update count_info set name=?,admin1=?,admin2=?,country=?,country_code=?,alt_country=? where city_id=?',(c_info['name'],a1n,a2n,iso2[c],c,c_info['alt-country'],i))
-    # cur.execute('update chain_info set admin1=?,admin2=?,country=?,country_code=?,alt_country=? where city_id=?',(a1n,a2n,iso2[c],c,c_info['alt-country'],i))
-    if (n+1)%500==0:
-        cur.executemany('update count_info set name=?,admin1=?,admin2=?,country=?,country_code=?,alt_country=? where city_id=?',[(name,admin1,admin2,iso2[country],country,alt_country,c_id) for c_id,name,country,admin1,admin2,alt_country in cits])
-        cur.executemany('update chain_info set admin1=?,admin2=?,country=?,country_code=?,alt_country=? where city_id=?',[(admin1,admin2,iso2[country],country,alt_country,c_id) for c_id,name,country,admin1,admin2,alt_country in cits])
-        cits=[]
-        print(n+1)
-    conn.commit()
-conn.commit()
 
 async def fail(message:discord.Message,reason,sinfo,citieslist,res,n,cityfound,msgref):
     guildid=message.guild.id
