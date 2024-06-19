@@ -243,9 +243,9 @@ def search_cities_chain(query, checkApostrophe,min_pop,include_deleted):
         country=', '.join(p[3:])
         cchoice=countriesdata[(countriesdata['name'].str.lower()==country)|(countriesdata['country'].str.lower()==country)]
         c=set(cchoice['country'])
-        a1choice=admin1data[(admin1data['name'].str.lower()==admin1)|(admin1data['admin1'].str.lower()==admin1)&(admin1data['country'].isin(c))]
+        a1choice=admin1data[((admin1data['name'].str.lower()==admin1)|(admin1data['admin1'].str.lower()==admin1))&(admin1data['country'].isin(c))]
         a1=set(a1choice['admin1'])
-        a2choice=admin2data[(admin2data['name'].str.lower()==admin2)|(admin2data['admin2'].str.lower()==admin2)&(admin2data['country'].isin(c))&(admin2data['admin1'].isin(a1))]
+        a2choice=admin2data[((admin2data['name'].str.lower()==admin2)|(admin2data['admin2'].str.lower()==admin2))&(admin2data['country'].isin(c))&(admin2data['admin1'].isin(a1))]
         a2choice=set(zip(a2choice['country'],a2choice['admin1'],a2choice['admin2']))
         rcol=results.columns
         a2results=pd.DataFrame(columns=rcol)
@@ -260,9 +260,7 @@ def search_cities_chain(query, checkApostrophe,min_pop,include_deleted):
         else:
             return search_cities_chain(query.replace("`","'").replace("’","'").replace("ʻ","'").replace("ʼ","'"),1,min_pop,include_deleted)
     else:
-
         r=results.sort_values(['default','population','match'],ascending=[0,0,1]).head(1).iloc[0]
-        
         # if population too small, look for larger options. if none, return original result
         if r['population']<min_pop:
             alternateresult=results.sort_values(['population','default','match'],ascending=[0,0,1]).head(1).iloc[0]
@@ -479,17 +477,6 @@ async def on_ready():
     for i in empty:
         cur.execute('''insert into server_info(server_id) VALUES (?)''',data=(i,))
     conn.commit()
-    
-    # for i in client.guilds:
-    #     cur.execute('select server_id,channel_id from server_info where server_id=? and channel_id!=-1',data=(i.id,))
-    #     if cur.rowcount:
-    #         channel=cur.fetchone()[1]
-    #         c = client.get_channel(channel)
-    #         if c:
-    #             await c.send("Sorry bot was down for so long, was busy updating admin1 and admin2 names in the database for each city. If there are comments/concerns/feedback to give to the bot, there is a support discord server in the /about command\n-the developer")
-            
-        
-
     print(f'Logged in as {client.user} (ID: {client.user.id})\n------')
 
 @client.event
@@ -797,6 +784,7 @@ async def on_message_delete(message:discord.Message):
                     if valid:
                         await message.channel.send("<@%s> has deleted their city of `%s`. The next letter is `%s`."%(minfo[0],name,minfo[2]))
 
+# potentially use to replace on_message_edit
 # @client.event
 # async def on_raw_message_edit(payload:discord.RawMessageUpdateEvent):
 #     print(payload.cached_message.content)
