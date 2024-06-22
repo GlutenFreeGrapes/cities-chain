@@ -832,7 +832,9 @@ async def on_message(message:discord.Message):
 
 async def chain(message:discord.Message,guildid,authorid,original_content,ref):
     if is_blocked(authorid,guildid):
-        await message.add_reaction('\N{NO PEDESTRIANS}')
+        # await message.add_reaction('\N{NO PEDESTRIANS}')
+        await message.channel.send(":no_pedestrians: <@%s> is blocked from using this bot."%authorid)
+        await message.delete()
     else:
         cur.execute('''select round_number,
                     chain_end
@@ -1047,7 +1049,7 @@ async def user(interaction: discord.Interaction, member:Optional[discord.Member]
     await interaction.response.defer(ephemeral=eph)
     if not member:
         member=interaction.user
-    cur.execute('select correct,incorrect,score,last_active from global_user_info where user_id = ?',data=(member.id,))
+    cur.execute('select correct,incorrect,score,last_active,blocked from global_user_info where user_id = ?',data=(member.id,))
     if cur.rowcount==0:
         if member.id==interaction.user.id:
             await interaction.followup.send(embed=discord.Embed(color=RED,description='You must join the chain to use that command. '),ephemeral=eph)
@@ -1065,12 +1067,12 @@ async def user(interaction: discord.Interaction, member:Optional[discord.Member]
         embedslist.append(embed)
         
         if (uinfo[0]+uinfo[1])>0:
-            embed.add_field(name='Global Stats',value=f"Correct: **{f'{uinfo[0]:,}'}**\nIncorrect: **{f'{uinfo[1]:,}'}**\nCorrect Rate: **{round(uinfo[0]/(uinfo[0]+uinfo[1])*10000)/100 if uinfo[0]+uinfo[1]>0 else 0.0}%**\nScore: **{f'{uinfo[2]:,}'}**\nLast Active: <t:{uinfo[3]}:R>",inline=True)
-        cur.execute('select correct,incorrect,score,last_active from server_user_info where user_id = ? and server_id = ?',data=(member.id,interaction.guild_id))
+            embed.add_field(name=f'Global Stats {"no_pedestrians" if uinfo[4] else ""}',value=f"Correct: **{f'{uinfo[0]:,}'}**\nIncorrect: **{f'{uinfo[1]:,}'}**\nCorrect Rate: **{round(uinfo[0]/(uinfo[0]+uinfo[1])*10000)/100 if uinfo[0]+uinfo[1]>0 else 0.0}%**\nScore: **{f'{uinfo[2]:,}'}**\nLast Active: <t:{uinfo[3]}:R>",inline=True)
+        cur.execute('select correct,incorrect,score,last_active,blocked from server_user_info where user_id = ? and server_id = ?',data=(member.id,interaction.guild_id))
         uinfo=cur.fetchone()
         if (uinfo[0]+uinfo[1])>0:
             
-            embed.add_field(name='Stats for ```%s```'%interaction.guild.name,value=f"Correct: **{f'{uinfo[0]:,}'}**\nIncorrect: **{f'{uinfo[1]:,}'}**\nCorrect Rate: **{round(uinfo[0]/(uinfo[0]+uinfo[1])*10000)/100 if uinfo[0]+uinfo[1]>0 else 0.0}%**\nScore: **{f'{uinfo[2]:,}'}**\nLast Active: <t:{uinfo[3]}:R>",inline=True)
+            embed.add_field(name=f'Stats for ```%s``` {"no_pedestrians" if uinfo[4] else ""}'%interaction.guild.name,value=f"Correct: **{f'{uinfo[0]:,}'}**\nIncorrect: **{f'{uinfo[1]:,}'}**\nCorrect Rate: **{round(uinfo[0]/(uinfo[0]+uinfo[1])*10000)/100 if uinfo[0]+uinfo[1]>0 else 0.0}%**\nScore: **{f'{uinfo[2]:,}'}**\nLast Active: <t:{uinfo[3]}:R>",inline=True)
         
             
             favcities = discord.Embed(title=f"Favorite Cities/Countries", color=GREEN)
@@ -1089,7 +1091,7 @@ async def user(interaction: discord.Interaction, member:Optional[discord.Member]
             countryuses = {i[0]:i[1] for i in cur}
             cur.execute('SELECT alt_country, COUNT(*) AS use_count FROM chain_info WHERE server_id = ? AND user_id = ? AND valid = 1 AND alt_country IS NOT NULL GROUP BY alt_country ORDER BY use_count DESC',data=(interaction.guild_id,member.id))
             for i in cur:
-                if i[0] in cur:
+                if i[0] in countryuses:
                     countryuses[i[0]]+=i[1]
                 else:
                     countryuses[i[0]]=i[1]
@@ -1204,7 +1206,7 @@ async def slb(interaction: discord.Interaction,se:Optional[Literal['yes','no']]=
         embed.set_author(name=interaction.guild.name)
     cur.execute('''select user_id,score from server_user_info where server_id = ? order by score desc''',data=(interaction.guild_id,))
     if cur.rowcount>0:
-        fmt=[f'{n+1}. <@{i[0]}> - **{f"{i[1]:,}"}**' for n,i in enumerate(cur)]
+        fmt=[f'{n+1}. <@{i[0]}>{":no_pedestrians:" if is_blocked(i[0],interaction.guild_id) else ""} - **{f"{i[1]:,}"}**' for n,i in enumerate(cur)]
         embed.description='\n'.join(fmt[:25])
         await interaction.followup.send(embed=embed,view=Paginator(1,fmt,embed.title,math.ceil(len(fmt)/25),interaction.user.id,embed),ephemeral=eph)    
     else:
@@ -1246,9 +1248,9 @@ async def ulb(interaction: discord.Interaction,se:Optional[Literal['yes','no']]=
         return
     await interaction.response.defer(ephemeral=eph)
     embed=discord.Embed(title=f"GLOBAL USER LEADERBOARD",color=GREEN)
-    cur.execute('''select user_id,score from global_user_info order by score desc''',data=(interaction.guild_id,))
+    cur.execute('''select user_id,score,blocked from global_user_info order by score desc''',data=(interaction.guild_id,))
     if cur.rowcount>0:
-        fmt = [f'{n+1}. <@{i[0]}> - **{f"{i[1]:,}"}**' for n,i in enumerate(cur)]
+        fmt = [f'{n+1}. <@{i[0]}>{":no_pedestrians:" if i[2] else ""} - **{f"{i[1]:,}"}**' for n,i in enumerate(cur)]
         embed.description='\n'.join(fmt[:25])
         await interaction.followup.send(embed=embed,view=Paginator(1,fmt,embed.title,math.ceil(len(fmt)/25),interaction.user.id,embed),ephemeral=eph)
     else:
@@ -1656,7 +1658,7 @@ async def help(interaction: discord.Interaction,se:Optional[Literal['yes','no']]
         command_messages[n]=headers[n]+'\n\n'+'\n'.join(command_messages[n])
     
     embed.description="Choose a topic."
-    await interaction.followup.send(embed=embed,view=Help(['''1. Find a channel that you want to use the bot in, and use `/set channel` to designate it as such.\n2. Using the `/set` commands listed in the Commands section of this help page, change around settings to your liking.\n3. Happy playing!''','''One person chooses a city, then the next person must choose a city beginning with the last letter of the previous city. \nExamples: \n- Londo**n** --> **N**ew Yor**k** --> **K**arachi\n- Londo**n** --> **N**anjin**g** --> **G**uadalajara\n\nThe chain can be broken in a few different ways, such as the next city not starting with the last letter, the next city not existing, the next city having too small of a population, the next user going twice, or putting down a city that has been said before. The settings for some of those can be changed, but here are some examples:\n- **User A**: New Haven\n- **User B**: London (city starts with wrong letter)\n\n- **User A**: New Haven\n- **User A**: Nagoya (user went twice in a row)\n\n- **User A**: New Haven\n- **User B**: New Kent (city's population is below 1000, if 1000 is the minimum population set)\n\n- **User A**: New Haven\n- **User B**: New Haven (same city repeated)\n\n- **User A**: New Haven\n- **User B**: Never Gonna Give You Up (city does not exist)\n\nCities must be prefixed by the server's given prefix in order to be counted towards the chain (by default it's **!**, but this can be changed).\n\nDo note that cities with alternate names will start and end with the first and last letters of those names, but will be counted as the same city. \nFor example, The Hague starts with `t` and ends with `e`, while Den Haag starts with `d` and ends with `g`, but both are considered the same city. \n\nRuining the chain deliberately is considered a bannable offense, as is creating alternate accounts to sidestep bans.''',None,''':white_check_mark: - valid addition to chain\n:ballot_box_with_check: - valid addition to chain, breaks server record\n:x: - invalid addition to chain\n:regional_indicator_a: - letter the city ends with\n\nIn addition, you can make the bot react to certain cities of your choosing using the `/add react` and `/remove react` commands.''','''- When many people are playing, play cities that start and end with the same letter to avoid breaking the chain. \n- If you want to specify a different city than the one the bot interprets, you can use commas to specify provinces, states, or countries: \nExamples: \n:white_check_mark: Atlanta\n:white_check_mark: Atlanta, United States\n:white_check_mark: Atlanta, Georgia\n:white_check_mark: Atlanta, Fulton County\n:white_check_mark: Atlanta, Fulton County, Georgia, United States\nYou can specify a maximum of 2 administrative divisions, not including the country. \n- Googling cities is allowed. \n- Remember, at the end of the day, it is just a game, and the game is supposed to be lighthearted and fun.''','''**Q: Some cities aren't recognized by the bot. Why?**\nA: The bot takes its data from Geonames, and only cities with a listed population (that is, greater than 0 people listed) are considered by the bot.\n\n**Q: I added some cities to Geonames, but they still aren't recognized by the bot. Why?**\nA: The Geonames dump updates the cities list daily, but the bot's record of cities is not updated on a regular basis, so it might take until I decide to update it again for those cities to show up.\n\n**Q: Why does the bot go down sometimes for a few seconds before coming back up?**\nA: Usually, this is because I have just updated the bot. The way this is set up, the bot will check every 15 minutes whethere there is a new update, and if so, will restart. Just to be safe, when this happens, use `/stats server` to check what the next letter is.\n\n**Q: Why are some of the romanizations for cities incorrect?**\nA: That's a thing to do with the Python library I use to romanize the characters (`unidecode`) - characters are romanized one-by-one instead of with context. For example, `unidecode` will turn `广州` into `Yan Zhou`. I still haven't found a good way to match every foreign name to a perfect translation. \n\n**Q: How do I suggest feedback to the bot?**\nA: There is a support server and support channels listed in the `/about` command for this bot.'''],command_messages,interaction.user.id),ephemeral=(se=='no'))
+    await interaction.followup.send(embed=embed,view=Help(['''1. Find a channel that you want to use the bot in, and use `/set channel` to designate it as such.\n2. Using the `/set` commands listed in the Commands section of this help page, change around settings to your liking.\n3. Happy playing!''','''One person chooses a city, then the next person must choose a city beginning with the last letter of the previous city. \nExamples: \n- Londo**n** --> **N**ew Yor**k** --> **K**arachi\n- Londo**n** --> **N**anjin**g** --> **G**uadalajara\n\nThe chain can be broken in a few different ways, such as the next city not starting with the last letter, the next city not existing, the next city having too small of a population, the next user going twice, or putting down a city that has been said before. The settings for some of those can be changed, but here are some examples:\n- **User A**: New Haven\n- **User B**: London (city starts with wrong letter)\n\n- **User A**: New Haven\n- **User A**: Nagoya (user went twice in a row)\n\n- **User A**: New Haven\n- **User B**: New Kent (city's population is below 1000, if 1000 is the minimum population set)\n\n- **User A**: New Haven\n- **User B**: New Haven (same city repeated)\n\n- **User A**: New Haven\n- **User B**: Never Gonna Give You Up (city does not exist)\n\nCities must be prefixed by the server's given prefix in order to be counted towards the chain (by default it's **!**, but this can be changed).\n\nDo note that cities with alternate names will start and end with the first and last letters of those names, but will be counted as the same city. \nFor example, The Hague starts with `t` and ends with `e`, while Den Haag starts with `d` and ends with `g`, but both are considered the same city. \n\nRuining the chain deliberately is considered a bannable offense, as is creating alternate accounts to sidestep bans.''',None,''':white_check_mark: - valid addition to chain\n:ballot_box_with_check: - valid addition to chain, breaks server record\n:x: - invalid addition to chain\n:regional_indicator_a: - letter the city ends with\n:no_pedestrians: - user is blocked from using this bot\n:no_entry: - city used to but no longer exists in the database\n\nIn addition, you can make the bot react to certain cities of your choosing using the `/add react` and `/remove react` commands.''','''- When many people are playing, play cities that start and end with the same letter to avoid breaking the chain. \n- If you want to specify a different city than the one the bot interprets, you can use commas to specify provinces, states, or countries: \nExamples: \n:white_check_mark: Atlanta\n:white_check_mark: Atlanta, United States\n:white_check_mark: Atlanta, Georgia\n:white_check_mark: Atlanta, Fulton County\n:white_check_mark: Atlanta, Fulton County, Georgia, United States\nYou can specify a maximum of 2 administrative divisions, not including the country. \n- Googling cities is allowed. \n- Remember, at the end of the day, it is just a game, and the game is supposed to be lighthearted and fun.''','''**Q: Some cities aren't recognized by the bot. Why?**\nA: The bot takes its data from Geonames, and only cities with a listed population (that is, greater than 0 people listed) are considered by the bot.\n\n**Q: I added some cities to Geonames, but they still aren't recognized by the bot. Why?**\nA: The Geonames dump updates the cities list daily, but the bot's record of cities is not updated on a regular basis, so it might take until I decide to update it again for those cities to show up.\n\n**Q: Why does the bot go down sometimes for a few seconds before coming back up?**\nA: Usually, this is because I have just updated the bot. The way this is set up, the bot will check every 15 minutes whethere there is a new update, and if so, will restart. Just to be safe, when this happens, use `/stats server` to check what the next letter is.\n\n**Q: Why are some of the romanizations for cities incorrect?**\nA: That's a thing to do with the Python library I use to romanize the characters (`unidecode`) - characters are romanized one-by-one instead of with context. For example, `unidecode` will turn `广州` into `Yan Zhou`. I still haven't found a good way to match every foreign name to a perfect translation. \n\n**Q: How do I suggest feedback to the bot?**\nA: There is a support server and support channels listed in the `/about` command for this bot.'''],command_messages,interaction.user.id),ephemeral=(se=='no'))
 
 @tree.command(description="Information about the bot.")
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
