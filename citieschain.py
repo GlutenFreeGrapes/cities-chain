@@ -833,7 +833,14 @@ async def on_message(message:discord.Message):
 async def chain(message:discord.Message,guildid,authorid,original_content,ref):
     if is_blocked(authorid,guildid):
         # await message.add_reaction('\N{NO PEDESTRIANS}')
-        await message.channel.send(":no_pedestrians: <@%s> is blocked from using this bot."%authorid)
+        try:
+            cur.execute('select blocked from global_user_info where user_id=?',(authorid,))
+            if cur.fetchone()[0]:
+                await message.author.send("You are blocked from using this bot.")
+            else:
+                await message.author.send("You are blocked from using this bot in `%s`."%message.guild.name)
+        except:
+            pass
         await message.delete()
     else:
         cur.execute('''select round_number,
@@ -1067,12 +1074,12 @@ async def user(interaction: discord.Interaction, member:Optional[discord.Member]
         embedslist.append(embed)
         
         if (uinfo[0]+uinfo[1])>0:
-            embed.add_field(name=f'Global Stats {"no_pedestrians" if uinfo[4] else ""}',value=f"Correct: **{f'{uinfo[0]:,}'}**\nIncorrect: **{f'{uinfo[1]:,}'}**\nCorrect Rate: **{round(uinfo[0]/(uinfo[0]+uinfo[1])*10000)/100 if uinfo[0]+uinfo[1]>0 else 0.0}%**\nScore: **{f'{uinfo[2]:,}'}**\nLast Active: <t:{uinfo[3]}:R>",inline=True)
+            embed.add_field(name=f'Global Stats {":no_pedestrians:" if uinfo[4] else ""}',value=f"Correct: **{f'{uinfo[0]:,}'}**\nIncorrect: **{f'{uinfo[1]:,}'}**\nCorrect Rate: **{round(uinfo[0]/(uinfo[0]+uinfo[1])*10000)/100 if uinfo[0]+uinfo[1]>0 else 0.0}%**\nScore: **{f'{uinfo[2]:,}'}**\nLast Active: <t:{uinfo[3]}:R>",inline=True)
         cur.execute('select correct,incorrect,score,last_active,blocked from server_user_info where user_id = ? and server_id = ?',data=(member.id,interaction.guild_id))
         uinfo=cur.fetchone()
         if (uinfo[0]+uinfo[1])>0:
             
-            embed.add_field(name=f'Stats for ```%s``` {"no_pedestrians" if uinfo[4] else ""}'%interaction.guild.name,value=f"Correct: **{f'{uinfo[0]:,}'}**\nIncorrect: **{f'{uinfo[1]:,}'}**\nCorrect Rate: **{round(uinfo[0]/(uinfo[0]+uinfo[1])*10000)/100 if uinfo[0]+uinfo[1]>0 else 0.0}%**\nScore: **{f'{uinfo[2]:,}'}**\nLast Active: <t:{uinfo[3]}:R>",inline=True)
+            embed.add_field(name=f'Stats for ```%s``` {":no_pedestrians:" if uinfo[4] else ""}'%interaction.guild.name,value=f"Correct: **{f'{uinfo[0]:,}'}**\nIncorrect: **{f'{uinfo[1]:,}'}**\nCorrect Rate: **{round(uinfo[0]/(uinfo[0]+uinfo[1])*10000)/100 if uinfo[0]+uinfo[1]>0 else 0.0}%**\nScore: **{f'{uinfo[2]:,}'}**\nLast Active: <t:{uinfo[3]}:R>",inline=True)
         
             
             favcities = discord.Embed(title=f"Favorite Cities/Countries", color=GREEN)
