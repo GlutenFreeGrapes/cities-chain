@@ -106,6 +106,12 @@ cur.execute('''alter table global_user_info
                add column if not exists blocked bool default 0''')
 cur.execute('''alter table server_user_info
                add column if not exists blocked bool default 0''')
+
+cur.execute('''alter table global_user_info
+               add column if not exists block_reason varchar(128)''')
+cur.execute('''alter table server_user_info
+               add column if not exists block_reason varchar(128)''')
+
 cur.execute('''alter table chain_info
                add column if not exists leaderboard_eligible bool default 1''')
 
@@ -221,13 +227,19 @@ def search_cities_chain(query, checkApostrophe,min_pop,include_deleted):
         results=results.drop_duplicates()
     elif len(p)==3:
         otherdivision=p[1]
-        country=p[2]
-        cchoice=countriesdata[((countriesdata['name'].str.lower()==country)|(countriesdata['country'].str.lower()==country))]
+        division=p[2]
+        cchoice=countriesdata[((countriesdata['name'].str.lower()==division)|(countriesdata['country'].str.lower()==division))]
         c=set(cchoice['country'])
         a1choice=admin1data[((admin1data['name'].str.lower()==otherdivision)|(admin1data['admin1'].str.lower()==otherdivision))&(admin1data['country'].isin(c))]
         a2choice=admin2data[((admin2data['name'].str.lower()==otherdivision)|(admin2data['admin2'].str.lower()==otherdivision))&(admin2data['country'].isin(c))]
         a1choice=set(zip(a1choice['country'],a1choice['admin1']))
         a2choice=set(zip(a2choice['country'],a2choice['admin1'],a2choice['admin2']))
+
+        a1_base=admin1data[((admin1data['name'].str.lower()==division)|(admin1data['admin1'].str.lower()==division))]
+        a1_base=set(a1_base['country']+'.'+a1_base['admin1'])
+        a2_base=admin2data[((admin2data['name'].str.lower()==otherdivision)|(admin2data['admin2'].str.lower()==otherdivision))&((admin2data['country']+'.'+admin2data['admin1']).isin(a1_base))]
+        a2_base=set(zip(a2_base['country'],a2_base['admin1'],a2_base['admin2']))
+
         rcol=results.columns
         a1results=pd.DataFrame(columns=rcol)
         for i in a1choice:
@@ -235,7 +247,11 @@ def search_cities_chain(query, checkApostrophe,min_pop,include_deleted):
         a2results=pd.DataFrame(columns=rcol)
         for i in a2choice:
             a2results=pd.concat([a2results,results[((results['country']==i[0]))&(results['admin1']==i[1])&(results['admin2']==i[2])]])
-        results=pd.concat([a1results,a2results])
+        a1a2results=pd.DataFrame(columns=rcol)
+        for i in a2_base:
+            a1a2results=pd.concat([a1a2results,results[((results['country']==i[0]))&(results['admin1']==i[1])&(results['admin2']==i[2])&(results['admin2']==i[2])]])
+        
+        results=pd.concat([a1results,a2results,a1a2results])
         results=results.drop_duplicates()
     elif len(p)>3:
         admin2=p[1]
@@ -832,16 +848,15 @@ async def on_message(message:discord.Message):
 
 async def chain(message:discord.Message,guildid,authorid,original_content,ref):
     if is_blocked(authorid,guildid):
-        # await message.add_reaction('\N{NO PEDESTRIANS}')
         try:
             cur.execute('select blocked from global_user_info where user_id=?',(authorid,))
             if cur.fetchone()[0]:
                 await message.author.send("You are blocked from using this bot.")
             else:
                 await message.author.send("You are blocked from using this bot in `%s`."%message.guild.name)
+            await message.delete()
         except:
-            pass
-        await message.delete()
+            await message.add_reaction('\N{NO PEDESTRIANS}')
     else:
         cur.execute('''select round_number,
                     chain_end
@@ -1427,14 +1442,15 @@ async def blocked(interaction:discord.Interaction,se:Optional[Literal['yes','no'
         await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ",ephemeral=eph)
         return
     await interaction.response.defer(ephemeral=eph)
-    cur.execute('select user_id from server_user_info where blocked=? and server_id=?',data=(True,interaction.guild_id))
-    blocks={i[0] for i in cur}
-    cur.execute('select global_user_info.user_id from global_user_info inner join (select server_user_info.user_id from server_user_info where server_id=?) as b on global_user_info.user_id=b.user_id where blocked=? ',(interaction.guild_id,True,))
-    blocks.update({i for (i,) in cur})
+    cur.execute('select user_id,block_reason from server_user_info where blocked=? and server_id=?',data=(True,interaction.guild_id))
+    blocks={i[0]:i[1] for i in cur}
+    cur.execute('select global_user_info.user_id,global_user_info.block_reason from global_user_info inner join (select server_user_info.user_id from server_user_info where server_id=?) as b on global_user_info.user_id=b.user_id where blocked=? ',(interaction.guild_id,True,))
+    for i in cur:
+        blocks[i[0]]=i[1]
     embed=discord.Embed(title='Blocked Users',color=GREEN)
     cur.execute('''select city_id from repeat_info where server_id = ?''', data=(interaction.guild_id,))
     if len(blocks)>0:
-        fmt=[f"- <@{i}>" for i in blocks]
+        fmt=[f"- <@{i}> - {blocks[i]}" for i in blocks]
         embed.description='\n'.join(fmt[:25])
         view=Paginator(1,fmt,"Blocked Users",math.ceil(len(fmt)/25),interaction.user.id,embed)
         await interaction.followup.send(embed=embed,view=view,ephemeral=eph)
@@ -1573,18 +1589,18 @@ async def ping(interaction: discord.Interaction):
 
 @tree.command(name="block-server",description="Blocks a user from using the bot in the server. ")
 @app_commands.check(owner_modcheck)
-async def serverblock(interaction: discord.Interaction,member: discord.Member):
+async def serverblock(interaction: discord.Interaction,member: discord.Member, reason: app_commands.Range[str,0,128]):
     if member!=owner and not member.bot:
         if is_blocked(interaction.user.id,interaction.guild_id):
             await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
             return
         cur.execute("select user_id from server_user_info where user_id=? and server_id=?",data=(member.id,interaction.guild_id))
         if cur.rowcount:
-            cur.execute('''update server_user_info set blocked=? where user_id=? and server_id=?''',data=(True,member.id,interaction.guild_id))
+            cur.execute('''update server_user_info set blocked=?,block_reason=? where user_id=? and server_id=?''',data=(True,member.id,reason,interaction.guild_id))
         else:
-            cur.execute('insert into server_user_info(server_id,user_id,blocked) values(?,?,?)',data=(interaction.guild_id,member.id,True))
+            cur.execute('insert into server_user_info(server_id,user_id,blocked,block_reason) values(?,?,?,?)',data=(interaction.guild_id,member.id,True,reason))
         conn.commit()
-        await interaction.response.send_message(f"<@{member.id}> has been blocked from using this bot in the server. ")
+        await interaction.response.send_message(f"<@{member.id}> has been blocked from using this bot in the server. Reason: `{reason}`")
     else:
         await interaction.response.send_message(f"Nice try, bozo")
 
@@ -1598,7 +1614,7 @@ async def serverunblock(interaction: discord.Interaction,member: discord.Member)
     if cur.fetchone()[0]:
         await interaction.response.send_message(f":no_entry: <@{member.id}> cannot be unblocked. ")
     else:
-        cur.execute('''update server_user_info set blocked=? where user_id=? and server_id=?''',data=(False,member.id,interaction.guild_id))
+        cur.execute('''update server_user_info set blocked=?,block_reason=? where user_id=? and server_id=?''',data=(False,None,member.id,interaction.guild_id))
         conn.commit()
         await interaction.response.send_message(f"<@{member.id}> has been unblocked from using this bot in the server. ")
 
@@ -1606,21 +1622,21 @@ from discord.ext import commands
 
 @tree.command(name="block-global",description="Blocks a user from using the bot. ")
 @app_commands.check(is_owner)
-async def globalblock(interaction: discord.Interaction,user: discord.User):
+async def globalblock(interaction: discord.Interaction,user: discord.User,reason: app_commands.Range[str,0,128]):
     if user!=owner and not user.bot:
         if is_blocked(interaction.user.id,interaction.guild_id):
             await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
             return
         cur.execute("select user_id from global_user_info where user_id=?",data=(user.id,))
         if cur.rowcount:
-            cur.execute('''update global_user_info set blocked=? where user_id=?''',data=(True,user.id))
+            cur.execute('''update global_user_info set blocked=?,block_reason=? where user_id=?''',data=(True,user.id,reason))
         else:
-            cur.execute('insert into global_user_info(user_id,blocked) values(?,?)',data=(user.id,True))
-            cur.execute('insert into server_user_info(server_id,user_id,blocked) values(?,?,?)',data=(interaction.guild_id,user.id,True))
+            cur.execute('insert into global_user_info(user_id,blocked,block_reason) values(?,?,?)',data=(user.id,True,reason))
+            # cur.execute('insert into server_user_info(server_id,user_id,blocked,block_reason) values(?,?,?,?)',data=(interaction.guild_id,user.id,True,reason))
 
-        cur.execute('''update global_user_info set blocked=? where user_id=?''',data=(True,user.id))
+        # cur.execute('''update global_user_info set blocked=? where user_id=?''',data=(True,user.id))
         conn.commit()
-        await interaction.response.send_message(f"<@{user.id}> has been blocked from using this bot. ")
+        await interaction.response.send_message(f"<@{user.id}> has been blocked from using this bot. Reason: `{reason}`")
     else:
         await interaction.response.send_message(f"Nice try, bozo")
 
@@ -1630,7 +1646,7 @@ async def globalunblock(interaction: discord.Interaction,user: discord.User):
     if is_blocked(interaction.user.id,interaction.guild_id):
         await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
         return
-    cur.execute('''update global_user_info set blocked=? where user_id=?''',data=(False,user.id))
+    cur.execute('''update global_user_info set blocked=?,block_reason=? where user_id=?''',data=(False,None,user.id))
     conn.commit()
     await interaction.response.send_message(f"<@{user.id}> has been unblocked from using this bot. ")
 
@@ -1664,8 +1680,11 @@ async def help(interaction: discord.Interaction,se:Optional[Literal['yes','no']]
     for n in range(len(command_messages)):
         command_messages[n]=headers[n]+'\n\n'+'\n'.join(command_messages[n])
     
+
+
+
     embed.description="Choose a topic."
-    await interaction.followup.send(embed=embed,view=Help(['''1. Find a channel that you want to use the bot in, and use `/set channel` to designate it as such.\n2. Using the `/set` commands listed in the Commands section of this help page, change around settings to your liking.\n3. Happy playing!''','''One person chooses a city, then the next person must choose a city beginning with the last letter of the previous city. \nExamples: \n- Londo**n** --> **N**ew Yor**k** --> **K**arachi\n- Londo**n** --> **N**anjin**g** --> **G**uadalajara\n\nThe chain can be broken in a few different ways, such as the next city not starting with the last letter, the next city not existing, the next city having too small of a population, the next user going twice, or putting down a city that has been said before. The settings for some of those can be changed, but here are some examples:\n- **User A**: New Haven\n- **User B**: London (city starts with wrong letter)\n\n- **User A**: New Haven\n- **User A**: Nagoya (user went twice in a row)\n\n- **User A**: New Haven\n- **User B**: New Kent (city's population is below 1000, if 1000 is the minimum population set)\n\n- **User A**: New Haven\n- **User B**: New Haven (same city repeated)\n\n- **User A**: New Haven\n- **User B**: Never Gonna Give You Up (city does not exist)\n\nCities must be prefixed by the server's given prefix in order to be counted towards the chain (by default it's **!**, but this can be changed).\n\nDo note that cities with alternate names will start and end with the first and last letters of those names, but will be counted as the same city. \nFor example, The Hague starts with `t` and ends with `e`, while Den Haag starts with `d` and ends with `g`, but both are considered the same city. \n\nRuining the chain deliberately is considered a bannable offense, as is creating alternate accounts to sidestep bans.''',None,''':white_check_mark: - valid addition to chain\n:ballot_box_with_check: - valid addition to chain, breaks server record\n:x: - invalid addition to chain\n:regional_indicator_a: - letter the city ends with\n:no_pedestrians: - user is blocked from using this bot\n:no_entry: - city used to but no longer exists in the database\n\nIn addition, you can make the bot react to certain cities of your choosing using the `/add react` and `/remove react` commands.''','''- When many people are playing, play cities that start and end with the same letter to avoid breaking the chain. \n- If you want to specify a different city than the one the bot interprets, you can use commas to specify provinces, states, or countries: \nExamples: \n:white_check_mark: Atlanta\n:white_check_mark: Atlanta, United States\n:white_check_mark: Atlanta, Georgia\n:white_check_mark: Atlanta, Fulton County\n:white_check_mark: Atlanta, Fulton County, Georgia, United States\nYou can specify a maximum of 2 administrative divisions, not including the country. \n- Googling cities is allowed. \n- Remember, at the end of the day, it is just a game, and the game is supposed to be lighthearted and fun.''','''**Q: Some cities aren't recognized by the bot. Why?**\nA: The bot takes its data from Geonames, and only cities with a listed population (that is, greater than 0 people listed) are considered by the bot.\n\n**Q: I added some cities to Geonames, but they still aren't recognized by the bot. Why?**\nA: The Geonames dump updates the cities list daily, but the bot's record of cities is not updated on a regular basis, so it might take until I decide to update it again for those cities to show up.\n\n**Q: Why does the bot go down sometimes for a few seconds before coming back up?**\nA: Usually, this is because I have just updated the bot. The way this is set up, the bot will check every 15 minutes whethere there is a new update, and if so, will restart. Just to be safe, when this happens, use `/stats server` to check what the next letter is.\n\n**Q: Why are some of the romanizations for cities incorrect?**\nA: That's a thing to do with the Python library I use to romanize the characters (`unidecode`) - characters are romanized one-by-one instead of with context. For example, `unidecode` will turn `广州` into `Yan Zhou`. I still haven't found a good way to match every foreign name to a perfect translation. \n\n**Q: How do I suggest feedback to the bot?**\nA: There is a support server and support channels listed in the `/about` command for this bot.'''],command_messages,interaction.user.id),ephemeral=(se=='no'))
+    await interaction.followup.send(embed=embed,view=Help(['''1. Find a channel that you want to use the bot in, and use `/set channel` to designate it as such.\n2. Using the `/set` commands listed in the Commands section of this help page, change around settings to your liking.\n3. Happy playing!''','''1. The next letter of each city must start with the same letter of the previous city. \n2. You may not go twice in a row. \n3. Cities must meet the minimum population requirement. This number may be checked with `/stats server`. \n4. Unless specified otherwise, cities cannot be repeated within a certain number of cities as each other. This number may be checked with `/stats server`. \n5. Cities must exist on Geonames and must have a minimum population of 1. \n6. Cities must have a prefix at the beginning of the message they are sent in for the bot to count them. This may be checked with `/stats server`, with `None` meaning that all messages will count. \n7. Cities with alternate names will be counted as the same city, but may start and end with different letters. (e.g., despite being the same city`The Hague` starts with `t` and ends with `e`, and `Den Haag` starts with `d` and ends with `g`)\n8. If need be, users may be banned from using the bot. Reasons for banning include, but are not limited to:\n- Placing deliberately incorrect cities\n- Falsifying cities on Geonames\n- Creating alternate accounts to sidestep bans''',None,''':white_check_mark: - valid addition to chain\n:ballot_box_with_check: - valid addition to chain, breaks server record\n:x: - invalid addition to chain\n:regional_indicator_a: - letter the city ends with\n:no_pedestrians: - user is blocked from using this bot\n:no_entry: - city used to but no longer exists in the database\n\nIn addition, you can make the bot react to certain cities of your choosing using the `/add react` and `/remove react` commands.''','''- When many people are playing, play cities that start and end with the same letter to avoid breaking the chain. \n- If you want to specify a different city than the one the bot interprets, you can use commas to specify provinces, states, or countries: \nExamples: \n:white_check_mark: Atlanta\n:white_check_mark: Atlanta, United States\n:white_check_mark: Atlanta, Georgia\n:white_check_mark: Atlanta, Fulton County\n:white_check_mark: Atlanta, Georgia, United States\n:white_check_mark: Atlanta, Fulton County, United States\n:white_check_mark: Atlanta, Fulton County, Georgia\n:white_check_mark: Atlanta, Fulton County, Georgia, United States\nYou can specify a maximum of 2 administrative divisions, not including the country. \n- Googling cities is allowed. \n- Remember, at the end of the day, it is just a game, and the game is supposed to be lighthearted and fun.''','''**Q: Some cities aren't recognized by the bot. Why?**\nA: The bot takes its data from Geonames, and only cities with a listed population (that is, greater than 0 people listed) are considered by the bot.\n\n**Q: I added some cities to Geonames, but they still aren't recognized by the bot. Why?**\nA: The Geonames dump updates the cities list daily, but the bot's record of cities is not updated on a regular basis, so it might take until I decide to update it again for those cities to show up.\n\n**Q: Why does the bot go down sometimes for a few seconds before coming back up?**\nA: Usually, this is because I have just updated the bot. The way this is set up, the bot will check every 15 minutes whethere there is a new update, and if so, will restart. Just to be safe, when this happens, use `/stats server` to check what the next letter is.\n\n**Q: Why are some of the romanizations for cities incorrect?**\nA: That's a thing to do with the Python library I use to romanize the characters (`unidecode`) - characters are romanized one-by-one instead of with context. For example, `unidecode` will turn `广州` into `Yan Zhou`. I still haven't found a good way to match every foreign name to a perfect translation. \n\n**Q: How do I suggest feedback to the bot?**\nA: There is a support server and support channels listed in the `/about` command for this bot.'''],command_messages,interaction.user.id),ephemeral=(se=='no'))
 
 @tree.command(description="Information about the bot.")
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
