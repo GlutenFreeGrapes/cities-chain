@@ -1596,7 +1596,7 @@ async def serverblock(interaction: discord.Interaction,member: discord.Member, r
             return
         cur.execute("select user_id from server_user_info where user_id=? and server_id=?",data=(member.id,interaction.guild_id))
         if cur.rowcount:
-            cur.execute('''update server_user_info set blocked=?,block_reason=? where user_id=? and server_id=?''',data=(True,member.id,reason,interaction.guild_id))
+            cur.execute('''update server_user_info set blocked=?,block_reason=? where user_id=? and server_id=?''',data=(True,reason,member.id,interaction.guild_id))
         else:
             cur.execute('insert into server_user_info(server_id,user_id,blocked,block_reason) values(?,?,?,?)',data=(interaction.guild_id,member.id,True,reason))
         conn.commit()
@@ -1629,7 +1629,7 @@ async def globalblock(interaction: discord.Interaction,user: discord.User,reason
             return
         cur.execute("select user_id from global_user_info where user_id=?",data=(user.id,))
         if cur.rowcount:
-            cur.execute('''update global_user_info set blocked=?,block_reason=? where user_id=?''',data=(True,user.id,reason))
+            cur.execute('''update global_user_info set blocked=?,block_reason=? where user_id=?''',data=(True,reason,user.id))
         else:
             cur.execute('insert into global_user_info(user_id,blocked,block_reason) values(?,?,?)',data=(user.id,True,reason))
             # cur.execute('insert into server_user_info(server_id,user_id,blocked,block_reason) values(?,?,?,?)',data=(interaction.guild_id,user.id,True,reason))
