@@ -6,6 +6,9 @@ from dotenv import load_dotenv
 from mpl_toolkits.basemap import Basemap
 import matplotlib.pyplot as plt
 
+# TODO: Implement whitelist/blacklist - list_mode (int) column, list (text) column in server_info
+# TODO: On_ready() shows latest github update msg, updates column in server_info
+
 load_dotenv()
 
 intents = discord.Intents.default()
@@ -856,7 +859,10 @@ async def chain(message:discord.Message,guildid,authorid,original_content,ref):
                 await message.author.send("You are blocked from using this bot in `%s`."%message.guild.name)
             await message.delete()
         except:
-            await message.add_reaction('\N{NO PEDESTRIANS}')
+            try:
+                await message.add_reaction('\N{NO PEDESTRIANS}')
+            except:
+                await message.reply(':no_pedestrians: User is blocked from using this bot.')
     else:
         cur.execute('''select round_number,
                     chain_end
