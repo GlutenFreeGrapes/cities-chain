@@ -3657,7 +3657,7 @@ geonameid	country	iso3	name	default
 3923057	BO	BOL	玻利維亞	0
 3923057	BO	BOL	玻利维亚	0
 3923057	BO	BOL	볼리비아	0
-7626844	BQ	BES	Bonaire, Saint Eustatius and Saba 	1
+7626844	BQ	BES	Bonaire Saint Eustatius and Saba	1
 7626844	BQ	BES	Antillas Ollandaisas	0
 7626844	BQ	BES	Antilles yr Iseldiroedd	0
 7626844	BQ	BES	BES	0
@@ -22270,8 +22270,6 @@ geonameid	country	iso3	name	default
 2017370	RU	RUS	Расія	0
 2017370	RU	RUS	Ресей	0
 2017370	RU	RUS	Росси	0
-2017370	RU	RUS	Россией	0
-2017370	RU	RUS	России	0
 2017370	RU	RUS	Российская Федерация	0
 2017370	RU	RUS	Россия	0
 2017370	RU	RUS	Російська Федерація	0

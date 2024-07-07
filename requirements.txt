@@ -7,4 +7,3 @@ typing
 matplotlib
 basemap
 requests
-unidecode
