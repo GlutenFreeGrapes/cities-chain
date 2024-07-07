@@ -502,7 +502,7 @@ async def on_ready():
         cur.execute('''insert into server_info(server_id) VALUES (?)''',data=(i,))
     conn.commit()
     # prepare github messages
-    json_response = requests.get("https://api.github.com/repos/GlutenFreeGrapes/cities-chain/commits",params={"since":pytz.timezone('UTC').localize(datetime.datetime.now()-datetime.timedelta(minutes=90)).isoformat()}).json()
+    json_response = requests.get("https://api.github.com/repos/GlutenFreeGrapes/cities-chain/commits",params={"since":pytz.timezone('UTC').localize(datetime.datetime.now()-datetime.timedelta(days=1)).isoformat()}).json()
     commit_list = [(datetime.datetime.fromisoformat(i['commit']['author']['date']),i['commit']['message']) for i in json_response][::-1]
     embeds=[]
     for timestamp,message in commit_list:
