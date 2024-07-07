@@ -500,7 +500,7 @@ async def on_ready():
         cur.execute('''insert into server_info(server_id) VALUES (?)''',data=(i,))
     conn.commit()
     # prepare github messages
-    json_response = requests.get("https://api.github.com/repos/GlutenFreeGrapes/cities-chain/commits",params={"since":(datetime.datetime.now()-datetime.timedelta(minutes=15)).isoformat()}).json()
+    json_response = requests.get("https://api.github.com/repos/GlutenFreeGrapes/cities-chain/commits",params={"since":(datetime.datetime.now()-datetime.timedelta(minutes=35)).isoformat()}).json()
     commit_list = [(datetime.datetime.fromisoformat(i['commit']['author']['date']),i['commit']['message']) for i in json_response][::-1]
     embeds=[]
     for timestamp,message in commit_list:
@@ -649,10 +649,11 @@ async def choosecity(interaction: discord.Interaction, option:Literal["on","off"
                 # not blacklisted/are whitelisted
                 if c[4]:
                     countrieslist={i for i in c[5].split(',') if i}
-                    if c[4]==1:
-                        poss=poss[~(poss['country'].isin(countrieslist)|poss['alt-country'].isin(countrieslist))]
-                    else:
-                        poss=poss[poss['country'].isin(countrieslist)|poss['alt-country'].isin(countrieslist)]
+                    if len(countrieslist):
+                        if c[4]==1:
+                            poss=poss[~(poss['country'].isin(countrieslist)|poss['alt-country'].isin(countrieslist))]
+                        else:
+                            poss=poss[poss['country'].isin(countrieslist)|poss['alt-country'].isin(countrieslist)]
                 newid=int(random.choice(poss.index))
                 entr=allnames.loc[(newid)]
                 nname=poss.at[newid,'name']
@@ -1084,7 +1085,7 @@ async def chain(message:discord.Message,guildid,authorid,original_content,ref):
                     if ((sinfo[4] and res[0] not in set(citieslist[:sinfo[1]])) or (not sinfo[4] and res[0] not in set(citieslist)) or (res[0] in repeatset)):
                         # country is not blacklisted/is whitelisted
                         countrylist=set(i for i in sinfo[12].split(',') if i!='')
-                        if len(countrylist) and not ((sinfo[11]==1 and (country in countrylist or altcountry in countrylist)) or (sinfo[11]==2 and (country not in countrylist and altcountry not in countrylist))):
+                        if sinfo[11]==0 or (len(countrylist) and not ((sinfo[11]==1 and (country in countrylist or altcountry in countrylist)) or (sinfo[11]==2 and (country not in countrylist and altcountry not in countrylist)))):
                             if sinfo[8]!=message.author.id:
                                 cur.execute('''select correct,score from server_user_info where server_id = ? and user_id = ?''',data=(guildid,authorid))
                                 uinfo=cur.fetchone()
@@ -1194,10 +1195,11 @@ async def fail(message:discord.Message,reason,sinfo,citieslist,res,n,cityfound,m
         # not blacklisted/are whitelisted
         if sinfo[11]:
             countrieslist={i for i in sinfo[12].split(',') if i}
-            if sinfo[11]==1:
-                poss=poss[~(poss['country'].isin(countrieslist)|poss['alt-country'].isin(countrieslist))]
-            else:
-                poss=poss[poss['country'].isin(countrieslist)|poss['alt-country'].isin(countrieslist)]
+            if len(countrieslist):
+                if sinfo[11]==1:
+                    poss=poss[~(poss['country'].isin(countrieslist)|poss['alt-country'].isin(countrieslist))]
+                else:
+                    poss=poss[poss['country'].isin(countrieslist)|poss['alt-country'].isin(countrieslist)]
         newid=int(random.choice(poss.index))
         await message.channel.send('<@%s> RUINED IT AT **%s**!! Start again from `%s` (next letter `%s`). %s'%(authorid,f"{len(citieslist):,}",poss.at[newid,'name'],poss.at[newid,'last-letter'],reason), reference = msgref)
     else:
