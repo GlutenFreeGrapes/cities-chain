@@ -5,6 +5,8 @@ from os import environ as env
 from dotenv import load_dotenv
 from mpl_toolkits.basemap import Basemap
 import matplotlib.pyplot as plt
+import tzdata.zoneinfo
+import tzdata.zoneinfo.Europe
 
 load_dotenv()
 
@@ -485,7 +487,7 @@ owner=None
 cur.execute('select server_id from server_info')
 processes = {i:None for (i,) in cur}
 
-import requests
+import requests,pytz
 
 @client.event
 async def on_ready():
@@ -500,12 +502,15 @@ async def on_ready():
         cur.execute('''insert into server_info(server_id) VALUES (?)''',data=(i,))
     conn.commit()
     # prepare github messages
-    json_response = requests.get("https://api.github.com/repos/GlutenFreeGrapes/cities-chain/commits",params={"since":(datetime.datetime.now()-datetime.timedelta(minutes=35)).isoformat()}).json()
+    json_response = requests.get("https://api.github.com/repos/GlutenFreeGrapes/cities-chain/commits",params={"since":pytz.timezone('UTC').localize(datetime.datetime.now()-datetime.timedelta(minutes=60)).isoformat()}).json()
     commit_list = [(datetime.datetime.fromisoformat(i['commit']['author']['date']),i['commit']['message']) for i in json_response][::-1]
     embeds=[]
     for timestamp,message in commit_list:
         message_split = message.split('\n\n')
         header, body = message_split[0],'\n\n'.join(message_split[1:])
+        print(timestamp)
+        print(message)
+        print('-------')
         embed = discord.Embed(color=GREEN,title=header,description=body,timestamp=timestamp)
         embed.set_footer(text='To disable these updates, use /set updates')
         embeds.append(embed)
@@ -515,6 +520,9 @@ async def on_ready():
             channel = client.get_channel(c_id)
             if channel:
                 await channel.send(embeds=embeds)
+            # else:
+            #     channel = await client.fetch_channel(c_id)
+            #     await channel.send(embeds=embeds)
     print(f'Logged in as {client.user} (ID: {client.user.id})\n------')
 
 @client.event
