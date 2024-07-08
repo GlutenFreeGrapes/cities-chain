@@ -5,8 +5,6 @@ from os import environ as env
 from dotenv import load_dotenv
 from mpl_toolkits.basemap import Basemap
 import matplotlib.pyplot as plt
-import tzdata.zoneinfo
-import tzdata.zoneinfo.Europe
 
 load_dotenv()
 
@@ -485,7 +483,7 @@ class Confirmation(discord.ui.View):
 
 owner=None
 cur.execute('select server_id from server_info')
-processes = {i:None for (i,) in cur}
+processes = {i:None for (i,) in cur.fetchall()}
 
 import requests,pytz
 
@@ -496,13 +494,13 @@ async def on_ready():
     app_info = await client.application_info()
     owner = await client.fetch_user(app_info.team.owner_id)
     cur.execute('select server_id from server_info')
-    alr={i for (i,) in cur}
+    alr={i for (i,) in cur.fetchall()}
     empty={i.id for i in client.guilds}-alr
     for i in empty:
         cur.execute('''insert into server_info(server_id) VALUES (?)''',data=(i,))
     conn.commit()
     # prepare github messages
-    json_response = requests.get("https://api.github.com/repos/GlutenFreeGrapes/cities-chain/commits",params={"since":pytz.timezone('UTC').localize(datetime.datetime.now()-datetime.timedelta(days=1)).isoformat()}).json()
+    json_response = requests.get("https://api.github.com/repos/GlutenFreeGrapes/cities-chain/commits",params={"since":(datetime.datetime.now(tz=pytz.utc)-datetime.timedelta(minutes=17)).isoformat()}).json()
     commit_list = [(datetime.datetime.fromisoformat(i['commit']['author']['date']),i['commit']['message']) for i in json_response][::-1]
     embeds=[]
     for timestamp,message in commit_list:
@@ -516,13 +514,24 @@ async def on_ready():
         embeds.append(embed)
     if len(embeds):
         cur.execute('select server_id,channel_id from server_info where updates=1 and channel_id!=-1')
-        for s_id,c_id in cur:
+        for s_id,c_id in cur.fetchall():
             channel = client.get_channel(c_id)
-            if channel:
-                await channel.send(embeds=embeds)
-            # else:
-            #     channel = await client.fetch_channel(c_id)
-            #     await channel.send(embeds=embeds)
+            channel_unavailable=1 if c_id==-1 else 0
+            if not channel_unavailable:
+                try:
+                    if not channel:
+                        channel = await client.fetch_channel(c_id)
+                    await channel.send(embeds=embeds)
+                except:
+                    channel_unavailable=1
+            if channel_unavailable:
+                try:
+                    for channel in (await client.fetch_guild(s_id)).text_channels:
+                        if channel.permissions_for(client.user).send_messages:
+                            await channel.send(embeds=embeds)
+                            break
+                except:
+                    pass
     print(f'Logged in as {client.user} (ID: {client.user.id})\n------')
 
 @client.event
@@ -535,7 +544,7 @@ async def on_guild_join(guild:discord.Guild):
     for channel in guild.text_channels:
         if channel.permissions_for(guild.me).send_messages:
             await channel.send('Hi! use /help to get more information on how to use this bot. ')
-        break
+            break
 
 async def owner_modcheck(interaction: discord.Interaction):
     return interaction.permissions.moderate_members or interaction.user==owner
@@ -1043,7 +1052,7 @@ async def chain(message:discord.Message,guildid,authorid,original_content,ref):
                 where server_id = ?''',data=(guildid,))
         sinfo=cur.fetchone()
         cur.execute('''select city_id from chain_info where server_id = ? and round_number = ? order by count desc''',data=(guildid,sinfo[0]))
-        citieslist=[i for (i,) in cur]
+        citieslist=[i for (i,) in cur.fetchall()]
         # run is leaderboard eligible
         if len(citieslist):
             cur.execute('''select leaderboard_eligible from chain_info where server_id = ? and round_number = ? order by count desc''',data=(guildid,sinfo[0]))
@@ -1297,7 +1306,7 @@ async def user(interaction: discord.Interaction, member:Optional[discord.Member]
             favc = []
             # (THANKS MARENS FOR SQL CODE)
             cur.execute('SELECT city_id, COUNT(*) AS use_count FROM chain_info WHERE server_id = ? AND user_id = ? AND valid = 1 GROUP BY city_id ORDER BY use_count DESC',data=(interaction.guild_id,member.id))
-            for i in cur:
+            for i in cur.fetchall():
                 if len(favc)==10:
                     break
                 if i[0] in allnames.index:
@@ -1306,9 +1315,9 @@ async def user(interaction: discord.Interaction, member:Optional[discord.Member]
             favcities.add_field(name='Cities',value='\n'.join([f"{n+1}. "+i for n,i in enumerate(favc)]))
             
             cur.execute('SELECT country_code, COUNT(*) AS use_count FROM chain_info WHERE server_id = ? AND user_id = ? AND valid = 1 GROUP BY country_code ORDER BY use_count DESC',data=(interaction.guild_id,member.id))
-            countryuses = {i[0]:i[1] for i in cur}
+            countryuses = {i[0]:i[1] for i in cur.fetchall()}
             cur.execute('SELECT alt_country, COUNT(*) AS use_count FROM chain_info WHERE server_id = ? AND user_id = ? AND valid = 1 AND alt_country IS NOT NULL GROUP BY alt_country ORDER BY use_count DESC',data=(interaction.guild_id,member.id))
-            for i in cur:
+            for i in cur.fetchall():
                 if i[0] in countryuses:
                     countryuses[i[0]]+=i[1]
                 else:
@@ -1338,14 +1347,14 @@ async def cities(interaction: discord.Interaction,order:Literal['sequential','al
     cur.execute('''select round_number,repeats,min_repeat,chain_end from server_info where server_id = ?''',data=(guildid,))
     s=cur.fetchone()
     cur.execute('''select city_id from repeat_info where server_id = ?''', data=(interaction.guild_id,))
-    repeated={i[0] for i in cur}
+    repeated={i[0] for i in cur.fetchall()}
     cur.execute('''select name,admin1,admin2,country_code,alt_country,city_id,valid from chain_info where server_id = ? and round_number = ? order by count desc''',data=(guildid,s[0]))
     if cur.rowcount>0:
         cutoff=[]
         
         cityids = []
         
-        for i in cur:
+        for i in cur.fetchall():
             if i[6]:
                 cityids.append(i[5])
             cutoff.append((city_string(i[0],i[1],i[2],i[3],i[4])+(f"{':no_entry:' if (i[5]!=-1 and allnames.loc[i[5],'deleted']) else ''}{':repeat:' if i[5] in repeated else ''}"),i[6]))
@@ -1390,7 +1399,7 @@ async def roundinfo(interaction: discord.Interaction,round_num:app_commands.Rang
 
         cityids=[]
 
-        for i in cur:
+        for i in cur.fetchall():
             if i[6]:
                 cityids.append(i[5])
             cutoff.append(('%s. '%i[7]if i[6] else ':x: ') + city_string(i[0],i[1],i[2],i[3],i[4]))
@@ -1424,7 +1433,7 @@ async def slb(interaction: discord.Interaction,se:Optional[Literal['yes','no']]=
         embed.set_author(name=interaction.guild.name)
     cur.execute('''select user_id,score from server_user_info where server_id = ? order by score desc''',data=(interaction.guild_id,))
     if cur.rowcount>0:
-        fmt=[f'{n+1}. <@{i[0]}>{":no_pedestrians:" if is_blocked(i[0],interaction.guild_id) else ""} - **{f"{i[1]:,}"}**' for n,i in enumerate(cur)]
+        fmt=[f'{n+1}. <@{i[0]}>{":no_pedestrians:" if is_blocked(i[0],interaction.guild_id) else ""} - **{f"{i[1]:,}"}**' for n,i in enumerate(cur.fetchall())]
         embed.description='\n'.join(fmt[:25])
         await interaction.followup.send(embed=embed,view=Paginator(1,fmt,embed.title,math.ceil(len(fmt)/25),interaction.user.id,embed),ephemeral=eph)    
     else:
@@ -1445,7 +1454,7 @@ async def lb(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='
     if cur.rowcount>0:
         top=[]
         counter=0
-        for i in cur:
+        for i in cur.fetchall():
             server_from_id = client.get_guild(i[0])
             if server_from_id:
                 counter+=1
@@ -1468,7 +1477,7 @@ async def ulb(interaction: discord.Interaction,se:Optional[Literal['yes','no']]=
     embed=discord.Embed(title=f"GLOBAL USER LEADERBOARD",color=GREEN)
     cur.execute('''select user_id,score,blocked from global_user_info order by score desc''',data=(interaction.guild_id,))
     if cur.rowcount>0:
-        fmt = [f'{n+1}. <@{i[0]}>{":no_pedestrians:" if i[2] else ""} - **{f"{i[1]:,}"}**' for n,i in enumerate(cur)]
+        fmt = [f'{n+1}. <@{i[0]}>{":no_pedestrians:" if i[2] else ""} - **{f"{i[1]:,}"}**' for n,i in enumerate(cur.fetchall())]
         embed.description='\n'.join(fmt[:25])
         await interaction.followup.send(embed=embed,view=Paginator(1,fmt,embed.title,math.ceil(len(fmt)/25),interaction.user.id,embed),ephemeral=eph)
     else:
@@ -1488,7 +1497,7 @@ async def react(interaction: discord.Interaction,se:Optional[Literal['yes','no']
     cur.execute('''select city_id,reaction from react_info where server_id = ?''', data=(interaction.guild_id,))
     if cur.rowcount>0:
         fmt=[]
-        for (i,r) in cur:
+        for (i,r) in cur.fetchall():
             j=allnames.loc[(i)]
             fmt.append(f"- {city_string(j['name'],admin1name(j['country'],j['admin1']),admin2name(j['country'],j['admin1'],j['admin2']),j['country'],j['alt-country'])} - {r}")
         fmt=sorted(fmt)
@@ -1513,7 +1522,7 @@ async def repeat(interaction: discord.Interaction,se:Optional[Literal['yes','no'
     cur.execute('''select city_id from repeat_info where server_id = ?''', data=(interaction.guild_id,))
     if cur.rowcount>0:
         fmt=[]
-        for (i,) in cur:
+        for (i,) in cur.fetchall():
             j=allnames.loc[(i)]
             fmt.append(f"- {city_string(j['name'],admin1name(j['country'],j['admin1']),admin2name(j['country'],j['admin1'],j['admin2']),j['country'],j['alt-country'])}")
         fmt=sorted(fmt)
@@ -1535,9 +1544,9 @@ async def popular(interaction: discord.Interaction,se:Optional[Literal['yes','no
         return
     await interaction.response.defer(ephemeral=eph)
     cur.execute('''select distinct city_id,country_code,alt_country from count_info where server_id = ? order by count desc''',data=(interaction.guild_id,))
-    cities=[i for i in cur]
+    cities=[i for i in cur.fetchall()]
     cur.execute('''select city_id from repeat_info where server_id = ?''', data=(interaction.guild_id,))
-    repeated={i[0] for i in cur}
+    repeated={i[0] for i in cur.fetchall()}
     embed=discord.Embed(title="Popular Cities/Countries",color=GREEN)
     if interaction.guild.icon:
         embed.set_author(name=interaction.guild.name, icon_url=interaction.guild.icon.url)
@@ -1554,9 +1563,9 @@ async def popular(interaction: discord.Interaction,se:Optional[Literal['yes','no
         embed.add_field(name='Cities',value='\n'.join(['%s. %s - **%s**' %(n+1,i[1],f"{i[0]:,}") for (n,i) in enumerate(fmt)]))
         fmt=[]
         cur.execute('''select distinct country_code from count_info where server_id = ?''',data=(interaction.guild_id,))
-        countrylist = {i[0] for i in cur}
+        countrylist = {i[0] for i in cur.fetchall()}
         cur.execute('''select distinct alt_country from count_info where server_id = ? and alt_country is not null''',data=(interaction.guild_id,))
-        countrylist.update({i[0] for i in cur})
+        countrylist.update({i[0] for i in cur.fetchall()})
         countries={}
         for i in countrylist:
             cur.execute('''select sum(count) from count_info where server_id = ? and (country_code = ? or alt_country = ?)''',data= (interaction.guild_id, i,i))
@@ -1639,9 +1648,9 @@ async def blocked(interaction:discord.Interaction,se:Optional[Literal['yes','no'
         return
     await interaction.response.defer(ephemeral=eph)
     cur.execute('select user_id,block_reason from server_user_info where blocked=? and server_id=?',data=(True,interaction.guild_id))
-    blocks={i[0]:i[1] for i in cur}
+    blocks={i[0]:i[1] for i in cur.fetchall()}
     cur.execute('select global_user_info.user_id,global_user_info.block_reason from global_user_info inner join (select server_user_info.user_id from server_user_info where server_id=?) as b on global_user_info.user_id=b.user_id where blocked=? ',(interaction.guild_id,True,))
-    for i in cur:
+    for i in cur.fetchall():
         blocks[i[0]]=i[1]
     embed=discord.Embed(title='Blocked Users',color=GREEN)
     cur.execute('''select city_id from repeat_info where server_id = ?''', data=(interaction.guild_id,))
@@ -1773,7 +1782,7 @@ async def countryinfo(interaction: discord.Interaction, country:str,se:Optional[
             cur.execute('''select name,admin2,admin1,country_code,alt_country,count,city_id from count_info where server_id=? and (country_code=? or alt_country=?) order by count desc limit 10''',data=(interaction.guild_id,res['country'],res['country']))
             if cur.rowcount>0:
                 citylist=[]
-                for n,i in enumerate(cur):
+                for n,i in enumerate(cur.fetchall()):
                     deleted = allnames.loc[i[6],'deleted']
                     citylist.append(f'''{n+1}. {city_string(i[0],i[2],i[1],i[3],i[4])}{':no_entry:' if deleted else ''} - **{i[5]:,}**''')
                 topcities.description='\n'.join(citylist)
@@ -1797,7 +1806,7 @@ async def deletestats(interaction: discord.Interaction):
     if is_blocked(interaction.user.id,interaction.guild_id):
         await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
         return
-    embed=discord.Embed(color=RED,title='Are you sure?',description='This action is irreversible.')
+    embed=discord.Embed(color=RED,title='Are you sure?',description='This action is irreversible, and all people who have been server-blocked will be unblocked.')
     view=Confirmation(interaction.guild_id,interaction.user.id)
     await interaction.response.send_message(embed=embed,view=view)
     view.message=await interaction.original_response()
@@ -1903,7 +1912,7 @@ async def help(interaction: discord.Interaction,se:Optional[Literal['yes','no']]
 
 
     embed.description="Choose a topic."
-    await interaction.followup.send(embed=embed,view=Help(['''1. Find a channel that you want to use the bot in, and use `/set channel` to designate it as such.\n2. Using the `/set` commands listed in the Commands section of this help page, change around settings to your liking.\n3. Happy playing!''','''1. The next letter of each city must start with the same letter of the previous city. \n2. You may not go twice in a row. \n3. Cities must meet the minimum population requirement. This number may be checked with `/stats server`. \n4. Unless specified otherwise, cities cannot be repeated within a certain number of cities as each other. This number may be checked with `/stats server`. \n5. Cities must exist on Geonames and must have a minimum population of 1. \n6. Cities must have a prefix at the beginning of the message they are sent in for the bot to count them. This may be checked with `/stats server`, with `None` meaning that all messages will count. \n7. Cities with alternate names will be counted as the same city, but may start and end with different letters. (e.g., despite being the same city`The Hague` starts with `t` and ends with `e`, and `Den Haag` starts with `d` and ends with `g`)\n8. If need be, users may be banned from using the bot. Reasons for banning include, but are not limited to:\n- Placing deliberately incorrect cities\n- Falsifying cities on Geonames\n- Using slurs with this bot\n- Creating alternate accounts to sidestep bans''',None,''':white_check_mark: - valid addition to chain\n:ballot_box_with_check: - valid addition to chain, breaks server record\n:x: - invalid addition to chain\n:regional_indicator_a: - letter the city ends with\n:no_pedestrians: - user is blocked from using this bot\n:no_entry: - city used to but no longer exists in the database\n\nIn addition, you can make the bot react to certain cities of your choosing using the `/add react` and `/remove react` commands.''','''- When many people are playing, play cities that start and end with the same letter to avoid breaking the chain. \n- If you want to specify a different city than the one the bot interprets, you can use commas to specify provinces, states, or countries: \nExamples: \n:white_check_mark: Atlanta\n:white_check_mark: Atlanta, United States\n:white_check_mark: Atlanta, Georgia\n:white_check_mark: Atlanta, Fulton County\n:white_check_mark: Atlanta, Georgia, United States\n:white_check_mark: Atlanta, Fulton County, United States\n:white_check_mark: Atlanta, Fulton County, Georgia\n:white_check_mark: Atlanta, Fulton County, Georgia, United States\nYou can specify a maximum of 2 administrative divisions, not including the country. \n- Googling cities is allowed. \n- Remember, at the end of the day, it is just a game, and the game is supposed to be lighthearted and fun.''','''**Q: Some cities aren't recognized by the bot. Why?**\nA: The bot takes its data from Geonames, and only cities with a listed population (that is, greater than 0 people listed) are considered by the bot.\n\n**Q: I added some cities to Geonames, but they still aren't recognized by the bot. Why?**\nA: The Geonames dump updates the cities list daily, but the bot's record of cities is not updated on a regular basis, so it might take until I decide to update it again for those cities to show up.\n\n**Q: Why does the bot go down sometimes for a few seconds before coming back up?**\nA: Usually, this is because I have just updated the bot. The way this is set up, the bot will check every 15 minutes whethere there is a new update, and if so, will restart. Just to be safe, when this happens, use `/stats server` to check what the next letter is.\n\n**Q: Why are some of the romanizations for cities incorrect?**\nA: That's a thing to do with the Python library I use to romanize the characters (`unidecode`) - characters are romanized one-by-one instead of with context. For example, `unidecode` will turn `广州` into `Yan Zhou`. I still haven't found a good way to match every foreign name to a perfect translation. \n\n**Q: How do I suggest feedback to the bot?**\nA: There is a support server and support channels listed in the `/about` command for this bot.'''],command_messages,interaction.user.id),ephemeral=(se=='no'))
+    await interaction.followup.send(embed=embed,view=Help(['''1. Find a channel that you want to use the bot in, and use `/set channel` to designate it as such.\n2. Using the `/set` commands listed in the Commands section of this help page, change around settings to your liking.\n3. Happy playing!''','''1. The next letter of each city must start with the same letter of the previous city. \n2. You may not go twice in a row. \n3. Cities must meet the minimum population requirement. This number may be checked with `/stats server`. \n4. Unless specified otherwise, cities cannot be repeated within a certain number of cities as each other. This number may be checked with `/stats server`. \n5. Cities must exist on Geonames and must have a minimum population of 1. \n6. Cities must have a prefix at the beginning of the message they are sent in for the bot to count them. This may be checked with `/stats server`, with `None` meaning that all messages will count. \n7. Cities with alternate names will be counted as the same city, but may start and end with different letters. (e.g., despite being the same city`The Hague` starts with `t` and ends with `e`, and `Den Haag` starts with `d` and ends with `g`)\n8. If need be, users may be banned from using the bot. Reasons for banning include, but are not limited to:\n\t- Placing deliberately incorrect cities\n- Falsifying cities on Geonames\n- Using slurs with this bot\n- Creating alternate accounts to sidestep bans''',None,''':white_check_mark: - valid addition to chain\n:ballot_box_with_check: - valid addition to chain, breaks server record\n:x: - invalid addition to chain\n:regional_indicator_a: - letter the city ends with\n:no_pedestrians: - user is blocked from using this bot\n:no_entry: - city used to but no longer exists in the database\n\nIn addition, you can make the bot react to certain cities of your choosing using the `/add react` and `/remove react` commands.''','''- When many people are playing, play cities that start and end with the same letter to avoid breaking the chain. \n- If you want to specify a different city than the one the bot interprets, you can use commas to specify provinces, states, or countries: \nExamples: \n:white_check_mark: Atlanta\n:white_check_mark: Atlanta, United States\n:white_check_mark: Atlanta, Georgia\n:white_check_mark: Atlanta, Fulton County\n:white_check_mark: Atlanta, Georgia, United States\n:white_check_mark: Atlanta, Fulton County, United States\n:white_check_mark: Atlanta, Fulton County, Georgia\n:white_check_mark: Atlanta, Fulton County, Georgia, United States\nYou can specify a maximum of 2 administrative divisions, not including the country. \n- Googling cities is allowed. \n- Remember, at the end of the day, it is just a game, and the game is supposed to be lighthearted and fun.''','''**Q: Some cities aren't recognized by the bot. Why?**\nA: The bot takes its data from Geonames, and only cities with a listed population (that is, greater than 0 people listed) are considered by the bot.\n\n**Q: I added some cities to Geonames, but they still aren't recognized by the bot. Why?**\nA: The Geonames dump updates the cities list daily, but the bot's record of cities is not updated on a regular basis, so it might take until I decide to update it again for those cities to show up.\n\n**Q: Why does the bot go down sometimes for a few seconds before coming back up?**\nA: Usually, this is because I have just updated the bot. The way this is set up, the bot will check every 15 minutes whethere there is a new update, and if so, will restart. Just to be safe, when this happens, use `/stats server` to check what the next letter is.\n\n**Q: Why are some of the romanizations for cities incorrect?**\nA: That's a thing to do with the Python library I use to romanize the characters (`unidecode`) - characters are romanized one-by-one instead of with context. For example, `unidecode` will turn `广州` into `Yan Zhou`. I still haven't found a good way to match every foreign name to a perfect translation. \n\n**Q: How do I suggest feedback to the bot?**\nA: There is a support server and support channels listed in the `/about` command for this bot.'''],command_messages,interaction.user.id),ephemeral=(se=='no'))
 
 @tree.command(description="Information about the bot.")
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
