@@ -1238,8 +1238,7 @@ stats = app_commands.Group(name='stats',description="description", guild_only=Tr
 @stats.command(description="Displays server statistics.")
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
 async def server(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
-    eph=(se=='no')
-    await interaction.response.defer(ephemeral=eph)
+    await interaction.response.defer(ephemeral=(se=='no'))
     if is_blocked(interaction.user.id,interaction.guild_id):
         await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ")
         return
@@ -1253,27 +1252,26 @@ async def server(interaction: discord.Interaction,se:Optional[Literal['yes','no'
     sinfo=cur.fetchone()
     cur.execute('select * from chain_info where server_id = ? and round_number = ?',data=(guildid,sinfo[0]))
     embed.description='Round: **%s**\nCurrent letter: **%s**\nCurrent length: **%s**\nLast user: **%s**\nLongest chain: **%s** %s\nMinimum population: **%s**\nChoose city: **%s**\nRepeats: **%s**\nPrefix: %s\nList mode: **%s**\nUpdates: **%s**'%(f'{sinfo[0]:,}',sinfo[5],f'{cur.rowcount:,}','<@'+str(sinfo[6])+'>' if sinfo[6] else '-',f'{sinfo[7]:,}','<t:'+str(sinfo[8])+':R>' if sinfo[8] else '',f'{sinfo[2]:,}','enabled' if sinfo[3] else 'disabled', 'only after %s cities'%f'{sinfo[1]:,}' if sinfo[4] else 'disallowed','**'+sinfo[9]+'**' if sinfo[9]!='' else None,['disabled','blacklist','whitelist'][sinfo[10]],'enabled' if sinfo[11] else 'disabled')
-    await interaction.followup.send(embed=embed,ephemeral=eph)
+    await interaction.followup.send(embed=embed,ephemeral=(se=='no'))
 
 @stats.command(description="Displays user statistics.")
 @app_commands.rename(se='show-everyone')
 @app_commands.describe(member="The user to get statistics for.",se='Yes to show everyone stats, no otherwise')
 async def user(interaction: discord.Interaction, member:Optional[discord.User|discord.Member]=None,se:Optional[Literal['yes','no']]='no'):
-    eph=(se=='no')
-    await interaction.response.defer(ephemeral=eph)
+    await interaction.response.defer(ephemeral=(se=='no'))
     if not member:
         member=interaction.user
     cur.execute('select correct,incorrect,score,last_active,blocked from server_user_info where user_id = ? and server_id = ?',data=(member.id,interaction.guild_id))
     server_uinfo=cur.fetchone()
     if not (server_uinfo or isinstance(member,discord.Member)):
-        await interaction.followup.send(embed=discord.Embed(color=RED,description="You do not have permission to acces this user's stats. "),ephemeral=eph)
+        await interaction.followup.send(embed=discord.Embed(color=RED,description="You do not have permission to acces this user's stats. "),ephemeral=(se=='no'))
         return
     cur.execute('select correct,incorrect,score,last_active,blocked from global_user_info where user_id = ?',data=(member.id,))
     if cur.rowcount==0:
         if member.id==interaction.user.id:
-            await interaction.followup.send(embed=discord.Embed(color=RED,description='You must join the chain to use that command. '),ephemeral=eph)
+            await interaction.followup.send(embed=discord.Embed(color=RED,description='You must join the chain to use that command. '),ephemeral=(se=='no'))
         else:
-            await interaction.followup.send(embed=discord.Embed(color=RED,description=f'<@{member.id}> has no Cities Chain stats. '),ephemeral=eph)
+            await interaction.followup.send(embed=discord.Embed(color=RED,description=f'<@{member.id}> has no Cities Chain stats. '),ephemeral=(se=='no'))
     else:
         embedslist=[]
         global_uinfo=cur.fetchone()
@@ -1326,19 +1324,18 @@ async def user(interaction: discord.Interaction, member:Optional[discord.User|di
             else:
                 favcities.set_author(name=member.name)
             embedslist.append(favcities)
-        await interaction.followup.send(embeds=embedslist,ephemeral=eph)
+        await interaction.followup.send(embeds=embedslist,ephemeral=(se=='no'))
 
 @stats.command(description="Displays list of cities.")
 @app_commands.rename(se='show-everyone',showmap='map')
 @app_commands.describe(order='The order in which the cities are presented, sequential or alphabetical',cities='Whether to show all cities or only the ones that cannot be repeated',showmap='Whether to show a map of cities',se='Yes to show everyone stats, no otherwise')
 async def cities(interaction: discord.Interaction,order:Literal['sequential','alphabetical'],cities:Literal['all','non-repeatable'],showmap:Optional[Literal['yes','no']]='no',se:Optional[Literal['yes','no']]='no'):
-    eph=(se=='no')
     # if is_blocked(interaction.user.id,interaction.guild_id):
-    #     await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ",ephemeral=eph)
+    #     await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ",ephemeral=(se=='no'))
     #     return
     cit=cities.capitalize()+" Cities"
     title=f"{cit} - {order.capitalize()}"
-    await interaction.response.defer(ephemeral=eph)
+    await interaction.response.defer(ephemeral=(se=='no'))
     guildid=interaction.guild_id
     cur.execute('''select round_number,repeats,min_repeat,chain_end from server_info where server_id = ?''',data=(guildid,))
     s=cur.fetchone()
@@ -1367,20 +1364,19 @@ async def cities(interaction: discord.Interaction,order:Literal['sequential','al
         else:
             embed.description='\n'.join(alph[:25])
             view=Paginator(1,alph,title,math.ceil(len(alph)/25),interaction.user.id,embed)
-        await interaction.followup.send(embed=embed,view=view,ephemeral=eph,files=[generate_map(cityids)] if showmap=='yes' else [])
+        await interaction.followup.send(embed=embed,view=view,ephemeral=(se=='no'),files=[generate_map(cityids)] if showmap=='yes' else [])
         view.message=await interaction.original_response()
     else:
         embed=discord.Embed(title=title, color=GREEN,description='```null```')
-        await interaction.followup.send(embed=embed,ephemeral=eph)
+        await interaction.followup.send(embed=embed,ephemeral=(se=='no'))
 
 @stats.command(name='round',description="Displays all cities said for one round.")
 @app_commands.rename(se='show-everyone',showmap='map')
 @app_commands.describe(round_num='Round to retrieve information from (0 = current round, negative numbers for older rounds)',showmap='Whether to show a map of cities',se='Yes to show everyone stats, no otherwise')
 async def roundinfo(interaction: discord.Interaction,round_num:int,showmap:Optional[Literal['yes','no']]='no',se:Optional[Literal['yes','no']]='no'):
-    eph=(se=='no')
-    await interaction.response.defer(ephemeral=eph)
+    await interaction.response.defer(ephemeral=(se=='no'))
     if is_blocked(interaction.user.id,interaction.guild_id):
-        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ",ephemeral=eph)
+        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ",ephemeral=(se=='no'))
         return
     guildid=interaction.guild_id
     cur.execute('''select round_number from server_info where server_id = ?''',data=(guildid,))
@@ -1412,22 +1408,21 @@ async def roundinfo(interaction: discord.Interaction,round_num:int,showmap:Optio
         else:
             embed.set_author(name=interaction.guild.name)
         view=Paginator(1,cutoff,"Round %s"%(f'{round_num:,}'),math.ceil(len(cutoff)/25),interaction.user.id,embed)
-        await interaction.followup.send(embed=embed,view=view,ephemeral=eph,files=[generate_map(cityids)] if showmap=='yes' else [])
+        await interaction.followup.send(embed=embed,view=view,ephemeral=(se=='no'),files=[generate_map(cityids)] if showmap=='yes' else [])
         view.message=await interaction.original_response()
     else:
         if s[0]:
-            await interaction.followup.send("Round_num must be a number between **-%s** and **%s**."%(s[0]-1,s[0]),ephemeral=eph)
+            await interaction.followup.send("Round_num must be a number between **-%s** and **%s**."%(s[0]-1,s[0]),ephemeral=(se=='no'))
         else:
-            await interaction.followup.send("No rounds played yet.",ephemeral=eph)
+            await interaction.followup.send("No rounds played yet.",ephemeral=(se=='no'))
 
 @stats.command(description="Displays serverwide user leaderboard.")
 @app_commands.rename(se='show-everyone')
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
 async def slb(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
-    eph=(se=='no')
-    await interaction.response.defer(ephemeral=eph)
+    await interaction.response.defer(ephemeral=(se=='no'))
     if is_blocked(interaction.user.id,interaction.guild_id):
-        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ",ephemeral=eph)
+        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ",ephemeral=(se=='no'))
         return
     embed=discord.Embed(title=f"```{interaction.guild.name}``` LEADERBOARD",color=GREEN)
     if interaction.guild.icon:
@@ -1438,19 +1433,18 @@ async def slb(interaction: discord.Interaction,se:Optional[Literal['yes','no']]=
     if cur.rowcount>0:
         fmt=[f'{n+1}. <@{i[0]}>{":no_pedestrians:" if is_blocked(i[0],interaction.guild_id) else ""} - **{f"{i[1]:,}"}**' for n,i in enumerate(cur.fetchall())]
         embed.description='\n'.join(fmt[:25])
-        await interaction.followup.send(embed=embed,view=Paginator(1,fmt,embed.title,math.ceil(len(fmt)/25),interaction.user.id,embed),ephemeral=eph)    
+        await interaction.followup.send(embed=embed,view=Paginator(1,fmt,embed.title,math.ceil(len(fmt)/25),interaction.user.id,embed),ephemeral=(se=='no'))    
     else:
         embed.description='```null```'
-        await interaction.followup.send(embed=embed,ephemeral=eph)    
+        await interaction.followup.send(embed=embed,ephemeral=(se=='no'))    
 
 @stats.command(description="Displays global leaderboard of maximum scores for servers.")
 @app_commands.rename(se='show-everyone')
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
 async def lb(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
-    eph=(se=='no')
-    await interaction.response.defer(ephemeral=eph)
+    await interaction.response.defer(ephemeral=(se=='no'))
     if is_blocked(interaction.user.id,interaction.guild_id):
-        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ",ephemeral=eph)
+        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ",ephemeral=(se=='no'))
         return
     embed=discord.Embed(title=f"SERVER HIGH SCORES",color=GREEN)
     cur.execute('SELECT server_id,MAX(count) AS mc FROM chain_info WHERE valid=1 AND leaderboard_eligible=1 GROUP BY `server_id` ORDER BY mc DESC')
@@ -1463,39 +1457,37 @@ async def lb(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='
                 counter+=1
                 top.append(f'{counter}. {server_from_id.name} - **{f"{i[1]:,}"}**') 
         embed.description='\n'.join(top[:25])
-        await interaction.followup.send(embed=embed,view=Paginator(1,top,embed.title,math.ceil(len(top)/25),interaction.user.id,embed,"| The stats on this leaderboard indicate the maximum number of cities before a repeat."),ephemeral=eph)
+        await interaction.followup.send(embed=embed,view=Paginator(1,top,embed.title,math.ceil(len(top)/25),interaction.user.id,embed,"| The stats on this leaderboard indicate the maximum number of cities before a repeat."),ephemeral=(se=='no'))
     else:
         embed.description='```null```'
         embed.set_footer(text="The stats on this leaderboard indicate the maximum number of cities before a repeat.")
-        await interaction.followup.send(embed=embed,ephemeral=eph)
+        await interaction.followup.send(embed=embed,ephemeral=(se=='no'))
 
 @stats.command(description="Displays global user leaderboard.")
 @app_commands.rename(se='show-everyone')
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
 async def ulb(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
-    eph=(se=='no')
-    await interaction.response.defer(ephemeral=eph)
+    await interaction.response.defer(ephemeral=(se=='no'))
     if is_blocked(interaction.user.id,interaction.guild_id):
-        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ",ephemeral=eph)
+        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ",ephemeral=(se=='no'))
         return
     embed=discord.Embed(title=f"GLOBAL USER LEADERBOARD",color=GREEN)
     cur.execute('''select user_id,score,blocked from global_user_info order by score desc''',data=(interaction.guild_id,))
     if cur.rowcount>0:
         fmt = [f'{n+1}. <@{i[0]}>{":no_pedestrians:" if i[2] else ""} - **{f"{i[1]:,}"}**' for n,i in enumerate(cur.fetchall())]
         embed.description='\n'.join(fmt[:25])
-        await interaction.followup.send(embed=embed,view=Paginator(1,fmt,embed.title,math.ceil(len(fmt)/25),interaction.user.id,embed),ephemeral=eph)
+        await interaction.followup.send(embed=embed,view=Paginator(1,fmt,embed.title,math.ceil(len(fmt)/25),interaction.user.id,embed),ephemeral=(se=='no'))
     else:
         embed.description='```null```'
-        await interaction.followup.send(embed=embed,ephemeral=eph)
+        await interaction.followup.send(embed=embed,ephemeral=(se=='no'))
 
 @stats.command(name="first-cities",description="Displays users who have been first to place the most cities.")
 @app_commands.rename(se='show-everyone')
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
 async def firstcity(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
-    eph=(se=='no')
-    await interaction.response.defer(ephemeral=eph)
+    await interaction.response.defer(ephemeral=(se=='no'))
     if is_blocked(interaction.user.id,interaction.guild_id):
-        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ",ephemeral=eph)
+        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ",ephemeral=(se=='no'))
         return
     embed=discord.Embed(title=f"```{interaction.guild.name}``` LEADERBOARD - FIRST CITY-PLACERS",color=GREEN)
     if interaction.guild.icon:
@@ -1509,19 +1501,18 @@ async def firstcity(interaction: discord.Interaction,se:Optional[Literal['yes','
     if cur.rowcount>0:
         fmt=[f'{n+1}. <@{i[0]}>{":no_pedestrians:" if is_blocked(i[0],interaction.guild_id) else ""} - **{f"{i[1]:,}"}**' for n,i in enumerate(cur.fetchall())]
         embed.description='\n'.join(fmt[:25])
-        await interaction.followup.send(embed=embed,view=Paginator(1,fmt,embed.title,math.ceil(len(fmt)/25),interaction.user.id,embed),ephemeral=eph)    
+        await interaction.followup.send(embed=embed,view=Paginator(1,fmt,embed.title,math.ceil(len(fmt)/25),interaction.user.id,embed),ephemeral=(se=='no'))    
     else:
         embed.description='```null```'
-        await interaction.followup.send(embed=embed,ephemeral=eph)    
+        await interaction.followup.send(embed=embed,ephemeral=(se=='no'))    
 
 @stats.command(description="Displays all cities and their reactions.")
 @app_commands.rename(se='show-everyone')
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
 async def react(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
-    eph=(se=='no')
-    await interaction.response.defer(ephemeral=eph)
+    await interaction.response.defer(ephemeral=(se=='no'))
     if is_blocked(interaction.user.id,interaction.guild_id):
-        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ",ephemeral=eph)
+        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ",ephemeral=(se=='no'))
         return
     embed=discord.Embed(title='Cities With Reactions',color=GREEN)
     cur.execute('''select city_id,reaction from react_info where server_id = ?''', data=(interaction.guild_id,))
@@ -1533,20 +1524,19 @@ async def react(interaction: discord.Interaction,se:Optional[Literal['yes','no']
         fmt=sorted(fmt)
         embed.description='\n'.join(fmt[:25])
         view=Paginator(1,fmt,"Cities With Reactions",math.ceil(len(fmt)/25),interaction.user.id,embed)
-        await interaction.followup.send(embed=embed,view=view,ephemeral=eph)
+        await interaction.followup.send(embed=embed,view=view,ephemeral=(se=='no'))
         view.message=await interaction.original_response()
     else:
         embed.description="```null```"
-        await interaction.followup.send(embed=embed,ephemeral=eph)
+        await interaction.followup.send(embed=embed,ephemeral=(se=='no'))
 
 @stats.command(description="Displays all cities that can be repeated.")
 @app_commands.rename(se='show-everyone')
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
 async def repeat(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
-    eph=(se=='no')
-    await interaction.response.defer(ephemeral=eph)
+    await interaction.response.defer(ephemeral=(se=='no'))
     if is_blocked(interaction.user.id,interaction.guild_id):
-        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ",ephemeral=eph)
+        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ",ephemeral=(se=='no'))
         return
     embed=discord.Embed(title='Repeats Rule Exceptions',color=GREEN)
     cur.execute('''select city_id from repeat_info where server_id = ?''', data=(interaction.guild_id,))
@@ -1558,20 +1548,19 @@ async def repeat(interaction: discord.Interaction,se:Optional[Literal['yes','no'
         fmt=sorted(fmt)
         embed.description='\n'.join(fmt[:25])
         view=Paginator(1,fmt,"Repeats Rule Exceptions",math.ceil(len(fmt)/25),interaction.user.id,embed)
-        await interaction.followup.send(embed=embed,view=view,ephemeral=eph)
+        await interaction.followup.send(embed=embed,view=view,ephemeral=(se=='no'))
         view.message=await interaction.original_response()
     else:
         embed.description="```null```"
-        await interaction.followup.send(embed=embed,ephemeral=eph)
+        await interaction.followup.send(embed=embed,ephemeral=(se=='no'))
 
 @stats.command(name='popular-cities',description="Displays most popular cities and countries added to chain.")
 @app_commands.rename(se='show-everyone')
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
 async def popular(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
-    eph=(se=='no')
-    await interaction.response.defer(ephemeral=eph)
+    await interaction.response.defer(ephemeral=(se=='no'))
     if is_blocked(interaction.user.id,interaction.guild_id):
-        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ",ephemeral=eph)
+        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ",ephemeral=(se=='no'))
         return
     cur.execute('''select distinct city_id,country_code,alt_country from count_info where server_id = ? order by count desc''',data=(interaction.guild_id,))
     cities=[i for i in cur.fetchall()]
@@ -1608,16 +1597,15 @@ async def popular(interaction: discord.Interaction,se:Optional[Literal['yes','no
     else:
         embed.add_field(name='Cities',value='```null```')
         embed.add_field(name='Countries',value='```null```')
-    await interaction.followup.send(embed=embed,ephemeral=eph)
+    await interaction.followup.send(embed=embed,ephemeral=(se=='no'))
 
 @stats.command(name='best-rounds',description="Displays longest chains in server.")
 @app_commands.rename(se='show-everyone')
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
 async def bestrds(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
-    eph=(se=='no')
-    await interaction.response.defer(ephemeral=eph)
+    await interaction.response.defer(ephemeral=(se=='no'))
     if is_blocked(interaction.user.id,interaction.guild_id):
-        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ",ephemeral=eph)
+        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ",ephemeral=(se=='no'))
         return
     cur.execute('''select round_number,chain_end from server_info where server_id = ?''',data=(interaction.guild_id,))
     bb=cur.fetchone()
@@ -1666,16 +1654,15 @@ async def bestrds(interaction: discord.Interaction,se:Optional[Literal['yes','no
                 embed.add_field(name='None',value='Length: %s\nRound: %s\nParticipants: %s\nStarted: %s\nEnded: %s'%(f'{i[0]:,}',f'{i[1]:,}',f'{i[2]:,}',i[4][0],i[4][1]))
     else:
         embed.add_field(name='',value='```null```')
-    await interaction.followup.send(embed=embed,ephemeral=eph)
+    await interaction.followup.send(embed=embed,ephemeral=(se=='no'))
 
 @stats.command(name='blocked-users',description="Point and laugh.")
 @app_commands.rename(se='show-everyone')
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
 async def blocked(interaction:discord.Interaction,se:Optional[Literal['yes','no']]='no'):
-    eph=(se=='no')
-    await interaction.response.defer(ephemeral=eph)
+    await interaction.response.defer(ephemeral=(se=='no'))
     if is_blocked(interaction.user.id,interaction.guild_id):
-        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ",ephemeral=eph)
+        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ",ephemeral=(se=='no'))
         return
     cur.execute('select user_id,block_reason from server_user_info where blocked=? and server_id=?',data=(True,interaction.guild_id))
     blocks={i[0]:i[1] for i in cur.fetchall()}
@@ -1688,20 +1675,19 @@ async def blocked(interaction:discord.Interaction,se:Optional[Literal['yes','no'
         fmt=[f"- <@{i}> - {blocks[i]}" for i in blocks]
         embed.description='\n'.join(fmt[:25])
         view=Paginator(1,fmt,"Blocked Users",math.ceil(len(fmt)/25),interaction.user.id,embed)
-        await interaction.followup.send(embed=embed,view=view,ephemeral=eph)
+        await interaction.followup.send(embed=embed,view=view,ephemeral=(se=='no'))
         view.message=await interaction.original_response()
     else:
         embed.description="```null```"
-        await interaction.followup.send(embed=embed,ephemeral=eph)
+        await interaction.followup.send(embed=embed,ephemeral=(se=='no'))
 
 @stats.command(name='country-list',description="Shows blacklisted/whitelisted countries.")
 @app_commands.rename(se='show-everyone')
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
 async def countrylist(interaction:discord.Interaction,se:Optional[Literal['yes','no']]='no'):
-    eph=(se=='no')
-    await interaction.response.defer(ephemeral=eph)
+    await interaction.response.defer(ephemeral=(se=='no'))
     if is_blocked(interaction.user.id,interaction.guild_id):
-        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ",ephemeral=eph)
+        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ",ephemeral=(se=='no'))
         return
     cur.execute('select list,list_mode from server_info where server_id=?',(interaction.guild_id,))
     countrylist,mode=cur.fetchone()
@@ -1711,21 +1697,20 @@ async def countrylist(interaction:discord.Interaction,se:Optional[Literal['yes',
         fmt=[f"- {flags[i]} {iso2[i]} ({i})" for i in countrylist]
         embed.description='\n'.join(fmt[:25])
         view=Paginator(1,fmt,embed.title,math.ceil(len(fmt)/25),interaction.user.id,embed)
-        await interaction.followup.send(embed=embed,view=view,ephemeral=eph)
+        await interaction.followup.send(embed=embed,view=view,ephemeral=(se=='no'))
         view.message=await interaction.original_response()
     else:
         embed.description="```null```"
-        await interaction.followup.send(embed=embed,ephemeral=eph)
+        await interaction.followup.send(embed=embed,ephemeral=(se=='no'))
 
 @tree.command(name='city-info',description='Gets information for a given city.')
 @app_commands.describe(query="The name of the city",include_deletes='Whether to search for cities that have been removed from the database or not',se='Yes to show everyone stats, no otherwise')
 @app_commands.rename(include_deletes='include-deletes',se='show-everyone')
 @app_commands.guild_only()
 async def cityinfo(interaction: discord.Interaction, query:str,include_deletes:Optional[Literal['yes','no']]='no',se:Optional[Literal['yes','no']]='no'):
-    eph=(se=='no')
-    await interaction.response.defer(ephemeral=eph)
+    await interaction.response.defer(ephemeral=(se=='no'))
     if is_blocked(interaction.user.id,interaction.guild_id):
-        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ",ephemeral=eph)
+        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ",ephemeral=(se=='no'))
         return
     cur.execute('select min_pop from server_info where server_id=?',data=(interaction.guild_id,))
     minimum_population = cur.fetchone()[0]
@@ -1793,12 +1778,12 @@ async def cityinfo(interaction: discord.Interaction, query:str,include_deletes:O
                                                   j.value if j.value else '')]) for j in i.fields) for i in tosend]
             # while over limit send embeds individually
         while sum(embed_sizes)>6000:
-            await interaction.followup.send(embed=tosend[0],ephemeral=eph)
+            await interaction.followup.send(embed=tosend[0],ephemeral=(se=='no'))
             embed_sizes=embed_sizes[1:]      
             tosend=tosend[1:] 
-        await interaction.followup.send(embeds=tosend,ephemeral=eph)    
+        await interaction.followup.send(embeds=tosend,ephemeral=(se=='no'))    
     else:
-        await interaction.followup.send('City not recognized. Please try again. ',ephemeral=eph)
+        await interaction.followup.send('City not recognized. Please try again. ',ephemeral=(se=='no'))
 
 @tree.command(name='country-info',description='Gets information for a given country.')
 @app_commands.describe(country="The country to get information for",se='Yes to show everyone stats, no otherwise')
@@ -1806,10 +1791,9 @@ async def cityinfo(interaction: discord.Interaction, query:str,include_deletes:O
 @app_commands.autocomplete(country=countrycomplete)
 @app_commands.guild_only()
 async def countryinfo(interaction: discord.Interaction, country:str,se:Optional[Literal['yes','no']]='no'):
-    eph=(se=='no')
-    await interaction.response.defer(ephemeral=eph)
+    await interaction.response.defer(ephemeral=(se=='no'))
     if is_blocked(interaction.user.id,interaction.guild_id):
-        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ",ephemeral=eph)
+        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ",ephemeral=(se=='no'))
         return
     countrysearch=country.lower().strip()
     res=countriesdata[((countriesdata['name'].str.lower()==countrysearch)|(countriesdata['country'].str.lower()==countrysearch))]
@@ -1845,15 +1829,15 @@ async def countryinfo(interaction: discord.Interaction, country:str,se:Optional[
             embed_sizes = [sum([len(j) for j in (i.title if i.title else '',i.description)]) for i in tosend]
             # while over limit send embeds individually
             while sum(embed_sizes)>6000:
-                await interaction.followup.send(embed=tosend[0],ephemeral=eph)
+                await interaction.followup.send(embed=tosend[0],ephemeral=(se=='no'))
                 embed_sizes=embed_sizes[1:]      
                 tosend=tosend[1:] 
-            await interaction.followup.send(embeds=tosend,ephemeral=eph)      
+            await interaction.followup.send(embeds=tosend,ephemeral=(se=='no'))      
         else:
             embed.description='There are no alternate names for this country.'
-            await interaction.followup.send(embed=embed,ephemeral=eph)
+            await interaction.followup.send(embed=embed,ephemeral=(se=='no'))
     else:
-        await interaction.followup.send('Country not recognized. Please try again. ',ephemeral=eph)
+        await interaction.followup.send('Country not recognized. Please try again. ',ephemeral=(se=='no'))
 
 @tree.command(name='delete-stats',description='Deletes server stats.')
 @app_commands.guild_only()
@@ -1943,10 +1927,9 @@ async def globalunblock(interaction: discord.Interaction,user: discord.User):
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
 @app_commands.rename(se='show-everyone')
 async def help(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
-    eph=(se=='no')
-    await interaction.response.defer(ephemeral=eph)
+    await interaction.response.defer(ephemeral=(se=='no'))
     if is_blocked(interaction.user.id,interaction.guild_id):
-        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ",ephemeral=eph)
+        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ",ephemeral=(se=='no'))
         return
     embed=discord.Embed(color=GREEN)
     command_messages=[[],[],[],[]]
@@ -1977,9 +1960,8 @@ async def help(interaction: discord.Interaction,se:Optional[Literal['yes','no']]
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
 @app_commands.rename(se='show-everyone')
 async def about(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='no'):
-    eph=(se=='no')
     if is_blocked(interaction.user.id,interaction.guild_id):
-        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ",ephemeral=eph)
+        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ",ephemeral=(se=='no'))
         return
     embed = discord.Embed(color=GREEN,title="About Cities Chain Bot")
     embed.add_field(name="Ping",value=f"`{round(client.latency*1000, 3)}` ms")
@@ -1989,7 +1971,7 @@ async def about(interaction: discord.Interaction,se:Optional[Literal['yes','no']
     embed.add_field(name="GitHub Repository",value="[GitHub](https://github.com/GlutenFreeGrapes/cities-chain)")
     embed.add_field(name="Legal",value="[Terms of Service](https://github.com/GlutenFreeGrapes/cities-chain/blob/main/legal/Terms_of_Service.md)\n[Privacy Policy](https://github.com/GlutenFreeGrapes/cities-chain/blob/main/legal/Privacy_Policy.md)")
     embed.set_footer(text = "Geonames data from (YYYY-MM-DD):  %s "%(metadata["GeonamesDataDate"]))
-    await interaction.response.send_message(embed=embed,ephemeral=eph)
+    await interaction.response.send_message(embed=embed,ephemeral=(se=='no'))
 
 tree.add_command(assign)
 tree.add_command(add)
@@ -2032,4 +2014,4 @@ async def on_error(event, *args, **kwargs):
     owner = await client.fetch_user(app_info.team.owner_id)
     await owner.send(embed=embed)
 
-client.run(env["DISCORD_TOKEN"], reconnect=1)
+client.run(env["DISCORD_TOKEN"])
