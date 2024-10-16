@@ -215,7 +215,7 @@ def city_name_matches(city, min_pop, check_apostrophes, include_deleted):
         return results
     else:
         if check_apostrophes:
-            return None
+            return results
         else:
             return city_name_matches(re.sub("[`’ʻʼ]","'",city),min_pop,1,include_deleted)
 
@@ -374,7 +374,7 @@ class Help(discord.ui.View):
             await interaction.response.edit_message(embeds=interaction.message.embeds,view=self)
 
 class Paginator(discord.ui.View):
-    def __init__(self,page,blist,title,lens,user,embed):
+    def __init__(self,page,blist,title,lens,user,embed, other_footer_text = ""):
         super().__init__(timeout=None)
         self.page=page
         self.blist=blist
@@ -382,32 +382,33 @@ class Paginator(discord.ui.View):
         self.lens=lens
         self.author=user
         self.embed=embed
+        self.footer_text = other_footer_text
         self.update_buttons()
 
-    async def interaction_check(self,interaction):
-        return interaction.user.id==self.author
+    # async def interaction_check(self,interaction):
+    #     return interaction.user.id==self.author
     
     def update_buttons(self):
         if self.lens==1:
             for i in self.children:
                 i.disabled=True
-            self.embed.set_footer(text="Page %s/%s"%(1,1))
+            self.embed.set_footer(text="Page %s/%s%s"%(1,1,self.footer_text))
         elif self.page==1:
             self.children[0].disabled=True
             self.children[1].disabled=True
-            self.embed.set_footer(text="Page %s/%s"%(1,self.lens))
+            self.embed.set_footer(text="Page %s/%s%s"%(1,self.lens,self.footer_text))
             self.children[3].disabled=False
             self.children[4].disabled=False
         elif self.page==self.lens:
             self.children[0].disabled=False
             self.children[1].disabled=False
-            self.embed.set_footer(text="Page %s/%s"%(self.lens,self.lens))
+            self.embed.set_footer(text="Page %s/%s%s"%(self.lens,self.lens,self.footer_text))
             self.children[3].disabled=True
             self.children[4].disabled=True
         else:
             for i in self.children:
                 i.disabled=False
-            self.embed.set_footer(text="Page %s/%s"%(self.page,self.lens))
+            self.embed.set_footer(text="Page %s/%s%s"%(self.page,self.lens,self.footer_text))
 
     async def updateembed(self,interaction:discord.Interaction):
         has_author = self.embed.author
@@ -542,23 +543,24 @@ async def on_ready():
                             break
                 except:
                     pass
-    # fix leaderboard
-    cur.execute("""UPDATE chain_info
-    SET leaderboard_eligible=0""")
-    cur.execute("""UPDATE chain_info, (SELECT *, (COUNT(*) OVER(PARTITION BY server_id, round_number ORDER BY server_id, round_number, `count`)) AS new_count FROM
-        (SELECT server_id, round_number, `count`, city_id
-        FROM chain_info
-        WHERE valid=1
-        GROUP BY server_id, round_number, city_id
-        ORDER BY `time_placed` ASC) AS x ) y
-        SET leaderboard_eligible=1
-        WHERE y.count=y.new_count
-        AND chain_info.server_id=y.server_id
-        AND chain_info.round_number=y.round_number
-        AND chain_info.count=y.count
-        """)
+
     print(f'Logged in as {client.user} (ID: {client.user.id})\n------')
 
+# fix leaderboard
+cur.execute("""UPDATE chain_info
+    SET leaderboard_eligible=0""")
+cur.execute("""UPDATE chain_info, (SELECT *, (COUNT(*) OVER(PARTITION BY server_id, round_number ORDER BY server_id, round_number, `count`)) AS new_count FROM
+    (SELECT server_id, round_number, `count`, city_id
+    FROM chain_info
+    WHERE valid=1
+    GROUP BY server_id, round_number, city_id
+    ORDER BY `time_placed` ASC) AS x ) y
+    SET leaderboard_eligible=1
+    WHERE y.count=y.new_count
+    AND chain_info.server_id=y.server_id
+    AND chain_info.round_number=y.round_number
+    AND chain_info.count=y.count
+    """)
 @client.event
 async def on_guild_join(guild:discord.Guild):
     global processes
@@ -572,7 +574,7 @@ async def on_guild_join(guild:discord.Guild):
             break
 
 async def owner_modcheck(interaction: discord.Interaction):
-    return interaction.permissions.moderate_members or is_owner(interaction)
+    return interaction.user.guild_permissions.moderate_members or is_owner(interaction)
 async def is_owner(interaction: discord.Interaction):
     return interaction.user.id==owner.id
 
@@ -1486,10 +1488,11 @@ async def lb(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='
             if server_from_id:
                 counter+=1
                 top.append(f'{counter}. {server_from_id.name} - **{f"{i[1]:,}"}**') 
-        embed.description='\n'.join(top[:25])+"\nIn order for a server's run to be eligible for the leaderboard, no city (including repeat exceptions) can be said within 50 cities of itself."
-        await interaction.followup.send(embed=embed,view=Paginator(1,top,embed.title,math.ceil(len(top)/25),interaction.user.id,embed),ephemeral=eph)
+        embed.description='\n'.join(top[:25])
+        await interaction.followup.send(embed=embed,view=Paginator(1,top,embed.title,math.ceil(len(top)/25),interaction.user.id,embed,"| The stats on this leaderboard indicate the maximum number of cities before a repeat."),ephemeral=eph)
     else:
-        embed.description='```null```'+"\nIn order for a server's run to be eligible for the leaderboard, no city (including repeat exceptions) can be said within 50 cities of itself."
+        embed.description='```null```'
+        embed.set_footer(text="The stats on this leaderboard indicate the maximum number of cities before a repeat.")
         await interaction.followup.send(embed=embed,ephemeral=eph)
 
 @stats.command(description="Displays global user leaderboard.")
