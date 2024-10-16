@@ -219,8 +219,8 @@ def city_name_matches(city, min_pop, check_apostrophes, include_deleted):
         else:
             return city_name_matches(re.sub("[`’ʻʼ]","'",city),min_pop,1,include_deleted)
 
-def search_cities(city,other_arguments,min_pop):
-    city_names = city_name_matches(city, min_pop, 0, 0)
+def search_cities(city,other_arguments,min_pop,include_deleted):
+    city_names = city_name_matches(city, min_pop, include_deleted, 0)
     # length of other arguments is 1
     if len(other_arguments)==1:
         a1choice=admin1data[((admin1data['name'].str.lower()==other_arguments[0].lower())|(admin1data['admin1'].str.lower()==other_arguments[0].lower()))]
@@ -302,47 +302,50 @@ def sanitize_query(query):
 
 def generate_map(city_id_list):
     coords = [allnames.loc[city_id][['latitude','longitude']] for city_id in city_id_list]
-    lats,lons = zip(*coords)
-
-    # add padding
-    SCALING_FACTOR = .25
-    mlon=min(lons)
-    Mlon=max(lons)
-    mlat=min(lats)
-    Mlat=max(lats)
-
-    latdif = Mlat-mlat # height
-    londif = Mlon-mlon # width
-
-    maxmargins = SCALING_FACTOR*max(latdif,londif)
-    if latdif>londif:
-        mlon+=londif/2
-        Mlon-=londif/2
-        londif=(maxmargins+londif)/(1+SCALING_FACTOR)
-        mlon-=londif/2
-        Mlon+=londif/2
-    else:
-        mlat+=latdif/2
-        Mlat-=latdif/2
-        latdif=(maxmargins+latdif)/(1+SCALING_FACTOR)
-        mlat-=latdif/2
-        Mlat+=latdif/2
     if len(coords):
+        lats,lons = zip(*coords)
+
+        # add padding
+        SCALING_FACTOR = .25
+        mlon=min(lons)
+        Mlon=max(lons)
+        mlat=min(lats)
+        Mlat=max(lats)
+
+        latdif = Mlat-mlat # height
+        londif = Mlon-mlon # width
+
+        maxmargins = SCALING_FACTOR*max(latdif,londif)
+        if latdif>londif:
+            mlon+=londif/2
+            Mlon-=londif/2
+            londif=(maxmargins+londif)/(1+SCALING_FACTOR)
+            mlon-=londif/2
+            Mlon+=londif/2
+        else:
+            mlat+=latdif/2
+            Mlat-=latdif/2
+            latdif=(maxmargins+latdif)/(1+SCALING_FACTOR)
+            mlat-=latdif/2
+            Mlat+=latdif/2
         if len(coords)>1:
             m = Basemap(llcrnrlon=max(-180,mlon-londif*(SCALING_FACTOR/2)),llcrnrlat=max(-90,mlat-latdif*(SCALING_FACTOR/2)),urcrnrlon=min(180,Mlon+londif*(SCALING_FACTOR/2)),urcrnrlat=min(90,Mlat+latdif*(SCALING_FACTOR/2)),resolution='l',projection='cyl')
         else:
             MARGIN_DEGREES = 5 # on each side
             m = Basemap(llcrnrlon=lons[0]-MARGIN_DEGREES,llcrnrlat=lats[0]-MARGIN_DEGREES,urcrnrlon=lons[0]+MARGIN_DEGREES,urcrnrlat=lats[0]+MARGIN_DEGREES,resolution='l',projection='cyl')
         x,y = m(lons,lats)
-
         m.fillcontinents()
         m.drawcountries(color='w')
         m.plot(x,y,marker='.',color='tab:blue',mfc='k',mec='k',linewidth=1,markersize=2.5)
-        img_buf = io.BytesIO()
-        plt.savefig(img_buf,format='png',bbox_inches='tight')
-        img_buf.seek(0)
-        plt.clf()
-        return discord.File(img_buf, filename='map.png')
+    else:
+        m=Basemap(resolution='l',projection='cyl')
+        m.fillcontinents()
+        m.drawcountries(color='w')
+    img_buf = io.BytesIO()
+    plt.savefig(img_buf,format='png',bbox_inches='tight')
+    img_buf.seek(0)
+    plt.clf()
+    return discord.File(img_buf, filename='map.png')
 
 class Selector(discord.ui.Select):
     def __init__(self,messages,options,placeholder):
@@ -546,21 +549,6 @@ async def on_ready():
 
     print(f'Logged in as {client.user} (ID: {client.user.id})\n------')
 
-# fix leaderboard
-cur.execute("""UPDATE chain_info
-    SET leaderboard_eligible=0""")
-cur.execute("""UPDATE chain_info, (SELECT *, (COUNT(*) OVER(PARTITION BY server_id, round_number ORDER BY server_id, round_number, `count`)) AS new_count FROM
-    (SELECT server_id, round_number, `count`, city_id
-    FROM chain_info
-    WHERE valid=1
-    GROUP BY server_id, round_number, city_id
-    ORDER BY `time_placed` ASC) AS x ) y
-    SET leaderboard_eligible=1
-    WHERE y.count=y.new_count
-    AND chain_info.server_id=y.server_id
-    AND chain_info.round_number=y.round_number
-    AND chain_info.count=y.count
-    """)
 @client.event
 async def on_guild_join(guild:discord.Guild):
     global processes
@@ -573,13 +561,11 @@ async def on_guild_join(guild:discord.Guild):
             await channel.send('Hi! use /help to get more information on how to use this bot. ')
             break
 
-async def owner_modcheck(interaction: discord.Interaction):
-    return interaction.user.guild_permissions.moderate_members or is_owner(interaction)
+mod_perms = discord.Permissions(moderate_members=True)
 async def is_owner(interaction: discord.Interaction):
     return interaction.user.id==owner.id
 
-assign = app_commands.Group(name="set", description="Set different things for the chain.", guild_only=True)
-@app_commands.check(owner_modcheck)
+assign = app_commands.Group(name="set", description="Set different things for the chain.", guild_only=True, default_permissions=mod_perms)
 @assign.command(description="Sets the channel for the bot to monitor for cities chain.")
 @app_commands.describe(channel="The channel where the cities chain will happen")
 async def channel(interaction: discord.Interaction, channel: discord.TextChannel|discord.Thread|discord.ForumChannel):
@@ -596,7 +582,6 @@ async def channel(interaction: discord.Interaction, channel: discord.TextChannel
     conn.commit()
     await interaction.followup.send('Channel set to <#%s>.'%channel.id)
 
-@app_commands.check(owner_modcheck)
 @assign.command(description="Sets the gap between when a city can be repeated in the chain.")
 @app_commands.describe(num="The minimum number of cities before they can repeat again, set to -1 to disallow any repeats")
 async def repeat(interaction: discord.Interaction, num: app_commands.Range[int,-1,None]):
@@ -631,7 +616,6 @@ async def repeat(interaction: discord.Interaction, num: app_commands.Range[int,-
     else:
         await interaction.followup.send('Command can only be used after the chain has ended.')
 
-@app_commands.check(owner_modcheck)
 @assign.command(description="Sets the minimum population of cities in the chain.")
 @app_commands.describe(population="The minimum population of cities in the chain")
 async def population(interaction: discord.Interaction, population: app_commands.Range[int,1,None]):
@@ -651,7 +635,6 @@ async def population(interaction: discord.Interaction, population: app_commands.
     else:
         await interaction.followup.send('Command can only be used after the chain has ended.')
 
-@app_commands.check(owner_modcheck)
 @assign.command(description="Sets the prefix to listen to.")
 @app_commands.describe(prefix="Prefix that all cities to be chained must begin with")
 async def prefix(interaction: discord.Interaction, prefix: Optional[app_commands.Range[str,0,10]]=''):
@@ -674,7 +657,6 @@ async def prefix(interaction: discord.Interaction, prefix: Optional[app_commands
     else:
         await interaction.followup.send('Command can only be used after the chain has ended.')
 
-@app_commands.check(owner_modcheck)
 @assign.command(name='choose-city',description="Toggles if bot can choose starting city for the next chain.")
 @app_commands.describe(option="on to let the bot choose the next city, off otherwise")
 async def choosecity(interaction: discord.Interaction, option:Literal["on","off"]):
@@ -726,7 +708,6 @@ async def choosecity(interaction: discord.Interaction, option:Literal["on","off"
     else:
         await interaction.followup.send('Command can only be used after the chain has ended.')
 
-@app_commands.check(owner_modcheck)
 @assign.command(name='country-list-mode',description="Sets the mode of the server's list of countries.")
 @app_commands.describe(mode="Usage for the list of this server's countries")
 async def listmode(interaction: discord.Interaction, mode: Literal['blacklist','whitelist','disabled']):
@@ -751,7 +732,6 @@ async def listmode(interaction: discord.Interaction, mode: Literal['blacklist','
     else:
         await interaction.followup.send('Command can only be used after the chain has ended.')
 
-@app_commands.check(owner_modcheck)
 @assign.command(description="Toggles if bot can send updates when it restarts.")
 @app_commands.describe(option="on to let the bot send updates, off otherwise")
 async def updates(interaction: discord.Interaction, option:Literal["on","off"]):
@@ -777,8 +757,7 @@ async def countrycomplete(interaction: discord.Interaction, search: str):
     results.extend([iso3[i] for i in iso3 if i.lower().startswith(s) and iso3[i] not in results])
     return [app_commands.Choice(name=i,value=i) for i in results[:10]]
 
-add = app_commands.Group(name='add', description="Adds features for the chain.", guild_only=True)
-@app_commands.check(owner_modcheck)
+add = app_commands.Group(name='add', description="Adds features for the chain.", guild_only=True, default_permissions=mod_perms)
 @add.command(description="Adds reaction for a city. When prompted, react to client's message with emoji to react to city with.")
 @app_commands.describe(city="The city that the client will react to",province="State, province, etc that the city is located in",otherp='Subdivision of state/province, like a county within a state',country="Country the city is located in")
 @app_commands.rename(province='administrative-division', otherp='administrative-division-2')
@@ -822,7 +801,6 @@ async def react(interaction: discord.Interaction, city:str, province:Optional[st
     else:
         await interaction.followup.send('City not recognized. Please try again. ')
 
-@app_commands.check(owner_modcheck)
 @add.command(description="Adds repeating exception for a city.")
 @app_commands.describe(city="The city that the client will allow repeats for",province="State, province, etc that the city is located in",otherp='Subdivision of state/province, like a county within a state',country="Country the city is located in")
 @app_commands.rename(province='administrative-division', otherp='administrative-division-2')
@@ -853,7 +831,6 @@ async def repeat(interaction: discord.Interaction, city:str, province:Optional[s
     else:
         await interaction.followup.send('Command can only be used after the chain has ended.')
 
-@app_commands.check(owner_modcheck)
 @add.command(name='country-list',description="Adds country to the whitelist/blacklist.")
 @app_commands.describe(country="Country the city is located in")
 @app_commands.autocomplete(country=countrycomplete)
@@ -890,8 +867,7 @@ async def countrylist(interaction: discord.Interaction, country:str):
 
     
 
-remove = app_commands.Group(name='remove', description="Removes features from the chain.", guild_only=True)
-@app_commands.check(owner_modcheck)
+remove = app_commands.Group(name='remove', description="Removes features from the chain.", guild_only=True, default_permissions=mod_perms)
 @remove.command(description="Removes reaction for a city.")
 @app_commands.describe(city="The city that the client will not react to",province="State, province, etc that the city is located in",otherp='Subdivision of state/province, like a county within a state',country="Country the city is located in")
 @app_commands.rename(province='administrative-division', otherp='administrative-division-2')
@@ -916,7 +892,6 @@ async def react(interaction: discord.Interaction, city:str, province:Optional[st
     else:
         await interaction.followup.send('City not recognized. Please try again. ')
 
-@app_commands.check(owner_modcheck)
 @remove.command(description="Removes repeating exception for a city.")
 @app_commands.describe(city="The city that the client will disallow repeats for",province="State, province, etc that the city is located in",otherp='Subdivision of state/province, like a county within a state',country="Country the city is located in")
 @app_commands.rename(province='administrative-division', otherp='administrative-division-2')
@@ -944,7 +919,6 @@ async def repeat(interaction: discord.Interaction, city:str, province:Optional[s
     else:
         await interaction.followup.send('Command can only be used after the chain has ended.')
 
-@app_commands.check(owner_modcheck)
 @remove.command(name='country-list',description="Removes country from the whitelist/blacklist.")
 @app_commands.describe(country="Country the city is located in")
 @app_commands.autocomplete(country=countrycomplete)
@@ -1092,7 +1066,7 @@ async def chain(message:discord.Message,guildid,authorid,original_content,ref):
             l_eligible=1
             # does city exist
         sanitized_query = sanitize_query(original_content[len(sinfo[10]):])
-        res=search_cities(sanitized_query[0],sanitized_query[1:],sinfo[2])
+        res=search_cities(sanitized_query[0],sanitized_query[1:],sinfo[2],0)
         if res:
             cur.execute('''select
                     round_number,
@@ -1744,11 +1718,10 @@ async def countrylist(interaction:discord.Interaction,se:Optional[Literal['yes',
         await interaction.followup.send(embed=embed,ephemeral=eph)
 
 @tree.command(name='city-info',description='Gets information for a given city.')
-@app_commands.describe(city="The city to get information for",province="State, province, etc that the city is located in",otherp='Subdivision of state/province, like a county within a state',country="Country the city is located in",include_deletes='Whether to search for cities that have been removed from the database or not',se='Yes to show everyone stats, no otherwise')
-@app_commands.rename(province='administrative-division', otherp='administrative-division-2',include_deletes='include-deletes',se='show-everyone')
-@app_commands.autocomplete(country=countrycomplete)
+@app_commands.describe(query="The name of the city",include_deletes='Whether to search for cities that have been removed from the database or not',se='Yes to show everyone stats, no otherwise')
+@app_commands.rename(include_deletes='include-deletes',se='show-everyone')
 @app_commands.guild_only()
-async def cityinfo(interaction: discord.Interaction, city:str, province:Optional[str]=None, otherp:Optional[str]=None, country:Optional[str]=None,include_deletes:Optional[Literal['yes','no']]='no',se:Optional[Literal['yes','no']]='no'):
+async def cityinfo(interaction: discord.Interaction, query:str,include_deletes:Optional[Literal['yes','no']]='no',se:Optional[Literal['yes','no']]='no'):
     eph=(se=='no')
     await interaction.response.defer(ephemeral=eph)
     if is_blocked(interaction.user.id,interaction.guild_id):
@@ -1756,7 +1729,8 @@ async def cityinfo(interaction: discord.Interaction, city:str, province:Optional
         return
     cur.execute('select min_pop from server_info where server_id=?',data=(interaction.guild_id,))
     minimum_population = cur.fetchone()[0]
-    res=search_cities_command(city,province,otherp,country,minimum_population,(include_deletes=='yes'))
+    sanitized = sanitize_query(query)
+    res=search_cities(sanitized[0],sanitized[1:],minimum_population,(include_deletes=='yes'))
     if res:
         cur.execute("select count from count_info where server_id=? and city_id=?",data=(interaction.guild_id,res[0]))
         if cur.rowcount:
@@ -1882,7 +1856,6 @@ async def countryinfo(interaction: discord.Interaction, country:str,se:Optional[
         await interaction.followup.send('Country not recognized. Please try again. ',ephemeral=eph)
 
 @tree.command(name='delete-stats',description='Deletes server stats.')
-@app_commands.check(owner_modcheck)
 @app_commands.guild_only()
 async def deletestats(interaction: discord.Interaction):
     if is_blocked(interaction.user.id,interaction.guild_id):
@@ -1898,7 +1871,7 @@ async def ping(interaction: discord.Interaction):
     await interaction.response.send_message('Pong! `%s ms`'%(client.latency*1000))
 
 @tree.command(name="block-server",description="Blocks a user from using the bot in the server. ")
-@app_commands.check(owner_modcheck)
+@app_commands.default_permissions(moderate_members=True)
 @app_commands.guild_only()
 async def serverblock(interaction: discord.Interaction,member: discord.Member, reason: app_commands.Range[str,0,128]):
     if member!=owner and not member.bot:
@@ -1916,7 +1889,7 @@ async def serverblock(interaction: discord.Interaction,member: discord.Member, r
         await interaction.response.send_message(f"Nice try, bozo")
 
 @tree.command(name="unblock-server",description="Unblocks a user from using the bot in the server. ")
-@app_commands.check(owner_modcheck)
+@app_commands.default_permissions(moderate_members=True)
 @app_commands.guild_only()
 async def serverunblock(interaction: discord.Interaction,member: discord.Member):
     if is_blocked(interaction.user.id,interaction.guild_id):
@@ -1933,6 +1906,7 @@ async def serverunblock(interaction: discord.Interaction,member: discord.Member)
 
 @tree.command(name="block-global",description="Blocks a user from using the bot. ")
 @app_commands.check(is_owner)
+@app_commands.guilds(1126556064150736999)
 @app_commands.guild_only()
 async def globalblock(interaction: discord.Interaction,user: discord.User,reason: app_commands.Range[str,0,128]):
     if user!=owner and not user.bot:
@@ -1952,8 +1926,10 @@ async def globalblock(interaction: discord.Interaction,user: discord.User,reason
     else:
         await interaction.response.send_message(f"Nice try, bozo")
 
+
 @tree.command(name="unblock-global",description="Unblocks a user from using the bot. ")
 @app_commands.check(is_owner)
+@app_commands.guilds(1126556064150736999)
 @app_commands.guild_only()
 async def globalunblock(interaction: discord.Interaction,user: discord.User):
     if is_blocked(interaction.user.id,interaction.guild_id):
@@ -2031,6 +2007,8 @@ async def on_command_error(interaction:discord.Interaction, error, *args, **kwar
         embed.add_field(name='Parameters', value='\n'.join([f"**{i['name']}**: `{i['value']}`" for i in interaction.data['options']]))
     if interaction.guild_id:
         embed.add_field(name='Guild ID', value = str(interaction.guild_id))
+    if interaction.user:
+        embed.add_field(name='User ID', value = str(interaction.user.id))
     embed.description = '```\n%s\n```' % traceback.format_exc()
     embed.timestamp = datetime.datetime.now()
     app_info = await client.application_info()
@@ -2046,6 +2024,8 @@ async def on_error(event, *args, **kwargs):
     embed.add_field(name='Message',value=args[0].content)
     if args[0].guild:
         embed.add_field(name='Guild ID', value = str(args[0].guild.id))
+    if args[0].author:
+        embed.add_field(name='User ID', value = str(args[0].author.id))
     embed.description = '```\n%s\n```' % traceback.format_exc()
     embed.timestamp = datetime.datetime.now()
     app_info = await client.application_info()
