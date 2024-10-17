@@ -284,7 +284,7 @@ def search_cities_command(city,province,otherprovince,country,min_pop,include_de
                                  pd.merge(results.reset_index(),a2choice[['country','admin1','admin2']]).set_index("index")])
     # if country is specified
     if country:
-        cchoice=set(countriesdata[(countriesdata['name'].str.lower()==country)|(countriesdata['country'].str.lower()==country)]['country'])
+        cchoice=set(countriesdata[(countriesdata['name'].str.lower()==country.lower())|(countriesdata['country'].str.lower()==country.lower())]['country'])
         results = results[results['country'].isin(cchoice)|results['alt-country'].isin(cchoice)]
 
     if results.shape[0]:
@@ -505,6 +505,7 @@ processes = {i:None for (i,) in cur.fetchall()}
 async def on_ready():
     global owner
     await tree.sync()
+    await tree.sync(guild=discord.Object(1126556064150736999))
     app_info = await client.application_info()
     owner = await client.fetch_user(app_info.team.owner_id)
     cur.execute('select server_id from server_info')
@@ -1890,35 +1891,25 @@ async def serverunblock(interaction: discord.Interaction,member: discord.Member)
 
 @tree.command(name="block-global",description="Blocks a user from using the bot. ")
 @app_commands.check(is_owner)
+@app_commands.default_permissions(moderate_members=True)
 @app_commands.guilds(1126556064150736999)
 @app_commands.guild_only()
 async def globalblock(interaction: discord.Interaction,user: discord.User,reason: app_commands.Range[str,0,128]):
-    if user!=owner and not user.bot:
-        if is_blocked(interaction.user.id,interaction.guild_id):
-            await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
-            return
-        cur.execute("select user_id from global_user_info where user_id=?",data=(user.id,))
-        if cur.rowcount:
-            cur.execute('''update global_user_info set blocked=?,block_reason=? where user_id=?''',data=(True,reason,user.id))
-        else:
-            cur.execute('insert into global_user_info(user_id,blocked,block_reason) values(?,?,?)',data=(user.id,True,reason))
-            # cur.execute('insert into server_user_info(server_id,user_id,blocked,block_reason) values(?,?,?,?)',data=(interaction.guild_id,user.id,True,reason))
-
-        # cur.execute('''update global_user_info set blocked=? where user_id=?''',data=(True,user.id))
-        conn.commit()
-        await interaction.response.send_message(f"<@{user.id}> has been blocked from using this bot. Reason: `{reason}`")
+    cur.execute("select user_id from global_user_info where user_id=?",data=(user.id,))
+    if cur.rowcount:
+        cur.execute('''update global_user_info set blocked=?,block_reason=? where user_id=?''',data=(True,reason,user.id))
     else:
-        await interaction.response.send_message(f"Nice try, bozo")
+        cur.execute('insert into global_user_info(user_id,blocked,block_reason) values(?,?,?)',data=(user.id,True,reason))
+    conn.commit()
+    await interaction.response.send_message(f"<@{user.id}> has been blocked from using this bot. Reason: `{reason}`")
 
 
 @tree.command(name="unblock-global",description="Unblocks a user from using the bot. ")
 @app_commands.check(is_owner)
+@app_commands.default_permissions(moderate_members=True)
 @app_commands.guilds(1126556064150736999)
 @app_commands.guild_only()
 async def globalunblock(interaction: discord.Interaction,user: discord.User):
-    if is_blocked(interaction.user.id,interaction.guild_id):
-        await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
-        return
     cur.execute('''update global_user_info set blocked=?,block_reason=? where user_id=?''',data=(False,None,user.id))
     conn.commit()
     await interaction.response.send_message(f"<@{user.id}> has been unblocked from using this bot. ")
