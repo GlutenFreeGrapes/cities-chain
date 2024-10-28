@@ -1841,6 +1841,7 @@ async def countryinfo(interaction: discord.Interaction, country:str,se:Optional[
         await interaction.followup.send('Country not recognized. Please try again. ',ephemeral=(se=='no'))
 
 @tree.command(name='delete-stats',description='Deletes server stats.')
+@app_commands.default_permissions(moderate_members=True)
 @app_commands.guild_only()
 async def deletestats(interaction: discord.Interaction):
     if is_blocked(interaction.user.id,interaction.guild_id):
