@@ -56,8 +56,8 @@ cur = conn.cursor()
 
 cur.execute('create database if not exists ' + env["DB_NAME"])
 cur.execute('use ' + env["DB_NAME"])
-cur.execute("SET @@global.wait_timeout = 2592000") # max 30 day wait timeout
-cur.execute("SET @@global.interactive_timeout = 28800") # max 8hr interactive timeout
+cur.execute("SET @@session.wait_timeout = 2592000") # max 30 day wait timeout
+cur.execute("SET @@session.interactive_timeout = 28800") # max 8hr interactive timeout
 
 cur.execute('SELECT server_id, MIN(time_placed) FROM chain_info GROUP BY server_id')
 max_ages = {i[0]:i[1] for i in cur.fetchall()}
