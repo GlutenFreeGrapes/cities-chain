@@ -982,7 +982,15 @@ async def chain(message:discord.Message,guildid,authorid,original_content,ref):
             cur.execute('''update server_info set chain_end = ?, round_number = ? where server_id = ?''',data=(False,round_num+1,guildid))
         cur.execute('''select
                     round_number,
+                    min_repeat,
                     min_pop,
+                    choose_city,
+                    repeats,
+                    chain_end,
+                    channel_id,
+                    current_letter,
+                    last_user,
+                    max_chain,
                     prefix,
                     list_mode,
                     list
@@ -998,8 +1006,8 @@ async def chain(message:discord.Message,guildid,authorid,original_content,ref):
         else:
             l_eligible=1
             # does city exist
-        sanitized_query = sanitize_query(original_content[len(sinfo[2]):])
-        res=search_cities(sanitized_query[0],sanitized_query[1:],sinfo[1],0,sinfo[3],sinfo[4])
+        sanitized_query = sanitize_query(original_content[len(sinfo[10]):])
+        res=search_cities(sanitized_query[0],sanitized_query[1:],sinfo[2],0,sinfo[11],sinfo[12])
         if res:
             cur.execute('''select
                     round_number,
@@ -1152,7 +1160,7 @@ async def fail(message:discord.Message,reason,sinfo,citieslist,res,n,cityfound,m
     if cityfound:
         cur.execute('''insert into chain_info(server_id,user_id,round_number,count,city_id,name,admin2,admin1,country,country_code,alt_country,time_placed,valid,message_id,leaderboard_eligible) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,res[0],n[0],n[3],n[2],n[1][0],n[1][1],n[4],int(message.created_at.timestamp()),False,message.id,False))
     else:
-        cur.execute('''insert into chain_info(server_id,user_id,round_number,count,name,time_placed,valid,message_id,leaderboard_eligible) values (?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,message.content[len(sinfo[2]):],int(message.created_at.timestamp()),False,message.id,False))
+        cur.execute('''insert into chain_info(server_id,user_id,round_number,count,name,time_placed,valid,message_id,leaderboard_eligible) values (?,?,?,?,?,?,?,?,?)''',data=(guildid,authorid,sinfo[0],len(citieslist)+1,message.content[len(sinfo[10]):],int(message.created_at.timestamp()),False,message.id,False))
     cur.execute('''update server_info set chain_end = ?, current_letter = ?, last_user = ? where server_id = ?''',data=(True,'-',None,guildid))
     if sinfo[3]:
         entr=city_default.loc[(newid)]
@@ -1724,7 +1732,7 @@ async def cityinfo(interaction: discord.Interaction, query:str,include_deletes:O
             cur.execute('''select * from repeat_info where server_id = ? and city_id=?''', data=(interaction.guild_id,res[0]))
             repeatable=cur.rowcount
             aname=citydata[(citydata['geonameid']==res[0])]
-            default=city_default[res[0]]
+            default=city_default.loc[res[0]]
             dname=default['name']
             embed=discord.Embed(title='Information - %s'%dname,color = GREEN if not default['deleted'] else RED)
             embed.add_field(name='Geonames ID',value=res[0],inline=True)
@@ -1804,7 +1812,7 @@ async def subdivisioninfo(interaction: discord.Interaction, sd_name:str, admin1:
         res=admin2data[admin2data['name'].str.lower()==admsearch]
         a1search = admin1.lower().strip()
         a1choice=admin1data[admin1data['name'].str.lower()==a1search]
-        res = res.merge(a1choice.reset_index(), 'inner', ['country','admin1']).set_index('index').rename(columns={'geonameid_x':'geonameid'})
+        res = res.merge(a1choice.reset_index(), 'inner', ['country','admin1']).set_index('index').rename(columns={'geonameid_x':'geonameid', 'default_x':'default'})
     else:
         # case: admin1
         res=admin1data[admin1data['name'].str.lower()==admsearch]
