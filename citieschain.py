@@ -1367,8 +1367,8 @@ async def cities(interaction: discord.Interaction,order:Literal['sequential','al
                 dname = city_default.loc[i[5],'name']
             cutoff.append(i[0] if i[5]==-1 else (city_string(i[0] + (f" ({dname})" if i[0]!=dname else ""),i[1],i[2],i[3],i[4])+(f"{':no_entry:' if (i[5]!=-1 and city_default.loc[i[5],'deleted']) else ''}{':repeat:' if i[5] in repeated else ''}"),i[6]))
         if cache[guildid]["repeats"] and cit.startswith("N"):
-            cutoff=cutoff[:cache[guildid]["min_repeats"]]
-            cityids=cityids[:cache[guildid]["min_repeats"]]
+            cutoff=cutoff[:cache[guildid]["min_repeat"]]
+            cityids=cityids[:cache[guildid]["min_repeat"]]
         
         embed=discord.Embed(title=title, color=GREEN)
         if order.startswith('s'):
@@ -1434,7 +1434,17 @@ async def roundinfo(interaction: discord.Interaction,round_num:int,showmap:Optio
 
 def max_age_to_timestamp(interaction, max_age, is_global):
     if max_age == "All Time":
-        return earliest_time if is_global else max_ages[interaction.guild_id]
+        if is_global:
+            return earliest_time
+        else:
+            if interaction.guild_id in max_ages:
+                cur.execute('SELECT MIN(time_placed) FROM chain_info WHERE server_id = ?', (interaction.guild_id,))
+                since_time = cur.fetchone()[0]
+                if since_time:
+                    max_ages[interaction.guild_id]=since_time
+                else: 
+                    return 0
+            return max_ages[interaction.guild_id]
     else:
         return int((interaction.created_at - time_to_offset[max_age]).timestamp())
 
