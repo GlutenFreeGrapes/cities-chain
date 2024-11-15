@@ -972,8 +972,8 @@ async def on_message_edit(message:discord.Message, after:discord.Message):
 
 import concurrent.futures
 if __name__ == "__main__":
-    chain_pool = concurrent.futures.ThreadPoolExecutor(5)
-    # chain_pool = concurrent.futures.ProcessPoolExecutor(5)
+    # chain_pool = concurrent.futures.ThreadPoolExecutor(5)
+    chain_pool = concurrent.futures.ProcessPoolExecutor(5)
 RESPOND_WORDS = {"my bad", "mb", "oops", "woops", "sorry+", "sry+", "sowwy"}
 @client.event
 async def on_message(message:discord.Message):
@@ -1810,7 +1810,7 @@ async def cityinfo(interaction: discord.Interaction, query:str,include_deletes:O
             embed=discord.Embed(title='Information - %s'%dname,color = GREEN if not default['deleted'] else RED)
             embed.add_field(name='Geonames ID',value=res[0],inline=True)
             embed.add_field(name='Name',value=dname,inline=True)
-            embed.add_field(name='Count',value="%s%s"%(f"{count:,} {':repeat:' if repeatable else ''}",'\n(%s uses by <@%s>)\nFirst used by <@%s>'%(user_count,interaction.user.id,first_user) if count else ''),inline=True)
+            embed.add_field(name='Count',value="%s%s"%(f"{count:,} {':repeat:' if repeatable else ''}",'\n(%s uses by <@%s>)\nFirst used by <@%s>'%(f"{user_count:,}",interaction.user.id,first_user) if count else ''),inline=True)
             if default['deleted']:
                 embed.set_footer(text='This city has been removed from Geonames.')
             alts=aname[(aname['default']==0)]['name']
@@ -1923,7 +1923,7 @@ async def subdivisioninfo(interaction: discord.Interaction, sd_name:str, admin1:
 
         a1d = admin1name(res['country'], res['admin1']) if admin1 else ''
 
-        embed=discord.Embed(title='Information - %s, %s %s (%s) - Count: %s'%(f"{dname}, {a1d}" if admin1 else dname, flags[res['country']],iso2[res['country']],res['country'],f"{filtered_cities['count'].sum():,} ({filtered_cities['user_counts'].sum():,} by @{interaction.user.global_name})" if filtered_cities['count'].sum() else 0),color=GREEN)
+        embed=discord.Embed(title='Information - %s, %s %s (%s) - Count: %s'%(f"{dname}, {a1d}" if admin1 else dname, flags[res['country']],iso2[res['country']],res['country'],f"{filtered_cities['count'].sum():,} ({filtered_cities['user_counts'].sum():,} uses by @{interaction.user.global_name})" if filtered_cities['count'].sum() else 0),color=GREEN)
         alts=aname[(aname['default']==0)]['name']
         if alts.shape[0]!=0:
             joinednames='`'+'`,`'.join(alts)+'`'
@@ -1984,7 +1984,7 @@ async def countryinfo(interaction: discord.Interaction, country:str,se:Optional[
         aname=countriesdata[(countriesdata['geonameid']==res['geonameid'])]
         default=countrydefaults.loc[res['country']]
         dname=default['name']
-        embed=discord.Embed(title='Information - %s %s (%s) - Count: %s'%(flags[res['country']],dname,res['country'],f"{count:,} ({user_count:,} by @{interaction.user.global_name})" if count else 0, ),color=GREEN)
+        embed=discord.Embed(title='Information - %s %s (%s) - Count: %s'%(flags[res['country']],dname,res['country'],f"{count:,} ({user_count:,} uses by @{interaction.user.global_name})" if count else 0, ),color=GREEN)
         alts=aname[(aname['default']==0)]['name']
         if alts.shape[0]!=0:
             joinednames='`'+'`,`'.join(alts)+'`'
