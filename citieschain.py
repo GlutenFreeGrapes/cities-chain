@@ -1146,15 +1146,17 @@ async def process_chain(message:discord.Message,guildid,authorid,original_conten
         cur.execute('''update count_info set count=? where server_id=? and city_id=?''',data=(citycount+1,guildid,res[0]))
 
     length = len(citieslist)+1
+    new_high = False
     if cache[guildid]["max_chain"]<(length):
         current_time = int(message.created_at.timestamp())
         cur.execute('''update server_info set max_chain = ?,last_best = ? where server_id = ?''',data=(length,current_time,guildid))
         cache[guildid]["max_chain"] = length
         cache[guildid]["max_chain"] = current_time
+        new_high = True
     conn.commit()
     
     try:
-        if cache[guildid]["max_chain"]<(length):
+        if new_high:
             await message.add_reaction('\N{BALLOT BOX WITH CHECK}')
         else:
             await message.add_reaction('\N{WHITE HEAVY CHECK MARK}')
@@ -2163,7 +2165,7 @@ tree.add_command(stats)
 # error handling
 async def on_command_error(interaction:discord.Interaction, error:discord.app_commands.errors.CommandInvokeError, *args, **kwargs):
     # suppress 404 Not Found errors w/ code 10062
-    # if not (isinstance(error.original, discord.errors.NotFound) and (error.original.code == 10062)):
+    if not (isinstance(error.original, discord.errors.NotFound) and (error.original.code == 10062)):
         embed = discord.Embed(title=f":x: Command Error", colour=BLUE)
         if 'options' in interaction.data['options'][0]:
             embed.add_field(name='Command', value=f"{interaction.data['name']} {interaction.data['options'][0]['name']}")
