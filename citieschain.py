@@ -972,8 +972,8 @@ async def on_message_edit(message:discord.Message, after:discord.Message):
 
 import concurrent.futures
 if __name__ == "__main__":
-    # chain_pool = concurrent.futures.ThreadPoolExecutor(5)
-    chain_pool = concurrent.futures.ProcessPoolExecutor(5)
+    chain_pool = concurrent.futures.ThreadPoolExecutor(5)
+    # chain_pool = concurrent.futures.ProcessPoolExecutor(5)
 RESPOND_WORDS = {"my bad", "mb", "oops", "woops", "sorry+", "sry+", "sowwy"}
 @client.event
 async def on_message(message:discord.Message):
