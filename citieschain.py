@@ -972,8 +972,8 @@ async def on_message_edit(message:discord.Message, after:discord.Message):
 
 import concurrent.futures
 if __name__ == "__main__":
-    chain_pool = concurrent.futures.ThreadPoolExecutor(5)
-    # chain_pool = concurrent.futures.ProcessPoolExecutor(5)
+    # chain_pool = concurrent.futures.ThreadPoolExecutor(5)
+    chain_pool = concurrent.futures.ProcessPoolExecutor(2)
 RESPOND_WORDS = {"my bad", "mb", "oops", "woops", "sorry+", "sry+", "sowwy"}
 @client.event
 async def on_message(message:discord.Message):
@@ -1673,7 +1673,7 @@ async def bestrds(interaction: discord.Interaction,se:Optional[Literal['yes','no
         return
 
     since = max_age_to_timestamp(interaction, max_age, 0)
-    cur.execute('SELECT chain_info.server_id, chain_info.round_number, MAX(CASE valid WHEN 1 THEN count ELSE 0 END) as round_length, MIN(time_placed) as start_time, MAX(time_placed) as end_time FROM `chain_info`, (SELECT server_id, round_number FROM `chain_info` WHERE count = 1 AND server_id = ? AND time_placed >= ?) AS x WHERE chain_info.server_id = ? AND time_placed >= ? AND chain_info.server_id = x.server_id AND chain_info.round_number = x.round_number GROUP BY round_number ORDER BY round_length DESC, `chain_info`.`round_number` ASC LIMIT 10;', (interaction.guild_id, since, interaction.guild_id, since))
+    cur.execute('SELECT * FROM (SELECT server_id, round_number, MIN(count) as started_after, MAX(CASE valid WHEN 1 THEN count ELSE 0 END) as round_length, MIN(time_placed) as start_time, MAX(time_placed) as end_time, COUNT(DISTINCT(CASE WHEN valid = 1 AND user_id IS NOT NULL THEN user_id END)) as participants FROM chain_info WHERE server_id = ? AND time_placed >= ? GROUP BY round_number ORDER BY round_length DESC, round_number ASC LIMIT 11) X WHERE started_after = 1 ORDER BY round_length DESC, round_number ASC LIMIT 10;', (interaction.guild_id, since))
 
     embed=discord.Embed(title=f"Best Rounds - Since <t:{since}:d>",color=GREEN)
     if interaction.guild.icon:
@@ -1692,13 +1692,10 @@ async def bestrds(interaction: discord.Interaction,se:Optional[Literal['yes','no
         # maxrounds=sorted(maxrounds,reverse=1)[:10]
         # for i in maxrounds:
         for i in cur.fetchall():
-            _, round_num, length, start_time, end_time = i
-            # number of participants
-            cur.execute('''select distinct user_id from chain_info where server_id = ? and round_number = ?  and valid = 1 and user_id is not null''',data=(interaction.guild_id, round_num,))
-            part=cur.rowcount
+            _, round_num, _, length, start_time, end_time, part = i
             if length:
                 # get first city
-                cur.execute('SELECT city_id,name FROM chain_info WHERE server_id = ? AND round_number = ? AND count = ? AND valid = 1', (interaction.guild_id, round_num, 1))
+                cur.execute('SELECT city_id, name FROM chain_info WHERE server_id = ? AND round_number = ? AND (count = ? OR count = ?) AND valid = 1 ORDER BY count ASC', (interaction.guild_id, round_num, 1, length))
                 first_id, first_name = cur.fetchone()
                 f_c = city_default.loc[first_id]
                 name_str = city_string(first_name if first_name == f_c['name'] else f"{first_name} ({f_c['name']})", 
@@ -1707,7 +1704,7 @@ async def bestrds(interaction: discord.Interaction,se:Optional[Literal['yes','no
                                         f_c['country'], f_c['alt-country'])
                 if length-1:
                     # get last city
-                    cur.execute('SELECT city_id,name FROM chain_info WHERE server_id = ? AND round_number = ? AND count = ? AND valid = 1', (interaction.guild_id, round_num, length))
+                    # cur.execute('SELECT city_id,name FROM chain_info WHERE server_id = ? AND round_number = ? AND count = ? AND valid = 1', (interaction.guild_id, round_num, length))
                     last_id, last_name = cur.fetchone()
                     l_c = city_default.loc[last_id]
                     name_str += ' - ' +  city_string(last_name if last_name == l_c['name'] else f"{last_name} ({l_c['name']})", 
@@ -2107,6 +2104,27 @@ async def globalunblock(interaction: discord.Interaction,user: discord.User):
     conn.commit()
     await interaction.response.send_message(f"<@{user.id}> has been unblocked from using this bot. ")
 
+@tree.command(name="clear-processes",description="Clears list of cities for a given guild. ")
+@app_commands.check(is_owner)
+@app_commands.default_permissions(moderate_members=True)
+@app_commands.guilds(1126556064150736999)
+@app_commands.guild_only()
+async def clearprocesses(interaction: discord.Interaction, guild: str):
+    if guild.isnumeric():
+        processes[int(guild)] = []
+        await interaction.response.send_message(f"Server `{guild}` has had its processes list cleared. ")
+    else:
+        await interaction.response.send_message(f"Please put in valid server ID. ")
+
+@tree.command(description="Clears list of cities for a given guild. ")
+@app_commands.check(is_owner)
+@app_commands.default_permissions(moderate_members=True)
+@app_commands.guilds(1126556064150736999)
+@app_commands.guild_only()
+async def quit(interaction: discord.Interaction):
+    await interaction.response.send_message(f"Disconnecting.")
+    await client.close()
+
 @tree.command(description="Gets information about the bot and the game. ")
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
 @app_commands.rename(se='show-everyone')
@@ -2165,7 +2183,7 @@ tree.add_command(stats)
 # error handling
 async def on_command_error(interaction:discord.Interaction, error:discord.app_commands.errors.CommandInvokeError, *args, **kwargs):
     # suppress 404 Not Found errors w/ code 10062
-    if not (isinstance(error.original, discord.errors.NotFound) and (error.original.code == 10062)):
+    # if not (isinstance(error.original, discord.errors.NotFound) and (error.original.code == 10062)):
         embed = discord.Embed(title=f":x: Command Error", colour=BLUE)
         if 'options' in interaction.data['options'][0]:
             embed.add_field(name='Command', value=f"{interaction.data['name']} {interaction.data['options'][0]['name']}")
@@ -2186,12 +2204,16 @@ async def on_command_error(interaction:discord.Interaction, error:discord.app_co
 tree.on_error=on_command_error
 
 @client.event
+# message error handling
 async def on_error(event, *args, **kwargs):
     embed = discord.Embed(title=':x: Error', colour=RED)
     embed.add_field(name='Event', value=event)
     embed.add_field(name='Message',value=args[0].content)
-    if args[0].guild:
+    if args[0].guild and isinstance(args[0], discord.Message):
         embed.add_field(name='Guild ID', value = str(args[0].guild.id))
+        # empty process queue
+        processes[args[0].guild] = []
+        await args[0].reply(f'Ran into error processing city. Try running `/stats server` to see what has been registered.', mention_author=False)
     if args[0].author:
         embed.add_field(name='User ID', value = str(args[0].author.id))
     embed.description = '```\n%s\n```' % traceback.format_exc()
