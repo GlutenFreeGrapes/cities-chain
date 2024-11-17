@@ -1,4 +1,4 @@
-import discord, re, pandas as pd, math, mariadb, numpy as np, asyncio, io, anyascii, traceback, datetime, json, requests, pytz
+import discord, re, pandas as pd, math, mariadb, numpy as np, asyncio, io, anyascii, traceback, datetime, json, requests, pytz, concurrent.futures
 from discord import app_commands
 from typing import Optional,Literal
 from os import environ as env
@@ -970,7 +970,6 @@ async def on_message_edit(message:discord.Message, after:discord.Message):
                     if valid:
                         await message.channel.send("<@%s> has edited their city of `%s`. The next letter is `%s`."%(cache[guildid]["last_user"],name,cache[guildid]["current_letter"]))
 
-import concurrent.futures
 if __name__ == "__main__":
     # chain_pool = concurrent.futures.ThreadPoolExecutor(5)
     chain_pool = concurrent.futures.ProcessPoolExecutor(2)
@@ -1151,7 +1150,7 @@ async def process_chain(message:discord.Message,guildid,authorid,original_conten
         current_time = int(message.created_at.timestamp())
         cur.execute('''update server_info set max_chain = ?,last_best = ? where server_id = ?''',data=(length,current_time,guildid))
         cache[guildid]["max_chain"] = length
-        cache[guildid]["max_chain"] = current_time
+        cache[guildid]["last_best"] = current_time
         new_high = True
     conn.commit()
     
@@ -1714,7 +1713,7 @@ async def bestrds(interaction: discord.Interaction,se:Optional[Literal['yes','no
             else:
                 name_str = '-'
             
-            embed.add_field(name=name_str, value=f'Length: {length}\nRound: {round_num}\nParticipants: {part}\nStarted: <t:{start_time}:f>\nEnded: {"**Ongoing**" if (round_num==cache[interaction.guild_id]["round_number"] and not cache[interaction.guild_id]["round_number"]) else f"<t:{end_time}:f>"}')
+            embed.add_field(name=name_str, value=f'Length: {length}\nRound: {round_num}\nParticipants: {part}\nStarted: <t:{start_time}:f>\nEnded: {"**Ongoing**" if (round_num==cache[interaction.guild_id]["round_number"] and not cache[interaction.guild_id]["chain_end"]) else f"<t:{end_time}:f>"}')
             
             # if maxc>1:
             #     cur.execute('''select city_id,name,admin2,admin1,country_code,alt_country,time_placed from chain_info where server_id = ? and round_number = ? and count = ?''',data=(interaction.guild_id,i[1],1))
@@ -1803,7 +1802,9 @@ async def cityinfo(interaction: discord.Interaction, query:str,include_deletes:O
     minimum_population,country_list_mode,country_list = cache[interaction.guild_id]["min_pop"],cache[interaction.guild_id]["list_mode"],cache[interaction.guild_id]["list"]
     sanitized = sanitize_query(query)
     if len(sanitized):
-        res= search_cities(sanitized[0],sanitized[1:],minimum_population,(include_deletes=='yes'),country_list_mode,country_list)
+        # res=search_cities(sanitized[0],sanitized[1:],minimum_population,(include_deletes=='yes'),country_list_mode,country_list)
+        res=chain_pool.submit(search_cities,sanitized[0],sanitized[1:],minimum_population,(include_deletes=='yes'),country_list_mode,country_list)
+        res=res.result()
         if res:
             # cur.execute("select count from count_info where server_id=? and city_id=?",data=(interaction.guild_id,res[0]))
             cur.execute('SELECT user_id, COUNT(*), SUM(CASE user_id WHEN ? THEN 1 ELSE 0 END), MIN(time_placed) FROM `chain_info` WHERE server_id = ? AND city_id = ? AND valid = 1 AND user_id IS NOT NULL ORDER BY `time_placed` DESC;', (interaction.user.id,interaction.guild_id, res[0]))
@@ -2183,7 +2184,7 @@ tree.add_command(stats)
 # error handling
 async def on_command_error(interaction:discord.Interaction, error:discord.app_commands.errors.CommandInvokeError, *args, **kwargs):
     # suppress 404 Not Found errors w/ code 10062
-    # if not (isinstance(error.original, discord.errors.NotFound) and (error.original.code == 10062)):
+    if not (isinstance(error.original, discord.errors.NotFound) and (error.original.code == 10062)):
         embed = discord.Embed(title=f":x: Command Error", colour=BLUE)
         if 'options' in interaction.data['options'][0]:
             embed.add_field(name='Command', value=f"{interaction.data['name']} {interaction.data['options'][0]['name']}")
@@ -2195,6 +2196,7 @@ async def on_command_error(interaction:discord.Interaction, error:discord.app_co
             embed.add_field(name='Guild ID', value = str(interaction.guild_id))
         if interaction.user:
             embed.add_field(name='User ID', value = str(interaction.user.id))
+        embed.add_field(name='Timestamp created',value=int(interaction.created_at.timestamp()))
         embed.description = '```\n%s\n```' % traceback.format_exc()
         embed.timestamp = datetime.datetime.now()
         app_info = await client.application_info()
@@ -2216,6 +2218,7 @@ async def on_error(event, *args, **kwargs):
         await args[0].reply(f'Ran into error processing city. Try running `/stats server` to see what has been registered.', mention_author=False)
     if args[0].author:
         embed.add_field(name='User ID', value = str(args[0].author.id))
+    embed.add_field(name='Timestamp created',value=int(args[0].created_at.timestamp()))
     embed.description = '```\n%s\n```' % traceback.format_exc()
     embed.timestamp = datetime.datetime.now()
     app_info = await client.application_info()
