@@ -59,6 +59,62 @@ cur.execute('use ' + env["DB_NAME"])
 cur.execute("SET @@session.wait_timeout = 2592000") # max 30 day wait timeout
 cur.execute("SET @@session.interactive_timeout = 28800") # max 8hr interactive timeout
 
+# fix best chains
+cur.execute('''UPDATE server_info, 
+            (SELECT chain_info.server_id, x.mc, MIN(time_placed) as bt
+            FROM chain_info
+            INNER JOIN 
+            (SELECT server_id, MAX(count) as mc 
+            FROM chain_info 
+            WHERE valid = 1 AND user_id IS NOT NULL 
+            GROUP BY server_id) x
+            ON chain_info.server_id = x.server_id
+            AND chain_info.count = x.mc
+            WHERE valid = 1 AND user_id IS NOT NULL
+            GROUP BY server_id) y
+            SET server_info.last_best = y.bt, 
+                server_info.max_chain = y.mc
+            WHERE server_info.server_id = y.server_id''')
+print("server_info")
+
+# update city counts
+cur.execute('''
+            UPDATE count_info, 
+            (SELECT server_id, city_id, COUNT(*) AS city_counts 
+            FROM chain_info 
+            WHERE valid = 1 AND user_id IS NOT NULL 
+            GROUP BY server_id, city_id) x
+            SET count_info.count = x.city_counts
+            WHERE count_info.server_id = x.server_id AND count_info.city_id = x.city_id''')
+print("count_info")
+
+# update user scores
+cur.execute('''UPDATE server_user_info,
+            (SELECT server_id, user_id, SUM(CASE WHEN valid = 1 THEN 1 END) AS correct, SUM(CASE WHEN valid = 0 THEN 1 END) AS incorrect, SUM(CASE valid WHEN 1 THEN 1 ELSE -1 END) AS score, MAX(time_placed) AS last_active
+            FROM chain_info
+            WHERE user_id IS NOT NULL
+            GROUP BY server_id, user_id) x
+            SET server_user_info.correct = x.correct,
+                server_user_info.incorrect = x.incorrect,
+                server_user_info.score = x.score,
+                server_user_info.last_active = x.last_active
+            WHERE server_user_info.server_id = x.server_id AND server_user_info.user_id = x.user_id''')
+print("server_user_info")
+
+cur.execute('''UPDATE global_user_info,
+            (SELECT user_id, SUM(CASE WHEN valid = 1 THEN 1 END) AS correct, SUM(CASE WHEN valid = 0 THEN 1 END) AS incorrect, SUM(CASE valid WHEN 1 THEN 1 ELSE -1 END) AS score, MAX(time_placed) AS last_active
+            FROM chain_info
+            WHERE user_id IS NOT NULL
+            GROUP BY user_id) x
+            SET global_user_info.correct = x.correct,
+                global_user_info.incorrect = x.incorrect,
+                global_user_info.score = x.score,
+                global_user_info.last_active = x.last_active
+            WHERE global_user_info.user_id = x.user_id''')
+print("global_user_info")
+conn.commit()
+print("committed")
+
 cur.execute('SELECT server_id, MIN(time_placed) FROM chain_info GROUP BY server_id')
 max_ages = {i[0]:i[1] for i in cur.fetchall()}
 earliest_time = min(max_ages.values()) if len(max_ages) else 0
@@ -572,8 +628,6 @@ async def on_guild_join(guild:discord.Guild):
             break
 
 mod_perms = discord.Permissions(moderate_members=True)
-async def is_owner(interaction: discord.Interaction):
-    return interaction.user.id==owner.id
 
 assign = app_commands.Group(name="set", description="Set different things for the chain.", guild_only=True, default_permissions=mod_perms)
 @assign.command(description="Sets the channel for the bot to monitor for cities chain.")
@@ -955,7 +1009,6 @@ async def on_message_delete(message:discord.Message):
                     if valid:
                         await message.channel.send("<@%s> has deleted their city of `%s`. The next letter is `%s`."%(cache[guildid]["last_user"],name,cache[guildid]["current_letter"]))
 
-
 @client.event
 async def on_message_edit(message:discord.Message, after:discord.Message):
     if message.guild and not message.edited_at:
@@ -973,7 +1026,7 @@ async def on_message_edit(message:discord.Message, after:discord.Message):
 if __name__ == "__main__":
     # chain_pool = concurrent.futures.ThreadPoolExecutor(5)
     chain_pool = concurrent.futures.ProcessPoolExecutor(2)
-RESPOND_WORDS = {"my bad", "mb", "oops", "woops", "sorry+", "sry+", "sowwy"}
+RESPOND_WORDS = {"m(y )?b(ad)?", "w?oops", "so*r+y+", "sowwy"}
 @client.event
 async def on_message(message:discord.Message):
     content = message.content
@@ -1713,7 +1766,7 @@ async def bestrds(interaction: discord.Interaction,se:Optional[Literal['yes','no
             else:
                 name_str = '-'
             
-            embed.add_field(name=name_str, value=f'Length: {length}\nRound: {round_num}\nParticipants: {part}\nStarted: <t:{start_time}:f>\nEnded: {"**Ongoing**" if (round_num==cache[interaction.guild_id]["round_number"] and not cache[interaction.guild_id]["chain_end"]) else f"<t:{end_time}:f>"}')
+            embed.add_field(name=name_str, value=f'Length: {length:,}\nRound: {round_num:,}\nParticipants: {part:,}\nStarted: <t:{start_time}:f>\nEnded: {"**Ongoing**" if (round_num==cache[interaction.guild_id]["round_number"] and not cache[interaction.guild_id]["chain_end"]) else f"<t:{end_time}:f>"}')
             
             # if maxc>1:
             #     cur.execute('''select city_id,name,admin2,admin1,country_code,alt_country,time_placed from chain_info where server_id = ? and round_number = ? and count = ?''',data=(interaction.guild_id,i[1],1))
@@ -2081,7 +2134,6 @@ async def serverunblock(interaction: discord.Interaction,member: discord.Member)
     await interaction.response.send_message(f"<@{member.id}> has been unblocked from using this bot in the server. ")
 
 @tree.command(name="block-global",description="Blocks a user from using the bot. ")
-@app_commands.check(is_owner)
 @app_commands.default_permissions(moderate_members=True)
 @app_commands.guilds(1126556064150736999)
 @app_commands.guild_only()
@@ -2096,7 +2148,6 @@ async def globalblock(interaction: discord.Interaction,user: discord.User,reason
 
 
 @tree.command(name="unblock-global",description="Unblocks a user from using the bot. ")
-@app_commands.check(is_owner)
 @app_commands.default_permissions(moderate_members=True)
 @app_commands.guilds(1126556064150736999)
 @app_commands.guild_only()
@@ -2106,7 +2157,6 @@ async def globalunblock(interaction: discord.Interaction,user: discord.User):
     await interaction.response.send_message(f"<@{user.id}> has been unblocked from using this bot. ")
 
 @tree.command(name="clear-processes",description="Clears list of cities for a given guild. ")
-@app_commands.check(is_owner)
 @app_commands.default_permissions(moderate_members=True)
 @app_commands.guilds(1126556064150736999)
 @app_commands.guild_only()
@@ -2118,7 +2168,6 @@ async def clearprocesses(interaction: discord.Interaction, guild: str):
         await interaction.response.send_message(f"Please put in valid server ID. ")
 
 @tree.command(description="Clears list of cities for a given guild. ")
-@app_commands.check(is_owner)
 @app_commands.default_permissions(moderate_members=True)
 @app_commands.guilds(1126556064150736999)
 @app_commands.guild_only()
