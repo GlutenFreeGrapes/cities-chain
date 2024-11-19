@@ -90,7 +90,7 @@ print("count_info")
 
 # update user scores
 cur.execute('''UPDATE server_user_info,
-            (SELECT server_id, user_id, SUM(CASE WHEN valid = 1 THEN 1 END) AS correct, SUM(CASE WHEN valid = 0 THEN 1 END) AS incorrect, SUM(CASE valid WHEN 1 THEN 1 ELSE -1 END) AS score, MAX(time_placed) AS last_active
+            (SELECT server_id, user_id, SUM(CASE WHEN valid = 1 THEN 1 ELSE 0 END) AS correct, SUM(CASE WHEN valid = 0 THEN 1  ELSE 0 END) AS incorrect, SUM(CASE valid WHEN 1 THEN 1 ELSE -1 END) AS score, MAX(time_placed) AS last_active
             FROM chain_info
             WHERE user_id IS NOT NULL
             GROUP BY server_id, user_id) x
@@ -102,7 +102,7 @@ cur.execute('''UPDATE server_user_info,
 print("server_user_info")
 
 cur.execute('''UPDATE global_user_info,
-            (SELECT user_id, SUM(CASE WHEN valid = 1 THEN 1 END) AS correct, SUM(CASE WHEN valid = 0 THEN 1 END) AS incorrect, SUM(CASE valid WHEN 1 THEN 1 ELSE -1 END) AS score, MAX(time_placed) AS last_active
+            (SELECT user_id, SUM(CASE WHEN valid = 1 THEN 1 ELSE 0 END) AS correct, SUM(CASE WHEN valid = 0 THEN 1  ELSE 0 END) AS incorrect, SUM(CASE valid WHEN 1 THEN 1 ELSE -1 END) AS score, MAX(time_placed) AS last_active
             FROM chain_info
             WHERE user_id IS NOT NULL
             GROUP BY user_id) x
