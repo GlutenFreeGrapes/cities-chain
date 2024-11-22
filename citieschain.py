@@ -39,12 +39,18 @@ iso3={i:allcountries[n] for n,i in enumerate(countrydefaults['iso3'])}
 allcountries=sorted(allcountries)
 regionalindicators={chr(97+i):chr(127462+i) for i in range(26)}
 flags = {i:regionalindicators[i[0].lower()]+regionalindicators[i[1].lower()] for i in iso2}
-time_to_offset = {"24 Hours" : datetime.timedelta(days=1), 
+stats_time_offset = {"24 Hours" : datetime.timedelta(days=1), 
                      "48 Hours" : datetime.timedelta(days=2), 
                      "7 Days" : datetime.timedelta(days=7), 
                      "14 Days" : datetime.timedelta(days=14), 
                      "1 Month" : datetime.timedelta(days=30), 
                      "3 Months" : datetime.timedelta(days=90)}
+block_time_offset = {"1 Hour" : datetime.timedelta(hours=1),
+                     "6 Hours" : datetime.timedelta(hours=6),
+                     "24 Hours" : datetime.timedelta(days=1), 
+                     "48 Hours" : datetime.timedelta(days=2), 
+                     "7 Days" : datetime.timedelta(days=7), 
+                     "1 Month" : datetime.timedelta(days=30)}
 
 env.setdefault("DB_NAME", "cities_chain")
 conn = mariadb.connect(
@@ -58,6 +64,10 @@ cur.execute('create database if not exists ' + env["DB_NAME"])
 cur.execute('use ' + env["DB_NAME"])
 cur.execute("SET @@session.wait_timeout = 2592000") # max 30 day wait timeout
 cur.execute("SET @@session.interactive_timeout = 28800") # max 8hr interactive timeout
+
+# block durations
+cur.execute('ALTER TABLE server_user_info ADD IF NOT EXISTS block_expiry bigint DEFAULT -1')
+cur.execute('ALTER TABLE global_user_info ADD IF NOT EXISTS block_expiry bigint DEFAULT -1')
 
 # fix best chains
 cur.execute('''UPDATE server_info, 
@@ -530,6 +540,13 @@ owner=None
 cur.execute('select server_id from server_info')
 processes = {i:[] for (i,) in cur.fetchall()}
 
+async def timed_unblock(server_id, user_id, timestamp, is_global):
+    expire_dt = datetime.datetime.fromtimestamp(timestamp)
+    if expire_dt > datetime.datetime.now():
+        timeout = expire_dt - datetime.datetime.now()
+        await asyncio.sleep(timeout.seconds)
+    unblock(server_id, user_id, is_global)
+
 @client.event
 async def on_ready():
     global owner
@@ -563,6 +580,15 @@ async def on_ready():
             "updates":i[15],
         }
     conn.commit()
+    # timed blocks
+    cur.execute('SELECT server_id, user_id, block_expiry FROM server_user_info WHERE blocked = 1 AND block_expiry > 0')
+    for i in cur.fetchall():
+        print(i)
+        await timed_unblock(i[0],i[1],i[2],False)
+
+    cur.execute('SELECT user_id, block_expiry FROM global_user_info WHERE blocked = 1 AND block_expiry > 0')
+    for i in cur.fetchall():
+        await timed_unblock(0, i[0],i[1],True)
     # prepare github messages
     json_response = requests.get("https://api.github.com/repos/GlutenFreeGrapes/cities-chain/commits",params={"since":(datetime.datetime.now(tz=pytz.utc)-datetime.timedelta(minutes=17)).isoformat()}).json()
     commit_list = [(datetime.datetime.fromisoformat(i['commit']['author']['date']),i['commit']['message']) for i in json_response][::-1]
@@ -1025,7 +1051,7 @@ async def on_message_edit(message:discord.Message, after:discord.Message):
 
 if __name__ == "__main__":
     # chain_pool = concurrent.futures.ThreadPoolExecutor(5)
-    chain_pool = concurrent.futures.ProcessPoolExecutor(2)
+    chain_pool = concurrent.futures.ProcessPoolExecutor()
 RESPOND_WORDS = {"m(y )?b(ad)?", "w?oops", "so*r+y+", "sowwy"}
 @client.event
 async def on_message(message:discord.Message):
@@ -1477,7 +1503,7 @@ async def roundinfo(interaction: discord.Interaction,round_num:int,showmap:Optio
             embed.set_author(name=interaction.guild.name, icon_url=interaction.guild.icon.url)
         else:
             embed.set_author(name=interaction.guild.name)
-        view=Paginator(1,cutoff,"Round %s"%(f'{round_num:,}'),math.ceil(len(cutoff)/25),interaction.user.id,embed,f" | {len(set(cityids))} unique cities across {len(set(countries))} countries")
+        view=Paginator(1,cutoff,"Round %s (%s - %s, %s Participants)"%(f'{round_num:,}', f'<t:{start}:f>', f'<t:{end}:f>' if end else "Ongoing", len(participants)),math.ceil(len(cutoff)/25),interaction.user.id,embed,f" | {len(set(cityids))} unique cities across {len(set(countries))} countries")
         await interaction.followup.send(embed=embed,view=view,ephemeral=(se=='no'),files=[generate_map(cityids)] if showmap=='yes' else [])
         view.message=await interaction.original_response()
     else:
@@ -1500,7 +1526,7 @@ def max_age_to_timestamp(interaction, max_age, is_global):
                     return 0
             return max_ages[interaction.guild_id]
     else:
-        return int((interaction.created_at - time_to_offset[max_age]).timestamp())
+        return int((interaction.created_at - stats_time_offset[max_age]).timestamp())
 
 @stats.command(description="Displays serverwide user leaderboard.")
 @app_commands.rename(se='show-everyone', max_age = 'max-age')
@@ -1804,15 +1830,15 @@ async def blocked(interaction:discord.Interaction,se:Optional[Literal['yes','no'
     if is_blocked(interaction.user.id,interaction.guild_id):
         await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ",ephemeral=(se=='no'))
         return
-    cur.execute('select user_id,block_reason from server_user_info where blocked=? and server_id=?',data=(True,interaction.guild_id))
-    blocks={i[0]:i[1] for i in cur.fetchall()}
-    cur.execute('select global_user_info.user_id,global_user_info.block_reason from global_user_info inner join (select server_user_info.user_id from server_user_info where server_id=?) as b on global_user_info.user_id=b.user_id where blocked=? ',(interaction.guild_id,True,))
+    cur.execute('select user_id,block_reason,block_expiry from server_user_info where blocked=? and server_id=?',data=(True,interaction.guild_id))
+    blocks={i[0]:(i[1],i[2]) for i in cur.fetchall()}
+    cur.execute('select global_user_info.user_id,global_user_info.block_reason,global_user_info.block_expiry from global_user_info inner join (select server_user_info.user_id from server_user_info where server_id=?) as b on global_user_info.user_id=b.user_id where blocked=? ',(interaction.guild_id,True,))
     for i in cur.fetchall():
-        blocks[i[0]]=i[1]
+        blocks[i[0]]=(i[1],i[2])
     embed=discord.Embed(title='Blocked Users',color=GREEN)
     cur.execute('''select city_id from repeat_info where server_id = ?''', data=(interaction.guild_id,))
     if len(blocks)>0:
-        fmt=[f"- <@{i}> - {blocks[i]}" for i in blocks]
+        fmt=[f"- <@{i}> - {blocks[i][0]} - Expires {f'<t:{blocks[i][1]}:R>' if blocks[i][1]!=-1 else '**Never**'}" for i in blocks]
         embed.description='\n'.join(fmt[:25])
         view=Paginator(1,fmt,"Blocked Users",math.ceil(len(fmt)/25),interaction.user.id,embed)
         await interaction.followup.send(embed=embed,view=view,ephemeral=(se=='no'))
@@ -1857,7 +1883,7 @@ async def cityinfo(interaction: discord.Interaction, query:str,include_deletes:O
     if len(sanitized):
         # res=search_cities(sanitized[0],sanitized[1:],minimum_population,(include_deletes=='yes'),country_list_mode,country_list)
         res=chain_pool.submit(search_cities,sanitized[0],sanitized[1:],minimum_population,(include_deletes=='yes'),country_list_mode,country_list)
-        res=res.result()
+        res=res.result(10)
         if res:
             # cur.execute("select count from count_info where server_id=? and city_id=?",data=(interaction.guild_id,res[0]))
             cur.execute('SELECT user_id, COUNT(*), SUM(CASE user_id WHEN ? THEN 1 ELSE 0 END), MIN(time_placed) FROM `chain_info` WHERE server_id = ? AND city_id = ? AND valid = 1 AND user_id IS NOT NULL ORDER BY `time_placed` DESC;', (interaction.user.id,interaction.guild_id, res[0]))
@@ -2102,20 +2128,30 @@ async def ping(interaction: discord.Interaction):
 @tree.command(name="block-server",description="Blocks a user from using the bot in the server. ")
 @app_commands.default_permissions(moderate_members=True)
 @app_commands.guild_only()
-async def serverblock(interaction: discord.Interaction,member: discord.Member, reason: app_commands.Range[str,0,128]):
+async def serverblock(interaction: discord.Interaction,member: discord.Member, reason: app_commands.Range[str,0,128], duration: Literal['1 Hour', '6 Hours', '24 Hours', '48 Hours', '7 Days', '1 Month', 'Permanent']):
     if member!=owner and not member.bot:
         if is_blocked(interaction.user.id,interaction.guild_id):
             await interaction.response.send_message(":no_pedestrians: You are blocked from using this bot. ")
             return
         cur.execute("select user_id from server_user_info where user_id=? and server_id=?",data=(member.id,interaction.guild_id))
+        block_expiry = int((datetime.datetime.now()+block_time_offset[duration]).timestamp()) if duration!='Permanent' else -1
         if cur.rowcount:
-            cur.execute('''update server_user_info set blocked=?,block_reason=? where user_id=? and server_id=?''',data=(True,reason,member.id,interaction.guild_id))
+            cur.execute('''update server_user_info set blocked=?,block_reason=?,block_expiry=? where user_id=? and server_id=?''',data=(True,reason,block_expiry,member.id,interaction.guild_id))
         else:
-            cur.execute('insert into server_user_info(server_id,user_id,blocked,block_reason) values(?,?,?,?)',data=(interaction.guild_id,member.id,True,reason))
+            cur.execute('insert into server_user_info(server_id,user_id,blocked,block_reason,block_expiry) values(?,?,?,?,?)',data=(interaction.guild_id,member.id,True,reason,block_expiry))
         conn.commit()
-        await interaction.response.send_message(f"<@{member.id}> has been blocked from using this bot in the server. Reason: `{reason}`")
+        await interaction.response.send_message(f"<@{member.id}> has been blocked from using this bot in the server. Reason: `{reason}`, Expires: {f'<t:{block_expiry}:R>' if block_expiry!=-1 else '**Never**'}")
+        if duration!='Permanent':
+            await timed_unblock(interaction.guild_id,member.id,block_expiry,False)
     else:
         await interaction.response.send_message(f"Nice try, bozo")
+
+def unblock(server_id, user, is_global:bool):
+    if is_global:
+        cur.execute('''update global_user_info set blocked=?,block_reason=? where user_id=?''',data=(False,None,user))
+    else:
+        cur.execute('''update server_user_info set blocked=?,block_reason=? where user_id=? and server_id=?''',data=(False,None,user,server_id))
+    conn.commit()
 
 @tree.command(name="unblock-server",description="Unblocks a user from using the bot in the server. ")
 @app_commands.default_permissions(moderate_members=True)
@@ -2129,22 +2165,24 @@ async def serverunblock(interaction: discord.Interaction,member: discord.Member)
         if cur.fetchone()[0]:
             await interaction.response.send_message(f":no_entry: <@{member.id}> cannot be unblocked. ")
             return
-    cur.execute('''update server_user_info set blocked=?,block_reason=? where user_id=? and server_id=?''',data=(False,None,member.id,interaction.guild_id))
-    conn.commit()
+    unblock(interaction.guild_id,member.id,False)
     await interaction.response.send_message(f"<@{member.id}> has been unblocked from using this bot in the server. ")
 
 @tree.command(name="block-global",description="Blocks a user from using the bot. ")
 @app_commands.default_permissions(moderate_members=True)
 @app_commands.guilds(1126556064150736999)
 @app_commands.guild_only()
-async def globalblock(interaction: discord.Interaction,user: discord.User,reason: app_commands.Range[str,0,128]):
+async def globalblock(interaction: discord.Interaction,user: discord.User,reason: app_commands.Range[str,0,128], duration: Literal['1 Hour', '6 Hours', '24 Hours', '48 Hours', '7 Days', '1 Month', 'Permanent']):
     cur.execute("select user_id from global_user_info where user_id=?",data=(user.id,))
+    block_expiry = int((datetime.datetime.now()+block_time_offset[duration]).timestamp()) if duration!='Permanent' else -1
     if cur.rowcount:
-        cur.execute('''update global_user_info set blocked=?,block_reason=? where user_id=?''',data=(True,reason,user.id))
+        cur.execute('''update global_user_info set blocked=?,block_reason=?,block_expiry=? where user_id=?''',data=(True,reason,block_expiry,user.id))
     else:
-        cur.execute('insert into global_user_info(user_id,blocked,block_reason) values(?,?,?)',data=(user.id,True,reason))
+        cur.execute('insert into global_user_info(user_id,blocked,block_reason,block_expiry) values(?,?,?,?)',data=(user.id,True,reason,block_expiry))
     conn.commit()
-    await interaction.response.send_message(f"<@{user.id}> has been blocked from using this bot. Reason: `{reason}`")
+    await interaction.response.send_message(f"<@{user.id}> has been blocked from using this bot. Reason: `{reason}`, Expires: {f'<t:{block_expiry}:R>' if block_expiry!=-1 else '**Never**'}")
+    if duration!='Permanent':
+        await timed_unblock(interaction.guild_id,user.id,block_expiry,True)
 
 
 @tree.command(name="unblock-global",description="Unblocks a user from using the bot. ")
@@ -2152,8 +2190,7 @@ async def globalblock(interaction: discord.Interaction,user: discord.User,reason
 @app_commands.guilds(1126556064150736999)
 @app_commands.guild_only()
 async def globalunblock(interaction: discord.Interaction,user: discord.User):
-    cur.execute('''update global_user_info set blocked=?,block_reason=? where user_id=?''',data=(False,None,user.id))
-    conn.commit()
+    unblock(interaction.guild_id, user.id, True)
     await interaction.response.send_message(f"<@{user.id}> has been unblocked from using this bot. ")
 
 @tree.command(name="clear-processes",description="Clears list of cities for a given guild. ")
