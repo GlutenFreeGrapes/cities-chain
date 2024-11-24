@@ -357,7 +357,7 @@ def generate_map(city_id_list):
             latdif=(maxmargins+latdif)/(1+SCALING_FACTOR)
             mlat-=latdif/2
             Mlat+=latdif/2
-        if len(coords)>1:
+        if len(set(coords))>1:
             m = Basemap(llcrnrlon=max(-180,mlon-londif*(SCALING_FACTOR/2)),llcrnrlat=max(-90,mlat-latdif*(SCALING_FACTOR/2)),urcrnrlon=min(180,Mlon+londif*(SCALING_FACTOR/2)),urcrnrlat=min(90,Mlat+latdif*(SCALING_FACTOR/2)),resolution='l',projection='cyl')
         else:
             MARGIN_DEGREES = 5 # on each side
@@ -910,7 +910,7 @@ async def repeat(interaction: discord.Interaction, city:str, province:Optional[s
         await interaction.followup.send('Command can only be used after the chain has ended.')
 
 @add.command(name='country-list',description="Adds country to the whitelist/blacklist.")
-@app_commands.describe(country="Country the city is located in")
+@app_commands.describe(country="Country to add to the list")
 @app_commands.autocomplete(country=countrycomplete)
 async def countrylist(interaction: discord.Interaction, country:str):
     await interaction.response.defer()
@@ -992,7 +992,7 @@ async def repeat(interaction: discord.Interaction, city:str, province:Optional[s
         await interaction.followup.send('Command can only be used after the chain has ended.')
 
 @remove.command(name='country-list',description="Removes country from the whitelist/blacklist.")
-@app_commands.describe(country="Country the city is located in")
+@app_commands.describe(country="Country to remove from the list")
 @app_commands.autocomplete(country=countrycomplete)
 async def countrylist(interaction: discord.Interaction, country:str):
     await interaction.response.defer()
