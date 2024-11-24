@@ -65,65 +65,65 @@ cur.execute('use ' + env["DB_NAME"])
 cur.execute("SET @@session.wait_timeout = 2592000") # max 30 day wait timeout
 cur.execute("SET @@session.interactive_timeout = 28800") # max 8hr interactive timeout
 
-# block durations
-cur.execute('ALTER TABLE server_user_info ADD IF NOT EXISTS block_expiry bigint DEFAULT -1')
-cur.execute('ALTER TABLE global_user_info ADD IF NOT EXISTS block_expiry bigint DEFAULT -1')
+# # block durations
+# cur.execute('ALTER TABLE server_user_info ADD IF NOT EXISTS block_expiry bigint DEFAULT -1')
+# cur.execute('ALTER TABLE global_user_info ADD IF NOT EXISTS block_expiry bigint DEFAULT -1')
 
-# fix best chains
-cur.execute('''UPDATE server_info, 
-            (SELECT chain_info.server_id, x.mc, MIN(time_placed) as bt
-            FROM chain_info
-            INNER JOIN 
-            (SELECT server_id, MAX(count) as mc 
-            FROM chain_info 
-            WHERE valid = 1 AND user_id IS NOT NULL 
-            GROUP BY server_id) x
-            ON chain_info.server_id = x.server_id
-            AND chain_info.count = x.mc
-            WHERE valid = 1 AND user_id IS NOT NULL
-            GROUP BY server_id) y
-            SET server_info.last_best = y.bt, 
-                server_info.max_chain = y.mc
-            WHERE server_info.server_id = y.server_id''')
-print("server_info")
+# # fix best chains
+# cur.execute('''UPDATE server_info, 
+#             (SELECT chain_info.server_id, x.mc, MIN(time_placed) as bt
+#             FROM chain_info
+#             INNER JOIN 
+#             (SELECT server_id, MAX(count) as mc 
+#             FROM chain_info 
+#             WHERE valid = 1 AND user_id IS NOT NULL 
+#             GROUP BY server_id) x
+#             ON chain_info.server_id = x.server_id
+#             AND chain_info.count = x.mc
+#             WHERE valid = 1 AND user_id IS NOT NULL
+#             GROUP BY server_id) y
+#             SET server_info.last_best = y.bt, 
+#                 server_info.max_chain = y.mc
+#             WHERE server_info.server_id = y.server_id''')
+# print("server_info")
 
-# update city counts
-cur.execute('''
-            UPDATE count_info, 
-            (SELECT server_id, city_id, COUNT(*) AS city_counts 
-            FROM chain_info 
-            WHERE valid = 1 AND user_id IS NOT NULL 
-            GROUP BY server_id, city_id) x
-            SET count_info.count = x.city_counts
-            WHERE count_info.server_id = x.server_id AND count_info.city_id = x.city_id''')
-print("count_info")
+# # update city counts
+# cur.execute('''
+#             UPDATE count_info, 
+#             (SELECT server_id, city_id, COUNT(*) AS city_counts 
+#             FROM chain_info 
+#             WHERE valid = 1 AND user_id IS NOT NULL 
+#             GROUP BY server_id, city_id) x
+#             SET count_info.count = x.city_counts
+#             WHERE count_info.server_id = x.server_id AND count_info.city_id = x.city_id''')
+# print("count_info")
 
-# update user scores
-cur.execute('''UPDATE server_user_info,
-            (SELECT server_id, user_id, SUM(CASE WHEN valid = 1 THEN 1 ELSE 0 END) AS correct, SUM(CASE WHEN valid = 0 THEN 1  ELSE 0 END) AS incorrect, SUM(CASE valid WHEN 1 THEN 1 ELSE -1 END) AS score, MAX(time_placed) AS last_active
-            FROM chain_info
-            WHERE user_id IS NOT NULL
-            GROUP BY server_id, user_id) x
-            SET server_user_info.correct = x.correct,
-                server_user_info.incorrect = x.incorrect,
-                server_user_info.score = x.score,
-                server_user_info.last_active = x.last_active
-            WHERE server_user_info.server_id = x.server_id AND server_user_info.user_id = x.user_id''')
-print("server_user_info")
+# # update user scores
+# cur.execute('''UPDATE server_user_info,
+#             (SELECT server_id, user_id, SUM(CASE WHEN valid = 1 THEN 1 ELSE 0 END) AS correct, SUM(CASE WHEN valid = 0 THEN 1  ELSE 0 END) AS incorrect, SUM(CASE valid WHEN 1 THEN 1 ELSE -1 END) AS score, MAX(time_placed) AS last_active
+#             FROM chain_info
+#             WHERE user_id IS NOT NULL
+#             GROUP BY server_id, user_id) x
+#             SET server_user_info.correct = x.correct,
+#                 server_user_info.incorrect = x.incorrect,
+#                 server_user_info.score = x.score,
+#                 server_user_info.last_active = x.last_active
+#             WHERE server_user_info.server_id = x.server_id AND server_user_info.user_id = x.user_id''')
+# print("server_user_info")
 
-cur.execute('''UPDATE global_user_info,
-            (SELECT user_id, SUM(CASE WHEN valid = 1 THEN 1 ELSE 0 END) AS correct, SUM(CASE WHEN valid = 0 THEN 1  ELSE 0 END) AS incorrect, SUM(CASE valid WHEN 1 THEN 1 ELSE -1 END) AS score, MAX(time_placed) AS last_active
-            FROM chain_info
-            WHERE user_id IS NOT NULL
-            GROUP BY user_id) x
-            SET global_user_info.correct = x.correct,
-                global_user_info.incorrect = x.incorrect,
-                global_user_info.score = x.score,
-                global_user_info.last_active = x.last_active
-            WHERE global_user_info.user_id = x.user_id''')
-print("global_user_info")
-conn.commit()
-print("committed")
+# cur.execute('''UPDATE global_user_info,
+#             (SELECT user_id, SUM(CASE WHEN valid = 1 THEN 1 ELSE 0 END) AS correct, SUM(CASE WHEN valid = 0 THEN 1  ELSE 0 END) AS incorrect, SUM(CASE valid WHEN 1 THEN 1 ELSE -1 END) AS score, MAX(time_placed) AS last_active
+#             FROM chain_info
+#             WHERE user_id IS NOT NULL
+#             GROUP BY user_id) x
+#             SET global_user_info.correct = x.correct,
+#                 global_user_info.incorrect = x.incorrect,
+#                 global_user_info.score = x.score,
+#                 global_user_info.last_active = x.last_active
+#             WHERE global_user_info.user_id = x.user_id''')
+# print("global_user_info")
+# conn.commit()
+# print("committed")
 
 cur.execute('SELECT server_id, MIN(time_placed) FROM chain_info GROUP BY server_id')
 max_ages = {i[0]:i[1] for i in cur.fetchall()}
@@ -1566,8 +1566,17 @@ async def lb(interaction: discord.Interaction,se:Optional[Literal['yes','no']]='
 
     since = max_age_to_timestamp(interaction, max_age, 1)
     embed=discord.Embed(title=f"Server High Scores - Since <t:{since}:d>",color=GREEN)
-    # cur.execute('SELECT server_id,MAX(count) AS mc FROM chain_info WHERE valid=1 AND leaderboard_eligible=1 GROUP BY `server_id` ORDER BY mc DESC')
-    cur.execute('SELECT chain_info.server_id,MAX(count) AS mc FROM chain_info INNER JOIN (SELECT DISTINCT server_id, round_number from chain_info where count=1 and time_placed >= ?) X ON chain_info.server_id=X.server_id AND chain_info.round_number=X.round_number WHERE valid=1 AND leaderboard_eligible=1 GROUP BY chain_info.server_id ORDER BY mc DESC', (since,))
+    cur.execute('''SELECT server_id, mc
+                    FROM 
+                    (SELECT server_id, round_number,MAX(count) AS mc, MIN(count) AS began, MAX(time_placed) AS time_finished
+                    FROM chain_info 
+                    WHERE valid=1 AND leaderboard_eligible=1 AND time_placed >= ?
+                    GROUP BY server_id, round_number
+                    ORDER BY mc DESC) x
+                    WHERE began = 1
+                    GROUP BY server_id  
+                    ORDER BY mc DESC, time_finished ASC, server_id DESC;''', (since,))
+    # cur.execute('SELECT chain_info.server_id,MAX(count) AS mc FROM chain_info INNER JOIN (SELECT DISTINCT server_id, round_number from chain_info where count=1 and time_placed >= ?) X ON chain_info.server_id=X.server_id AND chain_info.round_number=X.round_number WHERE valid=1 AND leaderboard_eligible=1 GROUP BY chain_info.server_id ORDER BY mc DESC', (since,))
     if cur.rowcount>0:
         top=[]
         counter=0
@@ -1881,14 +1890,15 @@ async def cityinfo(interaction: discord.Interaction, query:str,include_deletes:O
     minimum_population,country_list_mode,country_list = cache[interaction.guild_id]["min_pop"],cache[interaction.guild_id]["list_mode"],cache[interaction.guild_id]["list"]
     sanitized = sanitize_query(query)
     if len(sanitized):
-        # res=search_cities(sanitized[0],sanitized[1:],minimum_population,(include_deletes=='yes'),country_list_mode,country_list)
-        res=chain_pool.submit(search_cities,sanitized[0],sanitized[1:],minimum_population,(include_deletes=='yes'),country_list_mode,country_list)
-        res=res.result(10)
+        res=search_cities(sanitized[0],sanitized[1:],minimum_population,(include_deletes=='yes'),country_list_mode,country_list)
+        # res=chain_pool.submit(search_cities,sanitized[0],sanitized[1:],minimum_population,(include_deletes=='yes'),country_list_mode,country_list)
+        # res=res.result()
         if res:
-            # cur.execute("select count from count_info where server_id=? and city_id=?",data=(interaction.guild_id,res[0]))
-            cur.execute('SELECT user_id, COUNT(*), SUM(CASE user_id WHEN ? THEN 1 ELSE 0 END), MIN(time_placed) FROM `chain_info` WHERE server_id = ? AND city_id = ? AND valid = 1 AND user_id IS NOT NULL ORDER BY `time_placed` DESC;', (interaction.user.id,interaction.guild_id, res[0]))
+            cur.execute("select count from count_info where server_id=? and city_id=?",data=(interaction.guild_id,res[0]))
             if cur.rowcount:
-                first_user, count, user_count, _=cur.fetchone()
+                count = cur.fetchone()[0]
+                cur.execute('SELECT user_id, SUM(CASE user_id WHEN ? THEN 1 ELSE 0 END), MIN(time_placed) FROM `chain_info` WHERE server_id = ? AND city_id = ? AND valid = 1 AND user_id IS NOT NULL ORDER BY `time_placed` DESC;', (interaction.user.id,interaction.guild_id, res[0]))
+                first_user, user_count, _=cur.fetchone()
             else:
                 count=0
             cur.execute('''select * from repeat_info where server_id = ? and city_id=?''', data=(interaction.guild_id,res[0]))
