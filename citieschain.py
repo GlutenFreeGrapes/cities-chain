@@ -330,7 +330,7 @@ def sanitize_query(query):
     return [i for i in query.split(',') if i!='']
 
 def generate_map(city_id_list):
-    coords = [city_default.loc[city_id][['latitude','longitude']] for city_id in city_id_list]
+    coords = list(city_default.loc[city_id_list][['latitude','longitude']].itertuples(index = False, name = None))
     if len(coords):
         lats,lons = zip(*coords)
 
@@ -1051,7 +1051,7 @@ async def on_message_edit(message:discord.Message, after:discord.Message):
 
 if __name__ == "__main__":
     # chain_pool = concurrent.futures.ThreadPoolExecutor(5)
-    chain_pool = concurrent.futures.ProcessPoolExecutor()
+    chain_pool = concurrent.futures.ProcessPoolExecutor(2)
 RESPOND_WORDS = {"m(y )?b(ad)?", "w?oops", "so*r+y+", "sowwy"}
 @client.event
 async def on_message(message:discord.Message):
