@@ -125,6 +125,15 @@ cur.execute("SET @@session.interactive_timeout = 28800") # max 8hr interactive t
 # conn.commit()
 # print("committed")
 
+# modify block expiry times
+cur.execute("ALTER TABLE server_user_info MODIFY COLUMN block_expiry bigint DEFAULT NULL;")
+cur.execute("ALTER TABLE global_user_info MODIFY COLUMN block_expiry bigint DEFAULT NULL;")
+cur.execute("UPDATE server_user_info SET block_expiry = NULL WHERE blocked = 0 AND block_expiry = -1")
+cur.execute("UPDATE global_user_info SET block_expiry = NULL WHERE blocked = 0 AND block_expiry = -1")
+# if a user has a block expiry time 
+cur.execute('UPDATE server_user_info SET blocked = 1 WHERE block_expiry IS NOT NULL')
+cur.execute('UPDATE global_user_info SET blocked = 1 WHERE block_expiry IS NOT NULL')
+
 cur.execute('SELECT server_id, MIN(time_placed) FROM chain_info GROUP BY server_id')
 max_ages = {i[0]:i[1] for i in cur.fetchall()}
 earliest_time = min(max_ages.values()) if len(max_ages) else 0
@@ -545,6 +554,12 @@ async def timed_unblock(server_id, user_id, timestamp, is_global):
     if expire_dt > datetime.datetime.now():
         timeout = expire_dt - datetime.datetime.now()
         await asyncio.sleep(timeout.seconds)
+    if is_global:
+        cur.execute('SELECT block_reason FROM global_user_info WHERE user_id = ?', (user_id,))
+    else:
+        cur.execute('SELECT block_reason FROM server_user_info WHERE server_id = ? AND user_id = ?', (server_id, user_id,))
+    reason = cur.fetchone()[0]
+    await owner.send(f"user {user_id} being unblocked {'globally' if is_global else f'from server {server_id}'} after reason: {reason}")
     unblock(server_id, user_id, is_global)
 
 @client.event
@@ -581,6 +596,7 @@ async def on_ready():
         }
     conn.commit()
     # timed blocks
+
     cur.execute('SELECT server_id, user_id, block_expiry FROM server_user_info WHERE blocked = 1 AND block_expiry > 0')
     for i in cur.fetchall():
         print(i)
@@ -2158,9 +2174,9 @@ async def serverblock(interaction: discord.Interaction,member: discord.Member, r
 
 def unblock(server_id, user, is_global:bool):
     if is_global:
-        cur.execute('''update global_user_info set blocked=?,block_reason=? where user_id=?''',data=(False,None,user))
+        cur.execute('''update global_user_info set blocked=?,block_reason=?,block_expiry=? where user_id=?''',data=(False,None,None,user))
     else:
-        cur.execute('''update server_user_info set blocked=?,block_reason=? where user_id=? and server_id=?''',data=(False,None,user,server_id))
+        cur.execute('''update server_user_info set blocked=?,block_reason=?,block_expiry=? where user_id=? and server_id=?''',data=(False,None,None,user,server_id))
     conn.commit()
 
 @tree.command(name="unblock-server",description="Unblocks a user from using the bot in the server. ")
