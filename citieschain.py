@@ -553,7 +553,7 @@ async def timed_unblock(server_id, user_id, timestamp, is_global):
     expire_dt = datetime.datetime.fromtimestamp(timestamp)
     if expire_dt > datetime.datetime.now():
         timeout = expire_dt - datetime.datetime.now()
-        await asyncio.sleep(timeout.seconds)
+        await asyncio.sleep(timeout.total_seconds())
     if is_global:
         cur.execute('SELECT block_reason FROM global_user_info WHERE user_id = ?', (user_id,))
     else:
