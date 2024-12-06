@@ -1,9 +1,10 @@
-import discord, re, pandas as pd, math, mariadb, numpy as np, asyncio, io, anyascii, traceback, datetime, json, requests, pytz, concurrent.futures
+import discord, re, pandas as pd, math, mariadb, numpy as np, asyncio, io, traceback, datetime, json, requests, pytz, concurrent.futures
 from discord import app_commands
 from typing import Optional,Literal
 from os import environ as env
 from dotenv import load_dotenv
 from mpl_toolkits.basemap import Basemap
+from anyascii import anyascii
 import matplotlib.pyplot as plt
 
 load_dotenv()
@@ -264,6 +265,7 @@ def search_cities(city,other_arguments,min_pop,include_deleted,country_list_mode
     else:
         results = city_names
     if results.shape[0]:
+        results=results.sort_values(['default','population','match'],ascending=[0,0,1])
         # return the results in different sortings depending on if the minimum population requirement is fulfilled
         # if population too small, look for larger options. if none, return original result
         if results.head(1).iloc[0]['population'] < min_pop:
@@ -554,12 +556,12 @@ async def timed_unblock(server_id, user_id, timestamp, is_global):
     if expire_dt > datetime.datetime.now():
         timeout = expire_dt - datetime.datetime.now()
         await asyncio.sleep(timeout.total_seconds())
-    if is_global:
-        cur.execute('SELECT block_reason FROM global_user_info WHERE user_id = ?', (user_id,))
-    else:
-        cur.execute('SELECT block_reason FROM server_user_info WHERE server_id = ? AND user_id = ?', (server_id, user_id,))
-    reason = cur.fetchone()[0]
-    await owner.send(f"user {user_id} being unblocked {'globally' if is_global else f'from server {server_id}'} after reason: {reason}")
+    # if is_global:
+    #     cur.execute('SELECT block_reason FROM global_user_info WHERE user_id = ?', (user_id,))
+    # else:
+    #     cur.execute('SELECT block_reason FROM server_user_info WHERE server_id = ? AND user_id = ?', (server_id, user_id,))
+    # reason = cur.fetchone()[0]
+    # await owner.send(f"user {user_id} being unblocked {'globally' if is_global else f'from server {server_id}'} after reason: {reason}")
     unblock(server_id, user_id, is_global)
 
 @client.event
@@ -1963,7 +1965,7 @@ async def cityinfo(interaction: discord.Interaction, query:str,include_deletes:O
             # first, last letters
             f_l_letters=discord.Embed(title=f"For the spelling `{res[2]}`",color=GREEN if not default['deleted'] else RED)
             f_l_letters.add_field(name="Name",value=f"`{res[1]['name']}`")
-            f_l_letters.add_field(name="As ASCII spelling",value=f"`{anyascii.anyascii(res[2])}`")
+            f_l_letters.add_field(name="As ASCII spelling",value=f"`{anyascii(res[2])}`")
             f_l_letters.add_field(name="First & Last Letters",value=f"`{res[1]['first-letter']}`,`{res[1]['last-letter']}`")
             tosend.append(f_l_letters)
 
@@ -2237,6 +2239,216 @@ async def clearprocesses(interaction: discord.Interaction, guild: str):
 async def quit(interaction: discord.Interaction):
     await interaction.response.send_message(f"Disconnecting.")
     await client.close()
+
+import zipfile, tarfile, requests, pandas as pd, io, re, time, json, datetime, pytz
+
+@tree.command(description="Updates cities list. ")
+@app_commands.default_permissions(moderate_members=True)
+@app_commands.guilds(1126556064150736999)
+@app_commands.guild_only()
+async def update(interaction: discord.Interaction):
+    await interaction.response.send_message(f"Updating.")
+    await client.close()
+    start = time.perf_counter()
+    t = tarfile.open(fileobj = io.BytesIO(requests.get('https://cityguesser.dbots.net/geobundles/geobundle.tgz', allow_redirects=1).content))
+
+    metadata = json.load(t.extractfile('geobundle/metadata.json'))
+    metadata['GeobundleRunTimeUtc']=metadata.pop('RunTimeUtc')
+    metadata['CitiesChainRunTimeUtc']=datetime.datetime.now(pytz.utc).isoformat()
+    with open('data/metadata.json','w') as f:
+        json.dump(metadata, f, indent=2)
+    # metadata = json.load(open('data/metadata.json'))
+    deleted = set(metadata['AllDeletedIds'])
+
+    raw_data = pd.read_table(t.extractfile('geobundle/cities.tsv'),sep='\t',dtype={'name':str,'asciiname':str,'alternatenames':str,'cc2':str,'admin1 code':str,'admin2 code':str,'admin3 code':str,'admin4 code':str,'population':int,'elevation':str},keep_default_na=False,na_values='',index_col=0,names=['geonameid','name','asciiname','alternatenames','latitude','longitude','feature class','feature code','country code','cc2','admin1 code','admin2 code','admin3 code','admin4 code','population','elevation','dem','timezone','modification date'])
+
+    admin1data,admin2data=pd.read_table(t.extractfile('geobundle/admin1.tsv'),sep='\t',keep_default_na=False,names=['code','default_name','name','geonameid'],index_col='geonameid',dtype={'code':str,'default_name':str,'name':str,'geonameid':int}),pd.read_table(t.extractfile('geobundle/admin2.tsv'),sep='\t',keep_default_na=False,names=['code','default_name','name','geonameid'],index_col='geonameid',dtype={'code':str,'default_name':str,'name':str,'geonameid':int})
+
+    countrydata=pd.read_table(t.extractfile('geobundle/countries.tsv'),sep='\t',keep_default_na=False,index_col='geonameid',names=['ISO','ISO3','ISO-Numeric','fips','Country','Capital','Area(in sq km)','Population','Continent','tld','CurrencyCode','CurrencyName','Phone','Postal Code Format','Postal Code Regex','Languages','geonameid','neighbours','EquivalentFipsCode'])
+    countrydata = countrydata[~countrydata['ISO'].str.startswith('#')]
+    countrydata.index=countrydata.index.astype(int)
+
+    countrydata=countrydata[['ISO','ISO3','Country']].rename({'ISO':'country','ISO3':'iso3','Country':'name'},axis=1)
+    countrydata = countrydata.assign(default=1)
+    print(countrydata)
+    # split admin1 code column
+    admin1data[['country','admin1']] = admin1data['code'].str.split('.',n=2,expand=True)
+    admin1data = admin1data.assign(default=1)
+    print(admin1data)
+    admin2data[['country','admin1','admin2']] = admin2data['code'].str.split('.',n=3,expand=True)
+    admin2data = admin2data.assign(default=1)
+    print(admin2data)
+
+    z = zipfile.ZipFile(io.BytesIO(requests.get("https://download.geonames.org/export/dump/alternateNamesV2.zip").content))
+    alternate_names = pd.read_table(z.open('alternateNamesV2.txt'),sep='\t',index_col=0,names=['alternateNameId','geonameid','isolanguage','alternate name','isPreferredName','isShortName','isColloquial','isHistoric','from','to'],keep_default_na=False,dtype={'from':str,'to':str,'isolanguage':str,'geonameid':int})
+
+    alternate_names=alternate_names[((alternate_names['isolanguage'].str.len()!=4)&(alternate_names['isolanguage']!='geoid'))|(alternate_names['isolanguage']=='piny')|(alternate_names['isolanguage']=='abbr')].rename({'alternate name':'name'},axis=1)
+    print(alternate_names['name'].str.replace('[,،፣٬].*','',regex=True,n=1))
+    alternate_names['name']=alternate_names['name'].str.replace('[,،፣٬].*','',regex=True,n=1).str.strip()
+    print(alternate_names)
+    # move default_name to another row
+    c=pd.concat([pd.DataFrame(countrydata['country'].tolist(),index=countrydata.index).stack().reset_index([0,'geonameid']).rename({'country':'name'},axis=1),pd.DataFrame(countrydata['iso3'].tolist(),index=countrydata.index).stack().reset_index([0,'geonameid']).rename({'iso3':'name'},axis=1)])
+    c.columns = ['geonameid','name']
+    c=pd.concat([c,alternate_names[alternate_names['geonameid'].isin(c['geonameid'])][['geonameid','name']]])
+    for column in ('country','iso3'):
+        c[column] = c['geonameid'].apply(lambda x: countrydata.at[x, column])
+
+    a1=pd.DataFrame(admin1data['default_name'].tolist(),index=admin1data.index).stack().reset_index([0,'geonameid'])
+    a1.columns = ['geonameid','name']
+    a1 = pd.concat([a1,alternate_names[alternate_names['geonameid'].isin(a1['geonameid'])][['geonameid','name']]])
+    for column in ('country','admin1'):
+        a1[column] = a1['geonameid'].apply(lambda x: admin1data.at[x, column])
+
+    a2=pd.DataFrame(admin2data['default_name'].tolist(),index=admin2data.index).stack().reset_index([0,'geonameid'])
+    a2.columns = ['geonameid','name']
+    a2 = pd.concat([a2,alternate_names[alternate_names['geonameid'].isin(a2['geonameid'])][['geonameid','name']]])
+    for column in ('country','admin1','admin2'):
+        a2[column] = a2['geonameid'].apply(lambda x: admin2data.at[x, column])
+
+    print(c)
+    print(a1)
+    print(a2)
+
+    countrydata['geonameid'] = countrydata.index
+    countrydata = countrydata[['geonameid','country','iso3','name','default']]
+    countrydata=pd.concat([countrydata,c])
+    countrydata['default'] = countrydata['default'].fillna(0).astype(int)
+    countrydata['name']=countrydata['name'].str.replace(',','').str.strip()
+    countrydata=countrydata.sort_values(['country','geonameid','default','name'],ascending=[1,1,0,1])
+    countrydata=countrydata.drop_duplicates(['geonameid','name'])
+    countrydata=countrydata[countrydata['name'].str.strip().str.len()>0]
+    print(countrydata)
+    countrydata.to_csv('data/countries.txt',index=0,sep='\t')
+
+    admin1data['geonameid'] = admin1data.index
+    admin1data = admin1data[['geonameid','country','admin1','name','default']]
+    admin1data=pd.concat([admin1data,a1])
+    admin1data['default'] = admin1data['default'].fillna(0).astype(int)
+    admin1data['name']=admin1data['name'].str.replace(',','').str.strip()
+    admin1data=admin1data.sort_values(['country','geonameid','default','name'],ascending=[1,1,0,1])
+    admin1data=admin1data.drop_duplicates(['geonameid','name'])
+    admin1data=admin1data[admin1data['name'].str.strip().str.len()>0]
+    print(admin1data)
+    admin1data.to_csv('data/admin1.txt',index=0,sep='\t')
+
+    admin2data['geonameid'] = admin2data.index
+    admin2data = admin2data[['geonameid','country','admin1','admin2','name','default']]
+    admin2data=pd.concat([admin2data,a2])
+    admin2data['default'] = admin2data['default'].fillna(0).astype(int)
+    admin2data['name']=admin2data['name'].str.replace(',','').str.strip()
+    admin2data=admin2data.sort_values(['country','geonameid','default','name'],ascending=[1,1,0,1])
+    admin2data=admin2data.drop_duplicates(['geonameid','name'])
+    admin2data=admin2data[admin2data['name'].str.strip().str.len()>0]
+    print(admin2data)
+    admin2data.to_csv('data/admin2.txt',index=0,sep='\t')
+
+    # filling in asciinames that are nan
+    raw_data.loc[raw_data['asciiname'].isna(),'asciiname'] = raw_data.loc[raw_data['asciiname'].isna(),'name'].apply(lambda n: anyascii(n))
+    # use this for name
+    raw_data['use_name']=raw_data['name'].apply(anyascii)
+
+    # resolve alt countries
+    raw_data['country codes'] = list(zip(raw_data['country code'],raw_data['cc2']))
+    print(raw_data.loc[raw_data['cc2'].str.len()>2,'cc2'])
+    raw_data.loc[raw_data['cc2'].str.len()>2,'cc2'] = raw_data.loc[raw_data['cc2'].str.len()>2,'country codes'].apply(lambda name_tuple:name_tuple[1].replace(name_tuple[0],'').strip(','))
+
+    # fill in na values for altnames
+    raw_data['alternatenames'] = raw_data['alternatenames'].fillna('')
+
+    # check consistency with admin1 and admin2 data
+    has_admin1 = raw_data[raw_data['admin1 code'].notna()]
+    has_admin2 = raw_data[raw_data['admin2 code'].notna()]
+    raw_adm1 = set(zip(has_admin1['country code'],has_admin1['admin1 code']))
+    raw_adm2 = set(zip(has_admin2['country code'],has_admin2['admin1 code'],has_admin2['admin2 code']))
+    all_adm1 = set(zip(admin1data['country'],admin1data['admin1']))
+    all_adm2 = set(zip(admin2data['country'],admin2data['admin1'],admin2data['admin2']))
+    nonexistent_adm1 = raw_adm1-all_adm1
+    nonexistent_adm2 = raw_adm2-all_adm2
+    for i in nonexistent_adm2:
+        raw_data.loc[(raw_data['admin2 code']==i[2])&(raw_data['admin1 code']==i[1])&(raw_data['country code']==i[0]),'admin2 code'] = None  
+
+    for i in nonexistent_adm1:
+        raw_data.loc[(raw_data['admin1 code']==i[1])&(raw_data['country code']==i[0]),'admin1 code'] = None
+
+    # final table
+    citydata = raw_data[['use_name','population','country code','admin1 code','admin2 code','cc2','latitude','longitude']]
+    citydata = citydata.assign(default=1).rename({'use_name':'name'}, axis = 1)
+
+    # individual rows for each altname (will remove duplicates later)
+    alt_names = pd.DataFrame(raw_data['alternatenames'].str.split(',').tolist(),index=raw_data.index).stack().reset_index([0,'geonameid'])
+    alt_names.columns = ['geonameid','name']
+    alt_names = alt_names[alt_names['name']!='']
+    # add in name 
+    name = raw_data[['name']]
+    name = pd.melt(raw_data.reset_index(), value_vars=['name','asciiname'],id_vars='geonameid')[['geonameid','value']].rename({'value':'name'},axis=1)#name.rename_axis('geonameid').reset_index()
+
+    alt_names=pd.concat([alt_names, name])
+    # copy data for altnames
+    for column in ('population','country code','admin1 code','admin2 code','cc2'):
+        alt_names[column] = alt_names['geonameid'].apply(lambda x: citydata.at[x, column])
+    # add to df
+    citydata['geonameid'] = citydata.index
+    citydata = pd.concat([citydata,alt_names])
+
+    # replace all with single apostrophe type
+    print(citydata[citydata['name'].str.find("`")>-1])
+    citydata['name']=citydata['name'].str.replace("[`’ʻʼ]","'",regex=True)
+    print(citydata[citydata['name'].str.find("`")>-1])
+
+    # deleted column
+    citydata['deleted'] = citydata['geonameid'].isin(deleted).astype(int)
+    citydata = citydata.rename({'cc2':'alt-country','country code':'country','admin1 code':'admin1','admin2 code':'admin2'}, axis = 1).sort_values(['deleted','country','geonameid','default','name'],ascending=[1,1,1,0,1]).drop_duplicates(subset=('geonameid','name'))
+    citydata['default'] = citydata['default'].fillna(0).astype(int)
+    citydata.index = range(len(citydata.index))
+
+    # apply romanization
+    punctuation = r"[^\w\s]"
+    letter_search = r'[a-zA-Z]'
+    citydata['name'] = citydata['name'].apply(lambda name: re.sub(r'\s+',' ',name).strip())
+
+    # generate lowercase column, add zipped geonameid,lower columns to set, check for membership when making new columns
+    citydata['lower']=citydata['name'].str.lower()
+    citydata=citydata.drop_duplicates(['geonameid','lower'])
+    lower_names = set(zip(citydata['geonameid'],citydata['lower']))
+
+    citydata['decoded'] = citydata['name'].apply(lambda q: re.sub("[`’ʻʼ]","'",re.sub(r'\s+',' ',anyascii(q))).strip().replace(',',''))
+    citydata['punct-space'] = citydata['decoded'].apply(lambda q: re.sub(r'\s+',' ',(re.sub(punctuation,' ',q)).strip()))
+    citydata['punct-empty'] = citydata['decoded'].apply(lambda q: re.sub(r'\s+',' ',(re.sub(punctuation,'',q)).strip()))
+    citydata['first-letter'] = citydata['punct-space'].apply(lambda q: re.search(letter_search,q).group(0).lower() if re.search(letter_search,q) else None)
+    citydata['last-letter'] = citydata['punct-space'].apply(lambda q: re.search(letter_search,q[::-1]).group(0).lower() if re.search(letter_search,q[::-1]) else None)
+
+    # the ones that couldnt be romanized
+    citydata = citydata[citydata['first-letter'].notna()]
+
+    # clean up now?
+    # check for membership in other columns before removing duplicates
+    citydata['lower2'] = citydata['decoded'].str.lower()
+    citydata['zip2'] = list(zip(citydata['geonameid'],citydata['lower2']))
+    citydata['lower3'] = citydata['punct-space'].str.lower()
+    citydata['zip3'] = list(zip(citydata['geonameid'],citydata['lower3']))
+    citydata['lower4'] = citydata['punct-empty'].str.lower()
+    citydata['zip4'] = list(zip(citydata['geonameid'],citydata['lower4']))
+
+    citydata['decoded'] = citydata['decoded'].where(~citydata['zip2'].isin(lower_names),None)
+    lower_names.update(citydata['zip2'])
+    citydata['punct-space'] = citydata['punct-space'].where(~citydata['zip3'].isin(lower_names),None)
+    lower_names.update(citydata['zip3'])
+    citydata['punct-empty'] = citydata['punct-empty'].where(~citydata['zip4'].isin(lower_names),None)
+    lower_names.update(citydata['zip4'])
+
+    citydata['decoded'] = citydata['decoded'].where(~citydata['zip2'].duplicated(),None)
+    citydata['punct-space'] = citydata['punct-space'].where(~citydata['zip3'].duplicated(),None)
+    citydata['punct-empty'] = citydata['punct-empty'].where(~citydata['zip4'].duplicated(),None)
+
+    # sort columns and data
+    citydata = citydata[['geonameid','name','population','country','admin1','admin2','alt-country','default','latitude','longitude','decoded','punct-space','punct-empty','first-letter','last-letter','deleted']]
+    citydata['name']=citydata['name'].str.replace(',','').str.strip()
+    citydata=citydata.sort_values(['deleted','country','geonameid','default','name'],ascending=[1,1,1,0,1])
+
+    # save to tsv
+    print(time.perf_counter()-start)
+    citydata.to_csv('data/cities.txt',index=0,sep='\t')
+    print(time.perf_counter()-start)
 
 @tree.command(description="Gets information about the bot and the game. ")
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
