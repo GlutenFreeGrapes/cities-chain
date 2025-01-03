@@ -124,33 +124,33 @@ cur.execute("SET @@session.interactive_timeout = 28800") # max 8hr interactive t
 #             WHERE global_user_info.user_id = x.user_id''')
 # print("global_user_info")
 
-cur.execute('''ALTER TABLE chain_info
-ADD CONSTRAINT FOREIGN KEY(server_id)
-   REFERENCES server_info(server_id);''')
+# cur.execute('''ALTER TABLE chain_info
+# ADD CONSTRAINT FOREIGN KEY(server_id)
+#    REFERENCES server_info(server_id);''')
 
-cur.execute('''ALTER TABLE count_info
-ADD CONSTRAINT FOREIGN KEY(server_id)
-   REFERENCES server_info(server_id);''')
+# cur.execute('''ALTER TABLE count_info
+# ADD CONSTRAINT FOREIGN KEY(server_id)
+#    REFERENCES server_info(server_id);''')
 
-cur.execute('''ALTER TABLE react_info
-ADD CONSTRAINT FOREIGN KEY(server_id)
-   REFERENCES server_info(server_id);''')
+# cur.execute('''ALTER TABLE react_info
+# ADD CONSTRAINT FOREIGN KEY(server_id)
+#    REFERENCES server_info(server_id);''')
 
-cur.execute('''ALTER TABLE repeat_info
-ADD CONSTRAINT FOREIGN KEY(server_id)
-   REFERENCES server_info(server_id);''')
+# cur.execute('''ALTER TABLE repeat_info
+# ADD CONSTRAINT FOREIGN KEY(server_id)
+#    REFERENCES server_info(server_id);''')
 
-cur.execute('''ALTER TABLE server_user_info
-ADD CONSTRAINT FOREIGN KEY(server_id)
-   REFERENCES server_info(server_id);''')
+# cur.execute('''ALTER TABLE server_user_info
+# ADD CONSTRAINT FOREIGN KEY(server_id)
+#    REFERENCES server_info(server_id);''')
 
-cur.execute('''ALTER TABLE server_user_info
-ADD CONSTRAINT FOREIGN KEY(user_id)
-   REFERENCES global_user_info(user_id);''')
+# cur.execute('''ALTER TABLE server_user_info
+# ADD CONSTRAINT FOREIGN KEY(user_id)
+#    REFERENCES global_user_info(user_id);''')
 
-cur.execute('''ALTER TABLE chain_info
-ADD CONSTRAINT FOREIGN KEY(user_id)
-   REFERENCES global_user_info(user_id);''')
+# cur.execute('''ALTER TABLE chain_info
+# ADD CONSTRAINT FOREIGN KEY(user_id)
+#    REFERENCES global_user_info(user_id);''')
 
 cur.execute('''ALTER TABLE server_info ADD IF NOT EXISTS nice bool DEFAULT 1''')
 
