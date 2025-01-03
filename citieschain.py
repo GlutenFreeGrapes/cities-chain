@@ -1,4 +1,4 @@
-import discord, re, math, mariadb, asyncio, io, json, aiohttp, datetime, pytz, traceback
+import discord, re, pandas as pd, math, mariadb, numpy as np, asyncio, io, traceback, datetime, json, requests, pytz, concurrent.futures
 from discord import app_commands
 from typing import Optional,Literal
 from os import environ as env
@@ -6,55 +6,17 @@ from dotenv import load_dotenv
 from mpl_toolkits.basemap import Basemap
 from anyascii import anyascii
 import matplotlib.pyplot as plt
-import polars as pl
 
 load_dotenv()
-
-LOGGING_FILE = 'cities-chain-discord'
 
 intents = discord.Intents.default()
 intents.message_content = True
 
-citydata=pl.read_csv('data/cities.txt',separator='\t',null_values='',schema=pl.Schema({
-    'geonameid':pl.Int32,
-    'name':pl.String,
-    'population':pl.Int32,
-    'country':pl.String,
-    'admin1':pl.String,
-    'admin2':pl.String,
-    'alt-country':pl.String,
-    'default':pl.Int8,
-    'latitude':pl.Float32,
-    'longitude':pl.Float32,
-    'decoded':pl.String,
-    'punct-space':pl.String,
-    'punct-empty':pl.String,
-    'first-letter':pl.String,
-    'last-letter':pl.String,
-    'deleted':pl.Int8
-}))
-countriesdata=pl.read_csv('data/countries.txt',separator='\t',null_values='', schema = pl.Schema({
-    'geonameid':pl.Int32,
-    'country':pl.String,
-    'iso3':pl.String,
-    'name':pl.String,
-    'default':pl.Int8,
-}))
-admin1data=pl.read_csv('data/admin1.txt',separator='\t',null_values='',schema=pl.Schema({
-    'geonameid':pl.Int32,
-    'country':pl.String,
-    'admin1':pl.String,
-    'name':pl.String,
-    'default':pl.Int8,
-}))
-admin2data=pl.read_csv('data/admin2.txt',separator='\t',null_values='',schema=pl.Schema({
-    'geonameid':pl.Int32,
-    'country':pl.String,
-    'admin1':pl.String,
-    'admin2':pl.String,
-    'name':pl.String,
-    'default':pl.Int8,
-}))
+citydata,countriesdata,admin1data,admin2data=pd.read_csv('data/cities.txt',sep='\t',keep_default_na=False,na_values='',dtype={'admin1':str,'admin2':str,'alt-country':str}),pd.read_csv('data/countries.txt',sep='\t',keep_default_na=False,na_values=''),pd.read_csv('data/admin1.txt',sep='\t',keep_default_na=False,na_values='',dtype={'admin1':str}),pd.read_csv('data/admin2.txt',sep='\t',keep_default_na=False,na_values='',dtype={'admin1':str,'admin2':str,})
+citydata=citydata.fillna(np.nan).replace([np.nan], [None])
+countriesdata=countriesdata.fillna(np.nan).replace([np.nan], [None])
+admin1data=admin1data.fillna(np.nan).replace([np.nan], [None])
+admin2data=admin2data.fillna(np.nan).replace([np.nan], [None])
 metadata = json.load(open('data/metadata.json','r'))
 
 GREEN = discord.Colour.from_rgb(0,255,0)
@@ -64,14 +26,17 @@ BLUE = discord.Color.from_rgb(0,0,255)
 client = discord.Client(intents=intents)
 tree=app_commands.tree.CommandTree(client)
 
-city_default=citydata.filter(pl.col('default') == 1)
-admin2_default=admin2data.filter(pl.col('default') == 1)
-admin1_default=admin1data.filter(pl.col('default') == 1)
-countrydefaults=countriesdata.filter(pl.col('default') == 1)
+city_default=citydata[citydata['default']==1]
+city_default=city_default.set_index('geonameid')
+admin2_default=admin2data[admin2data['default']==1]
+admin2_default=admin2_default.set_index(['country','admin1','admin2'])
+admin1_default=admin1data[admin1data['default']==1]
+admin1_default=admin1_default.set_index(['country','admin1'])
+countrydefaults=countriesdata[countriesdata['default']==1]
+countrydefaults=countrydefaults.set_index('country')
 allcountries=list(countrydefaults['name'])
-iso2={i:allcountries[n] for n,i in enumerate(countrydefaults['country'])}
+iso2={i:allcountries[n] for n,i in enumerate(countrydefaults.index)}
 iso3={i:allcountries[n] for n,i in enumerate(countrydefaults['iso3'])}
-
 allcountries=sorted(allcountries)
 regionalindicators={chr(97+i):chr(127462+i) for i in range(26)}
 flags = {i:regionalindicators[i[0].lower()]+regionalindicators[i[1].lower()] for i in iso2}
@@ -158,39 +123,8 @@ cur.execute("SET @@session.interactive_timeout = 28800") # max 8hr interactive t
 #                 global_user_info.last_active = x.last_active
 #             WHERE global_user_info.user_id = x.user_id''')
 # print("global_user_info")
-
-cur.execute('''ALTER TABLE chain_info
-ADD CONSTRAINT FOREIGN KEY(server_id)
-   REFERENCES server_info(server_id);''')
-
-cur.execute('''ALTER TABLE count_info
-ADD CONSTRAINT FOREIGN KEY(server_id)
-   REFERENCES server_info(server_id);''')
-
-cur.execute('''ALTER TABLE react_info
-ADD CONSTRAINT FOREIGN KEY(server_id)
-   REFERENCES server_info(server_id);''')
-
-cur.execute('''ALTER TABLE repeat_info
-ADD CONSTRAINT FOREIGN KEY(server_id)
-   REFERENCES server_info(server_id);''')
-
-cur.execute('''ALTER TABLE server_user_info
-ADD CONSTRAINT FOREIGN KEY(server_id)
-   REFERENCES server_info(server_id);''')
-
-cur.execute('''ALTER TABLE server_user_info
-ADD CONSTRAINT FOREIGN KEY(user_id)
-   REFERENCES global_user_info(user_id);''')
-
-cur.execute('''ALTER TABLE chain_info
-ADD CONSTRAINT FOREIGN KEY(user_id)
-   REFERENCES global_user_info(user_id);''')
-
-cur.execute('''ALTER TABLE server_info ADD IF NOT EXISTS nice bool DEFAULT 1''')
-
-conn.commit()
-print("committed")
+# conn.commit()
+# print("committed")
 
 # modify block expiry times
 cur.execute("ALTER TABLE server_user_info MODIFY COLUMN block_expiry bigint DEFAULT NULL;")
@@ -224,7 +158,6 @@ for i in cur.fetchall():
         "list_mode":i[13],
         "list":i[14],
         "updates":i[15],
-        "nice":i[16],
     }
 
 def is_blocked(user_id,guild_id):
@@ -242,16 +175,11 @@ def is_blocked(user_id,guild_id):
     else:
         return 0
 
-import functools
-
-# cache because the only way this will change is if bot shuts down to update
-@functools.cache
 def admin1name(country,admin1):
-    return admin1_default.row(by_predicate=(pl.col('country') == (country)) & (pl.col('admin1') == (admin1)))[admin1_default.get_column_index('name')] if admin1 else None
+    return admin1_default.loc[country, admin1]['name'] if admin1 else None
 
-@functools.cache
 def admin2name(country,admin1,admin2):
-    return admin2_default.row(by_predicate=(pl.col('country') == (country)) & (pl.col('admin1') == (admin1)) & (pl.col('admin2') == (admin2)))[admin2_default.get_column_index('name')] if admin2 else None
+    return admin2_default.loc[country, admin1, admin2]['name'] if admin2 else None
 
 def city_string(name,admin1,admin2,country,alt_country):
     city_str = name
@@ -265,30 +193,29 @@ def city_string(name,admin1,admin2,country,alt_country):
             city_str+=f"/{iso2[alt_country]} {flags[alt_country]}"
     return city_str
 
-@functools.cache
 def city_name_matches(city, min_pop, check_apostrophes, include_deleted):
     city=re.sub(',$','',city.lower().strip())
     if city[-1]==',':
         city=city[:-1]
 
     # get all cities with name city
-    res1=citydata.filter(pl.col('name').str.to_lowercase()==city)
-    res2=citydata.filter(pl.col('decoded').str.to_lowercase()==city)
-    res3=citydata.filter(pl.col('punct-space').str.to_lowercase()==city)
-    res4=citydata.filter(pl.col('punct-empty').str.to_lowercase()==city)
-    res1=res1.with_columns(pl.lit(0).alias("match"))
-    res2=res2.with_columns(pl.lit(1).alias("match"))
-    res3=res3.with_columns(pl.lit(2).alias("match"))
-    res4=res4.with_columns(pl.lit(3).alias("match"))
-    results=pl.concat([res1,res2,res3,res4])
+    res1=citydata[(citydata['name'].str.lower()==city)]
+    res2=citydata[(citydata['decoded'].str.lower()==city)]
+    res3=citydata[(citydata['punct-space'].str.lower()==city)]
+    res4=citydata[(citydata['punct-empty'].str.lower()==city)]
+    res1=res1.assign(match=0)
+    res2=res2.assign(match=1)
+    res3=res3.assign(match=2)
+    res4=res4.assign(match=3)
+    results=pd.concat([res1,res2,res3,res4])
 
     # if including search for deleted cities
     if not include_deleted:
-        results = results.filter(~pl.col('deleted').cast(pl.Boolean))
+        results = results[~results['deleted'].astype(bool)]
     # if there are results
     if results.shape[0]:
         # sort the results
-        results=results.sort(['default','population','match'],descending=[True,True,False])
+        results=results.sort_values(['default','population','match'],ascending=[0,0,1])
         return results
     else:
         if check_apostrophes:
@@ -296,72 +223,70 @@ def city_name_matches(city, min_pop, check_apostrophes, include_deleted):
         else:
             return city_name_matches(re.sub("[`’ʻʼ]","'",city),min_pop,1,include_deleted)
 
-@functools.cache
 def search_cities(city,other_arguments,min_pop,include_deleted,country_list_mode, country_list):
     city_names = city_name_matches(city, min_pop, 0, include_deleted)
 
     # length of other arguments is 1
     if len(other_arguments)==1:
-        a1choice=admin1data.filter((pl.col('name').str.to_lowercase()==other_arguments[0].lower())|(pl.col('admin1').str.to_lowercase()==other_arguments[0].lower()))
-        a2choice=admin2data.filter((pl.col('name').str.to_lowercase()==other_arguments[0].lower())|(pl.col('admin2').str.to_lowercase()==other_arguments[0].lower()))
-        cchoice=set(countriesdata.filter((pl.col('name').str.to_lowercase()==other_arguments[0].lower())|(pl.col('country').str.to_lowercase()==other_arguments[0].lower()))['country'])
-        results = pl.concat([
-            city_names.join(a1choice[['country', 'admin1']],['country', 'admin1'], 'inner'),
-            city_names.join(a2choice[['country', 'admin1', 'admin2']],['country', 'admin1', 'admin2'], 'inner'),
-            city_names.filter(pl.col('country').is_in(cchoice)|pl.col('alt-country').is_in(cchoice))
-        ]).unique()
+        a1choice=admin1data[((admin1data['name'].str.lower()==other_arguments[0].lower())|(admin1data['admin1'].str.lower()==other_arguments[0].lower()))]
+        a2choice=admin2data[((admin2data['name'].str.lower()==other_arguments[0].lower())|(admin2data['admin2'].str.lower()==other_arguments[0].lower()))]
+        cchoice=set(countriesdata[(countriesdata['name'].str.lower()==other_arguments[0].lower())|(countriesdata['country'].str.lower()==other_arguments[0].lower())]['country'])
+        results = pd.concat([
+            pd.merge(city_names.reset_index(), a1choice[['country', 'admin1']], 'inner').set_index('index'),
+            pd.merge(city_names.reset_index(), a2choice[['country', 'admin1', 'admin2']], 'inner').set_index('index'),
+            city_names[city_names['country'].isin(cchoice)|city_names['alt-country'].isin(cchoice)]
+        ]).drop_duplicates()
     elif len(other_arguments)==2:
         # other_args[0] is admin2 or admin1
-        a2choice=admin2data.filter((pl.col('name').str.to_lowercase()==other_arguments[0].lower())|(pl.col('admin2').str.to_lowercase()==other_arguments[0].lower()))
-        a1choice_1=admin1data.filter((pl.col('name').str.to_lowercase()==other_arguments[1].lower())|(pl.col('admin1').str.to_lowercase()==other_arguments[1].lower()))
+        a2choice=admin2data[((admin2data['name'].str.lower()==other_arguments[0].lower())|(admin2data['admin2'].str.lower()==other_arguments[0].lower()))]
+        a1choice_1=admin1data[((admin1data['name'].str.lower()==other_arguments[1].lower())|(admin1data['admin1'].str.lower()==other_arguments[1].lower()))]
         # other_args[1] is admin1 or country
-        a1choice_2=admin1data.filter((pl.col('name').str.to_lowercase()==other_arguments[0].lower())|(pl.col('admin1').str.to_lowercase()==other_arguments[0].lower()))
-        cchoice=set(countriesdata.filter((pl.col('name').str.to_lowercase()==other_arguments[1].lower())|(pl.col('country').str.to_lowercase()==other_arguments[1].lower()))['country'])
+        a1choice_2=admin1data[((admin1data['name'].str.lower()==other_arguments[0].lower())|(admin1data['admin1'].str.lower()==other_arguments[0].lower()))]
+        cchoice=set(countriesdata[(countriesdata['name'].str.lower()==other_arguments[1].lower())|(countriesdata['country'].str.lower()==other_arguments[1].lower())]['country'])
 
         # admin1 & admin2
-        a1a2choice=a2choice.join(a1choice_1[['country', 'admin1']], ['country', 'admin1'], 'inner')
-        results = city_names.join(a1a2choice[['country', 'admin1','admin2']], ['country', 'admin1','admin2'], 'inner')
+        a1a2choice=pd.merge(a2choice.reset_index(), a1choice_1[['country', 'admin1']], 'inner').set_index('index')
+        results = pd.merge(city_names.reset_index(), a1a2choice[['country', 'admin1','admin2']], 'inner').set_index('index')
         # country & admin1
-        a1cchoice=city_names.join(a1choice_2[['country', 'admin1']], ['country', 'admin1'], 'inner')
-        a1cchoice=a1cchoice.filter(pl.col('country').is_in(cchoice)|pl.col('alt-country').is_in(cchoice))
-        results = pl.concat([results, a1cchoice])
+        a1cchoice=pd.merge(city_names.reset_index(), a1choice_2[['country', 'admin1']], 'inner').set_index('index')
+        a1cchoice=a1cchoice[a1cchoice['country'].isin(cchoice)|a1cchoice['alt-country'].isin(cchoice)]
+        results = pd.concat([results, a1cchoice])
         # country & admin2
-        a2cchoice=city_names.join(a2choice[['country', 'admin1','admin2']], ['country', 'admin1','admin2'], 'inner')
-        a2cchoice=a2cchoice.filter(pl.col('country').is_in(cchoice)|pl.col('alt-country').is_in(cchoice))
-        results = pl.concat([results, a2cchoice]).unique()
+        a2cchoice=pd.merge(city_names.reset_index(), a2choice[['country', 'admin1','admin2']], 'inner').set_index('index')
+        a2cchoice=a2cchoice[a2cchoice['country'].isin(cchoice)|a2cchoice['alt-country'].isin(cchoice)]
+        results = pd.concat([results, a2cchoice]).drop_duplicates()
     elif len(other_arguments) >= 3:
-        a1choice=admin1data.filter((pl.col('name').str.to_lowercase()==other_arguments[1].lower())|(pl.col('admin1').str.to_lowercase()==other_arguments[1].lower()))
-        a2choice=admin2data.join(a1choice,['country','admin1'],'inner')
-        a2choice=a2choice.filter((pl.col('name').str.to_lowercase()==other_arguments[0].lower())|(pl.col('admin2').str.to_lowercase()==other_arguments[0].lower()))
-        cchoice=set(countriesdata.filter((pl.col('name').str.to_lowercase()==other_arguments[2].lower())|(pl.col('country').str.to_lowercase()==other_arguments[2].lower()))['country'])
-        results = city_names.join(a2choice[['country','admin1','admin2']],['country','admin1','admin2'],'inner')
-        results=results.filter(pl.col('country').is_in(cchoice)|pl.col('alt-country').is_in(cchoice)).unique()
+        a1choice=admin1data[((admin1data['name'].str.lower()==other_arguments[1].lower())|(admin1data['admin1'].str.lower()==other_arguments[1].lower()))]
+        a2choice=pd.merge(admin2data.reset_index(),a1choice[['country','admin1']],how='inner').set_index("index")
+        a2choice=a2choice[((a2choice['name'].str.lower()==other_arguments[0].lower())|(a2choice['admin2'].str.lower()==other_arguments[0].lower()))]
+        cchoice=set(countriesdata[(countriesdata['name'].str.lower()==other_arguments[2].lower())|(countriesdata['country'].str.lower()==other_arguments[2].lower())]['country'])
+        results = pd.merge(city_names.reset_index(),a2choice[['country','admin1','admin2']]).set_index("index")
+        results=results[results['country'].isin(cchoice)|results['alt-country'].isin(cchoice)]
     else:
         results = city_names
     if results.shape[0]:
-        results=results.sort(['default','population','match'],descending=[True,True,False])
+        results=results.sort_values(['default','population','match'],ascending=[0,0,1])
         # return the results in different sortings depending on if the minimum population requirement is fulfilled
         # if population too small, look for larger options. if none, return original result
-        if results.row(0)[city_default.get_column_index('population')] < min_pop:
+        if results.head(1).iloc[0]['population'] < min_pop:
             if results['population'].max() >= min_pop:
-                results = results.sort(['population','default','match'],descending=[True,True,False])
-        r = dict(zip(results.columns,results.row(0)))
+                results = results.sort_values(['population','default','match'],ascending=[0,0,1])
+        r = results.iloc[0]
         if country_list_mode:
             allowed_countries = country_list.split(',')
-            country_selection = (pl.col('country').is_in(allowed_countries))|(pl.col('alt-country').is_in(allowed_countries))
+            country_selection = (results['country'].isin(allowed_countries))|(results['alt-country'].isin(allowed_countries))
             # blacklist
             if country_list_mode == 1:
-                results = results.filter(~country_selection)
+                results = results[~country_selection]
             # whitelist
             else:
-                results = results.filter(country_selection)
+                results = results[country_selection]
             # choose top of those results, failing that choose the default result
             if results.shape[0]:
-                r = dict(zip(results.columns,results.row(0)))
-        return r['geonameid'], r, r[('name','decoded','punct-space','punct-empty')[r['match']]]
+                r = results.iloc[0]
+        return int(r['geonameid']), r, r[('name','decoded','punct-space','punct-empty')[r['match']]]
     return None
 
-@functools.cache
 def search_cities_command(city,province,otherprovince,country,min_pop,include_deleted,country_list_mode,country_list):
     # otherprovince only used if specified, other administrative division
     # maybe also specify geonameid? 
@@ -371,41 +296,40 @@ def search_cities_command(city,province,otherprovince,country,min_pop,include_de
     if province:
         if otherprovince:
             # (admin1, admin2) = (province, otherprovince)
-            a1choice=admin1data.filter((pl.col('name').str.to_lowercase()==province.lower())|(pl.col('admin1').str.to_lowercase()==province.lower()))
-            a2choice=admin2data.join(a1choice[['country','admin1']],['country','admin1'],'inner')
-            a2choice=a2choice.filter((pl.col('name').str.to_lowercase()==otherprovince.lower())|(pl.col('admin2').str.to_lowercase()==otherprovince.lower()))
-            results = results.join(a2choice[['country','admin1','admin2']],['country','admin1','admin2'],'inner')
+            a1choice=admin1data[((admin1data['name'].str.lower()==province.lower())|(admin1data['admin1'].str.lower()==province.lower()))]
+            a2choice=pd.merge(admin2data.reset_index(),a1choice[['country','admin1']],how='inner').set_index("index")
+            a2choice=a2choice[((a2choice['name'].str.lower()==otherprovince.lower())|(a2choice['admin2'].str.lower()==otherprovince.lower()))]
+            results = pd.merge(results.reset_index(),a2choice[['country','admin1','admin2']]).set_index("index")
         else:    
-            a1choice=admin1data.filter((pl.col('name').str.to_lowercase()==province.lower())|(pl.col('admin1').str.to_lowercase()==province.lower()))
-            a2choice=admin2data.filter((pl.col('name').str.to_lowercase()==province.lower())|(pl.col('admin2').str.to_lowercase()==province.lower()))
-            results = pl.concat([results.join(a1choice[['country','admin1']],['country','admin1'],'inner'), 
-                                 results.join(a2choice[['country','admin1','admin2']],['country','admin1','admin2'],'inner')])
+            a1choice=admin1data[(admin1data['name'].str.lower()==province.lower())|(admin1data['admin1'].str.lower()==province.lower())]
+            a2choice=admin2data[(admin2data['name'].str.lower()==province.lower())|(admin2data['admin2'].str.lower()==province.lower())]
+            results = pd.concat([pd.merge(results.reset_index(),a1choice[['country','admin1']]).set_index("index"), 
+                                 pd.merge(results.reset_index(),a2choice[['country','admin1','admin2']]).set_index("index")])
     # if country is specified
     if country:
-        cchoice=set(countriesdata.filter((pl.col('name').str.to_lowercase()==country.lower())|(pl.col('country').str.to_lowercase()==country.lower()))['country'])
-        results = results.filter(pl.col('country').is_in(cchoice)|pl.col('alt-country').is_in(cchoice))
+        cchoice=set(countriesdata[(countriesdata['name'].str.lower()==country.lower())|(countriesdata['country'].str.lower()==country.lower())]['country'])
+        results = results[results['country'].isin(cchoice)|results['alt-country'].isin(cchoice)]
 
     if results.shape[0]:
-        results=results.sort(['default','population','match'],descending=[True,True,False])
         # return the results in different sortings depending on if the minimum population requirement is fulfilled
         # if population too small, look for larger options. if none, return original result
-        if results.row(0)[city_default.get_column_index('population')] < min_pop:
+        if results.head(1).iloc[0]['population'] < min_pop:
             if results['population'].max() >= min_pop:
-                results = results.sort(['population','default','match'],descending=[True,True,False])
-        r = dict(zip(results.columns,results.row(0)))
+                results = results.sort_values(['population','default','match'],ascending=[0,0,1])
+        r=results.iloc[0]
         if country_list_mode:
             allowed_countries = country_list.split(',')
-            country_selection = (pl.col('country').is_in(allowed_countries))|(pl.col('alt-country').is_in(allowed_countries))
+            country_selection = (results['country'].isin(allowed_countries))|(results['alt-country'].isin(allowed_countries))
             # blacklist
             if country_list_mode == 1:
-                results = results.filter(~country_selection)
+                results = results[~country_selection]
             # whitelist
             else:
-                results = results.filter(country_selection)
+                results = results[country_selection]
             # choose top of those results, failing that choose the default result
             if results.shape[0]:
-                r = dict(zip(results.columns,results.row(0)))
-        return r['geonameid'], r, r[('name','decoded','punct-space','punct-empty')[r['match']]]
+                r = results.iloc[0]
+        return (int(r['geonameid']),r,r[('name','decoded','punct-space','punct-empty')[r['match']]])
     return None
 
 def sanitize_query(query):
@@ -414,12 +338,10 @@ def sanitize_query(query):
         query=query[:-1]
     if query.startswith(','):
         query=query[1:]
-    return tuple(i for i in query.split(',') if i!='')
+    return [i for i in query.split(',') if i!='']
 
-@functools.cache
 def generate_map(city_id_list):
-    coordinates = {i[city_default.get_column_index('geonameid')]:(i[city_default.get_column_index('latitude')],i[city_default.get_column_index('longitude')]) for i in city_default.filter(pl.col("geonameid").is_in(city_id_list)).iter_rows()}
-    coords = [coordinates[i] for i in city_id_list]
+    coords = list(city_default.loc[city_id_list][['latitude','longitude']].itertuples(index = False, name = None))
     if len(coords):
         lats,lons = zip(*coords)
 
@@ -463,7 +385,7 @@ def generate_map(city_id_list):
     plt.savefig(img_buf,format='png',bbox_inches='tight')
     img_buf.seek(0)
     plt.clf()
-    return img_buf.read()
+    return discord.File(img_buf, filename='map.png')
 
 class Selector(discord.ui.Select):
     def __init__(self,messages,options,placeholder):
@@ -673,22 +595,20 @@ async def on_ready():
             "list_mode":i[13],
             "list":i[14],
             "updates":i[15],
-            "nice":i[16],
         }
     conn.commit()
     # timed blocks
 
     cur.execute('SELECT server_id, user_id, block_expiry FROM server_user_info WHERE blocked = 1 AND block_expiry > 0')
     for i in cur.fetchall():
+        print(i)
         await timed_unblock(i[0],i[1],i[2],False)
 
     cur.execute('SELECT user_id, block_expiry FROM global_user_info WHERE blocked = 1 AND block_expiry > 0')
     for i in cur.fetchall():
         await timed_unblock(0, i[0],i[1],True)
     # prepare github messages
-    async with aiohttp.ClientSession() as session:
-        async with session.get("https://api.github.com/repos/GlutenFreeGrapes/cities-chain/commits",params={"since":(datetime.datetime.now(tz=pytz.utc)-datetime.timedelta(minutes=17)).isoformat()}) as resp:
-            json_response = await resp.json()
+    json_response = requests.get("https://api.github.com/repos/GlutenFreeGrapes/cities-chain/commits",params={"since":(datetime.datetime.now(tz=pytz.utc)-datetime.timedelta(minutes=17)).isoformat()}).json()
     commit_list = [(datetime.datetime.fromisoformat(i['commit']['author']['date']),i['commit']['message']) for i in json_response][::-1]
     embeds=[]
     for timestamp,message in commit_list:
@@ -745,7 +665,6 @@ async def on_guild_join(guild:discord.Guild):
             "list_mode":i[13],
             "list":i[14],
             "updates":i[15],
-            "nice":i[16],
         }
     for channel in guild.text_channels:
         if channel.permissions_for(guild.me).send_messages:
@@ -853,19 +772,22 @@ async def choosecity(interaction: discord.Interaction, option:Literal["on","off"
                 await interaction.followup.send('Choose_city is already **on**.')
             else:
                 # minimum population
-                poss=city_default.filter((pl.col('population') >= cache[interaction.guild_id]["min_pop"]) & (~pl.col('deleted').cast(pl.Boolean)))
+                poss=city_default[(city_default['population']>=cache[interaction.guild_id]["min_pop"]) & (~city_default['deleted'].astype(bool))]
                 # not blacklisted/are whitelisted
                 if cache[interaction.guild_id]["list_mode"]:
                     countrieslist={i for i in cache[interaction.guild_id]["list"].split(',') if i}
                     if len(countrieslist):
                         if cache[interaction.guild_id]["list_mode"]==1:
-                            poss=poss.filter(~(pl.col('country').is_in(countrieslist)|pl.col('alt-country').is_in(countrieslist)))
+                            poss=poss[~(poss['country'].isin(countrieslist)|poss['alt-country'].isin(countrieslist))]
                         else:
-                            poss=poss.filter(pl.col('country').is_in(countrieslist)|pl.col('alt-country').is_in(countrieslist))
-                if poss.shape[0]:
-                    entr=dict(zip(poss.columns,poss.sample(1).row(0)))
+                            poss=poss[poss['country'].isin(countrieslist)|poss['alt-country'].isin(countrieslist)]
+                if (poss.shape[0]):
+                    # newid=int(random.choice(poss.index))
+                    # entr=city_default.loc[(newid)]
+                    # nname=poss.at[newid,'name']
+                    entr=poss.sample(1).reset_index().iloc[0]
                     nname=entr['name']
-                    newid=entr['geonameid']
+                    newid=entr['geonameid'].item()
                     n=(nname,iso2[entr['country']],entr['country'],admin1name(entr['country'],entr['admin1']),admin2name(entr['country'],entr['admin1'],entr['admin2']),entr['alt-country'])
                     cur.execute('''update server_info
                                 set choose_city = ?,
@@ -924,19 +846,6 @@ async def updates(interaction: discord.Interaction, option:Literal["on","off"]):
     cur.execute('''update server_info set updates=? where server_id = ?''',data=(option=='on',guildid))
     cache[guildid]["updates"] = (option=='on')
     await interaction.followup.send(f'Updates set to **{option.upper()}**.')
-    conn.commit()
-
-@assign.command(description='''Toggles if bot can reply "it's ok" to messages in this server''')
-@app_commands.describe(option="on to let the bot send these kinds of messages, off otherwise")
-async def nice(interaction: discord.Interaction, option:Literal["on","off"]):
-    await interaction.response.defer()
-    if is_blocked(interaction.user.id,interaction.guild_id):
-        await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ")
-        return
-    guildid=interaction.guild_id
-    cur.execute('''update server_info set nice=? where server_id = ?''',data=(option=='on',guildid))
-    cache[guildid]["nice"] = (option=='on')
-    await interaction.followup.send(f'Nice set to **{option.upper()}**.')
     conn.commit()
 
 async def countrycomplete(interaction: discord.Interaction, search: str):
@@ -1030,11 +939,11 @@ async def countrylist(interaction: discord.Interaction, country:str):
     if cache[interaction.guild_id]["chain_end"]:
         #search countries
         countrysearch=country.lower().strip()
-        res=countriesdata.filter((pl.col('name').str.to_lowercase()==countrysearch)|(pl.col('country').str.to_lowercase()==countrysearch))
-        if res.shape[0]:
-            res = dict(zip(res.columns,res.row(0)))
+        res=countriesdata[((countriesdata['name'].str.lower()==countrysearch)|(countriesdata['country'].str.lower()==countrysearch))]
+        if res.shape[0]!=0:
+            res = res.iloc[0]
             country_list=cache[interaction.guild_id]["list"]
-            dname = countriesdata.row(by_predicate=(pl.col('default')==1)&(pl.col('geonameid')==res['geonameid']))[countriesdata.get_column_index('name')]
+            dname = countriesdata[(countriesdata['default']==1)&(countriesdata['geonameid']==res['geonameid'])].iloc[0]['name']
             if res['country'] not in country_list.split(','):
                 if country_list=='':
                     new_list=res['country']
@@ -1049,6 +958,8 @@ async def countrylist(interaction: discord.Interaction, country:str):
             await interaction.followup.send('Country not recognized. Please try again. ')
     else:
         await interaction.followup.send('Command can only be used after the chain has ended.')
+
+    
 
 remove = app_commands.Group(name='remove', description="Removes features from the chain.", guild_only=True, default_permissions=mod_perms)
 @remove.command(description="Removes reaction for a city.")
@@ -1110,11 +1021,11 @@ async def countrylist(interaction: discord.Interaction, country:str):
     if cache[interaction.guild_id]["chain_end"]:
         #search countries
         countrysearch=country.lower().strip()
-        res=countriesdata.filter((pl.col('name').str.to_lowercase()==countrysearch)|(pl.col('country').str.to_lowercase()==countrysearch))
-        if res.shape[0]:
-            res = dict(zip(res.columns,res.row(0)))
+        res=countriesdata[((countriesdata['name'].str.lower()==countrysearch)|(countriesdata['country'].str.lower()==countrysearch))]
+        if res.shape[0]!=0:
+            res = res.iloc[0]
             country_list=cache[interaction.guild_id]["list"]
-            dname = countriesdata.row(by_predicate=(pl.col('default')==1)&(pl.col('geonameid')==res['geonameid']))[countriesdata.get_column_index('name')]
+            dname = countriesdata[(countriesdata['default']==1)&(countriesdata['geonameid']==res['geonameid'])].iloc[0]['name']
             if res['country'] in country_list.split(','):
                 new_list=','.join([i for i in country_list.split(',') if i.strip() and i!=res['country']])
                 cur.execute('update server_info set list=? where server_id=?',(new_list,interaction.guild_id))
@@ -1156,7 +1067,10 @@ async def on_message_edit(message:discord.Message, after:discord.Message):
                     if valid:
                         await message.channel.send("<@%s> has edited their city of `%s`. The next letter is `%s`."%(cache[guildid]["last_user"],name,cache[guildid]["current_letter"]))
 
-RESPOND_WORDS = {"m(y? ?)?b(ad)?", "(w(h?))?oops(y|ie)?", "so*r+y+", "sow+y+"}
+if __name__ == "__main__":
+    # chain_pool = concurrent.futures.ThreadPoolExecutor(5)
+    chain_pool = concurrent.futures.ProcessPoolExecutor(2)
+RESPOND_WORDS = {"m(y )?b(ad)?", "w?oops", "so*r+y+", "sowwy"}
 @client.event
 async def on_message(message:discord.Message):
     content = message.content
@@ -1189,13 +1103,11 @@ async def on_message(message:discord.Message):
                 if index_in_process: 
                     # processes[guildid].append((message,guildid,authorid,content,msgref))
                     # processes[guildid].append((message,guildid,authorid,content,msgref,client.loop.run_in_executor(chain_pool, search_cities, *args)))
-                    # processes[guildid].append((message,guildid,authorid,content,msgref,chain_pool.submit(search_cities,*args)))
-                    processes[guildid].append((message,guildid,authorid,content,msgref,search_cities(*args)))
+                    processes[guildid].append((message,guildid,authorid,content,msgref,chain_pool.submit(search_cities,*args)))
                 else:
                     # processes[guildid]=[(message,guildid,authorid,content,msgref)]
                     # processes[guildid]=[(message,guildid,authorid,content,msgref,client.loop.run_in_executor(chain_pool, search_cities, *args))]
-                    # processes[guildid]=[(message,guildid,authorid,content,msgref,chain_pool.submit(search_cities,*args))]
-                    processes[guildid]=[(message,guildid,authorid,content,msgref,search_cities(*args))]
+                    processes[guildid]=[(message,guildid,authorid,content,msgref,chain_pool.submit(search_cities,*args))]
                 # IF THERE IS A CITY BEING PROCESSED, ADD IT TO THE QUEUE AND EVENTUALLY IT WILL BE REACHED. OTHERWISE PROCESS IMMEDIATELY WHILE KEEPING IN MIND THAT IT IS CURRENTLY BEING PROCESSED
                 # does city exist
                 # res = pool.apply_async(search_cities,(sanitized_query[0],sanitized_query[1:],cache[guildid]["min_pop"],0,cache[guildid]["list_mode"],cache[guildid]["list"])).get()
@@ -1218,10 +1130,14 @@ async def on_message(message:discord.Message):
                 # processes[guildid][index_in_process]+=(res,)
                 if processes[guildid][0][0].id==message.id:#index_in_process==0:
                     await asyncio.create_task(process_chain(*processes[guildid][0]))
-            elif cache[guildid]["nice"] and re.search(r"(?<!not )\b(("+')|('.join(RESPOND_WORDS)+r"))\b",message.content,re.I):
+            elif re.search(r"(?<!not )\b(("+')|('.join(RESPOND_WORDS)+r"))\b",message.content,re.I):
                 await message.reply("it's ok")
 
-async def process_chain(message:discord.Message,guildid,authorid,original_content,ref,res):
+async def process_chain(message:discord.Message,guildid,authorid,original_content,ref,res:pd.Series|concurrent.futures.Future):#asyncio.Future):
+    if isinstance(res, concurrent.futures.Future):#asyncio.Future):
+        # res = await res
+        res = res.result()
+    # print([i[0].content for i in processes[guildid]])
     round_num,chain_ended = cache[guildid]["round_number"], cache[guildid]["chain_end"]
     cur.execute('''select * from server_user_info where user_id = ? and server_id = ?''',data=(authorid,guildid))
     if cur.rowcount==0:
@@ -1247,7 +1163,7 @@ async def process_chain(message:discord.Message,guildid,authorid,original_conten
         return
     
     # default names
-    j=dict(zip(city_default.columns,city_default.row(by_predicate=pl.col('geonameid') == res[0])))
+    j=city_default.loc[(res[0])]
     name,adm2,adm1,country,altcountry=j['name'],j['admin2'],j['admin1'],j['country'],j['alt-country']
     if adm1:
         adm1=admin1name(country,adm1)
@@ -1320,7 +1236,7 @@ async def process_chain(message:discord.Message,guildid,authorid,original_conten
     new_city = False
     if cur.rowcount==0:
         new_city = True
-        cur.execute('''insert into count_info(server_id,city_id,name,admin2,admin1,country,country_code,alt_country,count) values (?,?,?,?,?,?,?,?,?)''',data=(guildid,res[0],j['name'],n[3],n[2],n[1][0],n[1][1],n[4],1))
+        cur.execute('''insert into count_info(server_id,city_id,name,admin2,admin1,country,country_code,alt_country,count) values (?,?,?,?,?,?,?,?,?)''',data=(guildid,res[0],city_default.loc[res[0]]['name'],n[3],n[2],n[1][0],n[1][1],n[4],1))
     else:
         citycount = cur.fetchone()[0]
         cur.execute('''update count_info set count=? where server_id=? and city_id=?''',data=(citycount+1,guildid,res[0]))
@@ -1360,6 +1276,7 @@ async def process_chain(message:discord.Message,guildid,authorid,original_conten
             await message.add_reaction('\N{FIRST PLACE MEDAL}')
     except:
         pass
+    # print([i[0].content for i in processes[guildid]])
     # remove this from the queue of messages to process
     processes[guildid].pop(0)
     # if queue of other cities to process empty, set to none again. otherwise, process next city
@@ -1389,19 +1306,18 @@ async def fail(message:discord.Message,reason,citieslist,res,n,cityfound,msgref)
     # choose city
     if cache[guildid]["choose_city"]:
         # satisfies min population
-        poss=city_default.filter((pl.col('population') >= cache[guildid]["min_pop"]) & (~pl.col('deleted').cast(pl.Boolean)))
+        poss=city_default[(city_default['population']>=cache[guildid]["min_pop"]) & (~city_default['deleted'].astype(bool))]
         # not blacklisted/are whitelisted
         if cache[guildid]["list_mode"]:
             countrieslist={i for i in cache[guildid]["list"].split(',') if i}
             if len(countrieslist):
                 if cache[guildid]["list_mode"]==1:
-                    poss=poss.filter(~(pl.col('country').is_in(countrieslist)|pl.col('alt-country').is_in(countrieslist)))
+                    poss=poss[~(poss['country'].isin(countrieslist)|poss['alt-country'].isin(countrieslist))]
                 else:
-                    poss=poss.filter(pl.col('country').is_in(countrieslist)|pl.col('alt-country').is_in(countrieslist))
-        entr=dict(zip(poss.columns,poss.sample(1).row(0)))
-
+                    poss=poss[poss['country'].isin(countrieslist)|poss['alt-country'].isin(countrieslist)]
+        entr=poss.sample(1).reset_index().iloc[0]
         nname=entr['name']
-        newid=entr['geonameid']
+        newid=entr['geonameid'].item()
         n=(nname,iso2[entr['country']],entr['country'],admin1name(entr['country'],entr['admin1']),admin2name(entr['country'],entr['admin1'],entr['admin2']),entr['alt-country'])
         cur.execute('''update server_info
                     set current_letter = ?
@@ -1417,9 +1333,10 @@ async def fail(message:discord.Message,reason,citieslist,res,n,cityfound,msgref)
     except:
         pass
     if cache[guildid]["choose_city"]:
-        await message.channel.send('<@%s> RUINED IT AT **%s**!! Start again from `%s` (next letter `%s`). %s'%(authorid,f"{len(citieslist):,}",entr['name'],entr['last-letter'],reason), reference = msgref)
+        await message.channel.send('<@%s> RUINED IT AT **%s**!! Start again from `%s` (next letter `%s`). %s'%(authorid,f"{len(citieslist):,}",poss.at[newid,'name'],poss.at[newid,'last-letter'],reason), reference = msgref)
     else:
         await message.channel.send('<@%s> RUINED IT AT **%s**!! %s'%(authorid,f"{len(citieslist):,}",reason), reference = msgref)
+    # print([i[0].content for i in processes[guildid]])
     # remove this from the queue of messages to process
     processes[guildid].pop(0)
     # if queue of other cities to process empty, set to none again. otherwise, process next city
@@ -1442,7 +1359,7 @@ async def server(interaction: discord.Interaction,se:Optional[Literal['yes','no'
     else:
         embed.set_author(name=interaction.guild.name)
     cur.execute('select * from chain_info where server_id = ? and round_number = ?',data=(guildid,cache[guildid]["round_number"]))
-    embed.description='Round: **%s**\nCurrent letter: **%s**\nCurrent length: **%s**\nLast user: **%s**\nLongest chain: **%s** %s\nMinimum population: **%s**\nChoose city: **%s**\nRepeats: **%s**\nPrefix: %s\nList mode: **%s**\nUpdates: **%s**\nNice: **%s**'%(f'{cache[guildid]["round_number"]:,}',cache[guildid]["current_letter"],f'{cur.rowcount:,}','<@'+str(cache[guildid]["last_user"])+'>' if cache[guildid]["last_user"] else '-',f'{cache[guildid]["max_chain"]:,}','<t:'+str(cache[guildid]["last_best"])+':R>' if cache[guildid]["last_best"] else '',f'{cache[guildid]["min_pop"]:,}','enabled' if cache[guildid]["choose_city"] else 'disabled', 'only after %s cities'%f'{cache[guildid]["min_repeat"]:,}' if cache[guildid]["repeats"] else 'disallowed','**'+cache[guildid]["prefix"]+'**' if cache[guildid]["prefix"]!='' else None,['disabled','blacklist','whitelist'][cache[guildid]["list_mode"]],'enabled' if cache[guildid]["updates"] else 'disabled','enabled' if cache[guildid]["nice"] else 'disabled')
+    embed.description='Round: **%s**\nCurrent letter: **%s**\nCurrent length: **%s**\nLast user: **%s**\nLongest chain: **%s** %s\nMinimum population: **%s**\nChoose city: **%s**\nRepeats: **%s**\nPrefix: %s\nList mode: **%s**\nUpdates: **%s**'%(f'{cache[guildid]["round_number"]:,}',cache[guildid]["current_letter"],f'{cur.rowcount:,}','<@'+str(cache[guildid]["last_user"])+'>' if cache[guildid]["last_user"] else '-',f'{cache[guildid]["max_chain"]:,}','<t:'+str(cache[guildid]["last_best"])+':R>' if cache[guildid]["last_best"] else '',f'{cache[guildid]["min_pop"]:,}','enabled' if cache[guildid]["choose_city"] else 'disabled', 'only after %s cities'%f'{cache[guildid]["min_repeat"]:,}' if cache[guildid]["repeats"] else 'disallowed','**'+cache[guildid]["prefix"]+'**' if cache[guildid]["prefix"]!='' else None,['disabled','blacklist','whitelist'][cache[guildid]["list_mode"]],'enabled' if cache[guildid]["updates"] else 'disabled')
     await interaction.followup.send(embed=embed,ephemeral=(se=='no'))
 
 @stats.command(description="Displays user statistics.")
@@ -1473,6 +1390,7 @@ async def user(interaction: discord.Interaction, member:Optional[discord.User|di
             embed.set_author(name=member.name)
 
         embedslist.append(embed)
+        
         if global_uinfo and global_uinfo[0]+global_uinfo[1]:
             embed.add_field(name=f'Global Stats {":no_pedestrians:" if global_uinfo[4] else ""}',value=f"Correct: **{f'{global_uinfo[0]:,}'}**\nIncorrect: **{f'{global_uinfo[1]:,}'}**\nCorrect Rate: **{round(global_uinfo[0]/(global_uinfo[0]+global_uinfo[1])*10000)/100 if global_uinfo[0]+global_uinfo[1]>0 else 0.0}%**\nScore: **{f'{global_uinfo[2]:,}'}**\nLast Active: <t:{global_uinfo[3]}:R>",inline=True)
         if server_uinfo and server_uinfo[0]+server_uinfo[1]:
@@ -1493,8 +1411,8 @@ async def user(interaction: discord.Interaction, member:Optional[discord.User|di
             for i in cur.fetchall():
                 if len(favc)==10:
                     break
-                if i[0] in city_default['geonameid']:
-                    cityrow = dict(zip(city_default.columns, city_default.row(by_predicate=pl.col('geonameid') == i[0])))
+                if i[0] in city_default.index:
+                    cityrow = city_default.loc[i[0]]
                     favc.append(city_string(cityrow['name'],admin1name(cityrow['country'],cityrow['admin1']),admin2name(cityrow['country'],cityrow['admin1'],cityrow['admin2']),cityrow['country'],cityrow['alt-country'])+f' - **{i[1]:,}**')
             favcities.add_field(name='Cities',value='\n'.join([f"{n+1}. "+i for n,i in enumerate(favc)]))
             
@@ -1538,15 +1456,14 @@ async def cities(interaction: discord.Interaction,order:Literal['sequential','al
         countries = set()
         
         for i in cur.fetchall():
-            r = dict(zip(city_default.columns, city_default.row(by_predicate=pl.col('geonameid') == i[5])))
             if i[6]:
                 cityids.append(i[5])
             if i[4]:
                 countries.add(i[4])
             countries.add(i[3])
             if i[5]!=-1:
-                dname = r['name']
-            cutoff.append(i[0] if i[5]==-1 else (city_string(i[0] + (f" ({dname})" if i[0]!=dname else ""),i[1],i[2],i[3],i[4])+(f"{':no_entry:' if (i[5]!=-1 and r['deleted']) else ''}{':repeat:' if i[5] in repeated else ''}"),i[6]))
+                dname = city_default.loc[i[5],'name']
+            cutoff.append(i[0] if i[5]==-1 else (city_string(i[0] + (f" ({dname})" if i[0]!=dname else ""),i[1],i[2],i[3],i[4])+(f"{':no_entry:' if (i[5]!=-1 and city_default.loc[i[5],'deleted']) else ''}{':repeat:' if i[5] in repeated else ''}"),i[6]))
         if cache[guildid]["repeats"] and cit.startswith("N"):
             cutoff=cutoff[:cache[guildid]["min_repeat"]]
             cityids=cityids[:cache[guildid]["min_repeat"]]
@@ -1559,7 +1476,7 @@ async def cities(interaction: discord.Interaction,order:Literal['sequential','al
         embed.description='\n'.join(fmt[:25])
         view=Paginator(1,fmt,title,math.ceil(len(fmt)/25),interaction.user.id,embed, f" | {len(set(cityids))} unique cities across {len(set(countries))} countries")
         
-        await interaction.followup.send(embed=embed,view=view,ephemeral=(se=='no'),files=[discord.File(io.BytesIO(generate_map(tuple(cityids))), filename='map.png')] if showmap=='yes' else [])
+        await interaction.followup.send(embed=embed,view=view,ephemeral=(se=='no'),files=[generate_map(cityids)] if showmap=='yes' else [])
         view.message=await interaction.original_response()
     else:
         embed=discord.Embed(title=title, color=GREEN,description='```There are no statistics.```')
@@ -1597,7 +1514,7 @@ async def roundinfo(interaction: discord.Interaction,round_num:int,showmap:Optio
                     countries.add(i[4])
                 countries.add(i[3])
             if i[5]>=0:
-                dname = city_default.row(by_predicate=pl.col('geonameid') == i[5])[city_default.get_column_index('name')]
+                dname = city_default.loc[i[5], 'name']
             cutoff.append(('%s. '%i[7]if i[6] else ':x: ') + (i[0] if i[5]==-1 else (city_string(i[0] + (f" ({dname})" if i[0]!=dname else ""),i[1],i[2],i[3],i[4]))))
         embed=discord.Embed(title="Round %s (%s - %s, %s Participants)"%(f'{round_num:,}', f'<t:{start}:f>', f'<t:{end}:f>' if end else "Ongoing", len(participants)), color=GREEN,description='\n'.join(cutoff[:25]))
         if interaction.guild.icon:
@@ -1605,7 +1522,7 @@ async def roundinfo(interaction: discord.Interaction,round_num:int,showmap:Optio
         else:
             embed.set_author(name=interaction.guild.name)
         view=Paginator(1,cutoff,"Round %s (%s - %s, %s Participants)"%(f'{round_num:,}', f'<t:{start}:f>', f'<t:{end}:f>' if end else "Ongoing", len(participants)),math.ceil(len(cutoff)/25),interaction.user.id,embed,f" | {len(set(cityids))} unique cities across {len(set(countries))} countries")
-        await interaction.followup.send(embed=embed,view=view,ephemeral=(se=='no'),files=[discord.File(io.BytesIO(generate_map(tuple(cityids))), filename='map.png')] if showmap=='yes' else [])
+        await interaction.followup.send(embed=embed,view=view,ephemeral=(se=='no'),files=[generate_map(cityids)] if showmap=='yes' else [])
         view.message=await interaction.original_response()
     else:
         if cache[guildid]["round_number"]:
@@ -1766,7 +1683,7 @@ async def react(interaction: discord.Interaction,se:Optional[Literal['yes','no']
     if cur.rowcount>0:
         fmt=[]
         for (i,r) in cur.fetchall():
-            j=dict(zip(city_default.columns, city_default.row(by_predicate=pl.col('geonameid') == i)))
+            j=city_default.loc[(i)]
             fmt.append(f"- {city_string(j['name'],admin1name(j['country'],j['admin1']),admin2name(j['country'],j['admin1'],j['admin2']),j['country'],j['alt-country'])} - {r}")
         fmt=sorted(fmt)
         embed.description='\n'.join(fmt[:25])
@@ -1790,7 +1707,7 @@ async def repeat(interaction: discord.Interaction,se:Optional[Literal['yes','no'
     if cur.rowcount>0:
         fmt=[]
         for (i,) in cur.fetchall():
-            j=dict(zip(city_default.columns, city_default.row(by_predicate=pl.col('geonameid') == i)))
+            j=city_default.loc[(i)]
             fmt.append(f"- {city_string(j['name'],admin1name(j['country'],j['admin1']),admin2name(j['country'],j['admin1'],j['admin2']),j['country'],j['alt-country'])}")
         fmt=sorted(fmt)
         embed.description='\n'.join(fmt[:25])
@@ -1824,7 +1741,7 @@ async def popular(interaction: discord.Interaction,se:Optional[Literal['yes','no
         countries={ccode:0 for ccode in iso2}
         for n,i in enumerate(cities):
             c=i[1]
-            j=dict(zip(city_default.columns, city_default.row(by_predicate=pl.col('geonameid') == i[0])))
+            j=city_default.loc[(i[0])]
             countries[j['country']]+=c
             if j['alt-country']:
                 countries[j['alt-country']]+=c
@@ -1885,19 +1802,19 @@ async def bestrds(interaction: discord.Interaction,se:Optional[Literal['yes','no
                 # get first city
                 cur.execute('SELECT city_id, name FROM chain_info WHERE server_id = ? AND round_number = ? AND (count = ? OR count = ?) AND valid = 1 ORDER BY count ASC', (interaction.guild_id, round_num, 1, length))
                 first_id, first_name = cur.fetchone()
-                f_c = dict(zip(city_default.columns,city_default.row(by_predicate=pl.col('geonameid') == first_id)))
+                f_c = city_default.loc[first_id]
                 name_str = city_string(first_name if first_name == f_c['name'] else f"{first_name} ({f_c['name']})", 
-                                        admin1_default.row(by_predicate=(pl.col('country') == f_c['country']) & (pl.col('admin1') == f_c['admin1']))[admin1_default.get_column_index('name')] if f_c['admin1'] else None,
-                                        admin2_default.row(by_predicate=(pl.col('country') == f_c['country']) & (pl.col('admin1') == f_c['admin1']) & (pl.col('admin2') == f_c['admin2']))[admin2_default.get_column_index('name')] if f_c['admin2'] else None,
+                                        admin1_default.loc[f_c['country'], f_c['admin1']]['name'] if f_c['admin1'] else None,
+                                        admin2_default.loc[f_c['country'], f_c['admin1'], f_c['admin2']]['name'] if f_c['admin2'] else None,
                                         f_c['country'], f_c['alt-country'])
                 if length-1:
                     # get last city
                     # cur.execute('SELECT city_id,name FROM chain_info WHERE server_id = ? AND round_number = ? AND count = ? AND valid = 1', (interaction.guild_id, round_num, length))
                     last_id, last_name = cur.fetchone()
-                    l_c = dict(zip(city_default.columns,city_default.row(by_predicate=pl.col('geonameid') == last_id)))
+                    l_c = city_default.loc[last_id]
                     name_str += ' - ' +  city_string(last_name if last_name == l_c['name'] else f"{last_name} ({l_c['name']})", 
-                                        admin1_default.row(by_predicate=(pl.col('country') == l_c['country']) & (pl.col('admin1') == l_c['admin1']))[admin1_default.get_column_index('name')] if l_c['admin1'] else None,
-                                        admin2_default.row(by_predicate=(pl.col('country') == l_c['country']) & (pl.col('admin1') == l_c['admin1']) & (pl.col('admin2') == l_c['admin2']))[admin2_default.get_column_index('name')] if l_c['admin2'] else None,
+                                        admin1_default.loc[l_c['country'], l_c['admin1']]['name'] if l_c['admin1'] else None,
+                                        admin2_default.loc[l_c['country'], l_c['admin1'], l_c['admin2']]['name'] if l_c['admin2'] else None,
                                         l_c['country'], l_c['alt-country'])
             else:
                 name_str = '-'
@@ -2004,8 +1921,8 @@ async def cityinfo(interaction: discord.Interaction, query:str,include_deletes:O
                 count=0
             cur.execute('''select * from repeat_info where server_id = ? and city_id=?''', data=(interaction.guild_id,res[0]))
             repeatable=cur.rowcount
-            aname=citydata.filter(pl.col('geonameid')==res[0])
-            default=dict(zip(city_default.columns,city_default.row(by_predicate=pl.col('geonameid') == res[0])))
+            aname=citydata[(citydata['geonameid']==res[0])]
+            default=city_default.loc[res[0]]
             dname=default['name']
             embed=discord.Embed(title='Information - %s'%dname,color = GREEN if not default['deleted'] else RED)
             embed.add_field(name='Geonames ID',value=res[0],inline=True)
@@ -2013,7 +1930,7 @@ async def cityinfo(interaction: discord.Interaction, query:str,include_deletes:O
             embed.add_field(name='Count',value="%s%s"%(f"{count:,} {':repeat:' if repeatable else ''}",'\n(%s uses by <@%s>)\nFirst used by <@%s>'%(f"{user_count:,}",interaction.user.id,first_user) if count else ''),inline=True)
             if default['deleted']:
                 embed.set_footer(text='This city has been removed from Geonames.')
-            alts=aname.filter(pl.col('default')==0)['name']
+            alts=aname[(aname['default']==0)]['name']
             tosend=[embed]
             if alts.shape[0]!=0:
                 joinednames='`'+'`,`'.join(alts)+'`'
@@ -2082,50 +1999,50 @@ async def subdivisioninfo(interaction: discord.Interaction, sd_name:str, admin1:
     admsearch=sd_name.lower().strip()
     if admin1:
         # case: admin2
-        res=admin2data.filter(pl.col('name').str.to_lowercase()==admsearch)
+        res=admin2data[admin2data['name'].str.lower()==admsearch]
         a1search = admin1.lower().strip()
-        a1choice=admin1data.filter(pl.col('name').str.to_lowercase()==a1search)
-        res = res.join(a1choice['country','admin1'], ['country','admin1'], 'inner')
+        a1choice=admin1data[admin1data['name'].str.lower()==a1search]
+        res = res.merge(a1choice.reset_index(), 'inner', ['country','admin1']).set_index('index').rename(columns={'geonameid_x':'geonameid', 'default_x':'default'})
     else:
         # case: admin1
-        res=admin1data.filter(pl.col('name').str.to_lowercase()==admsearch)
+        res=admin1data[admin1data['name'].str.lower()==admsearch]
     
     if country:
         countrysearch=country.lower().strip()
-        cchoice = countriesdata.filter((pl.col('name').str.to_lowercase()==countrysearch)|(pl.col('country').str.to_lowercase()==countrysearch))
-        res = res.join(cchoice, ['country'], 'inner')
-    res = res.sort(['default','country','admin1','geonameid'],descending=[True,False,False,False])
+        cchoice = countriesdata[((countriesdata['name'].str.lower()==countrysearch)|(countriesdata['country'].str.lower()==countrysearch))]
+        res = res.merge(cchoice.reset_index(), 'inner', ['country']).set_index('index').rename(columns={'geonameid_x':'geonameid', 'default_x':'default'})
+    res = res.sort_values(['default','country','admin1','geonameid'],ascending=[0,1,1,1])
 
-    if res.shape[0]:
-        res = dict(zip(res.columns,res.row(0)))
+    if res.shape[0]!=0:
+        res = res.iloc[0]
         # query was admin2
         if admin1:
-            cities_in_admin = city_default.filter((pl.col('country')==res['country'])&(pl.col('admin1')==res['admin1'])&(pl.col('admin2')==res['admin2']))
+            cities_in_admin = city_default[(city_default['country']==res['country'])&(city_default['admin1']==res['admin1'])&(city_default['admin2']==res['admin2'])]
         # query was admin1
         else:
-            cities_in_admin = city_default.filter((pl.col('country')==res['country'])&(pl.col('admin1')==res['admin1']))
+            cities_in_admin = city_default[(city_default['country']==res['country'])&(city_default['admin1']==res['admin1'])]
         # get cities in country, make pandas df, pd.merge to inner join two
 
         # cur.execute("select city_id, count from count_info WHERE server_id = ? AND country_code = ?",data=(interaction.guild_id,res['country']))
         cur.execute('SELECT city_id, COUNT(*), SUM(CASE user_id WHEN ? THEN 1 ELSE 0 END) FROM `chain_info` WHERE server_id = ? AND country_code = ? AND valid = 1 AND user_id IS NOT NULL GROUP BY city_id;', (interaction.user.id,interaction.guild_id, res['country']))
         if cur.rowcount:
             cities_fetched = [i for i in cur.fetchall()]
-            filtered_cities = pl.DataFrame(cities_fetched,schema={'geonameid':pl.Int32,'count':pl.Int16,'user_counts':pl.Int16}, orient='row').join(cities_in_admin, ['geonameid'], 'inner').sort(['count','geonameid'],descending=[True,False])
+            filtered_cities = pd.DataFrame(cities_fetched).rename(columns={0:'geonameid',1:'count',2:'user_counts'}).merge(cities_in_admin.reset_index(), 'inner', ['geonameid']).sort_values(['count','geonameid'],ascending=[0,1])
         else:
-            filtered_cities = pl.DataFrame(schema={'geonameid':pl.Int32,'count':pl.Int16,'user_counts':pl.Int16}, orient='row')
+            filtered_cities = pd.DataFrame(columns=['geonameid','count','user_counts'])
         if admin1:
-            aname=admin2data.filter(pl.col('geonameid')==res['geonameid'])
-            default=dict(zip(admin2_default.columns,admin2_default.row(by_predicate=(pl.col('country')==res['country'])&(pl.col('admin1')==res['admin1'])&(pl.col('admin2')==res['admin2']))))
+            aname=admin2data[(admin2data['geonameid']==res['geonameid'])]
+            default=admin2_default.loc[res['country'],res['admin1'],res['admin2']]
         else:
-            aname=admin1data.filter(pl.col('geonameid')==res['geonameid'])
-            default=dict(zip(admin1_default.columns,admin1_default.row(by_predicate=(pl.col('country')==res['country'])&(pl.col('admin1')==res['admin1']))))
+            aname=admin1data[(admin1data['geonameid']==res['geonameid'])]
+            default=admin1_default.loc[res['country'],res['admin1']]
         dname=default['name']
 
         a1d = admin1name(res['country'], res['admin1']) if admin1 else ''
 
-        embed=discord.Embed(title='Information - %s, %s %s (%s) - Count: %s'%(f"{dname}, {a1d}" if admin1 else dname, flags[res['country']],iso2[res['country']],res['country'],f"{filtered_cities['count'].sum():,} ({filtered_cities['user_counts'].sum():,} uses by @{interaction.user.name})" if filtered_cities['count'].sum() else 0),color=GREEN)
-        alts=aname.filter(pl.col('default')==0)['name']
-        if alts.shape[0]:
+        embed=discord.Embed(title='Information - %s, %s %s (%s) - Count: %s'%(f"{dname}, {a1d}" if admin1 else dname, flags[res['country']],iso2[res['country']],res['country'],f"{filtered_cities['count'].sum():,} ({filtered_cities['user_counts'].sum():,} uses by @{interaction.user.global_name})" if filtered_cities['count'].sum() else 0),color=GREEN)
+        alts=aname[(aname['default']==0)]['name']
+        if alts.shape[0]!=0:
             joinednames='`'+'`,`'.join(alts)+'`'
             if (len(joinednames)<4096):
                 embed.description=joinednames
@@ -2142,7 +2059,7 @@ async def subdivisioninfo(interaction: discord.Interaction, sd_name:str, admin1:
             if filtered_cities.shape[0]:
                 citylist=[]
                 for n in range(min(10,filtered_cities.shape[0])):
-                    i = dict(zip(filtered_cities.columns,filtered_cities.row(n)))
+                    i = filtered_cities.iloc[n]
                     citylist.append(f"{n+1}. {city_string(i['name'], a1d if admin1 else dname, dname if admin1 else admin2name(i['country'], i['admin1'], i['admin2']), i['country'], i['alt-country'])} - **{i['count']:,}**")
                     
             #     citylist=[]
@@ -2175,18 +2092,18 @@ async def countryinfo(interaction: discord.Interaction, country:str,se:Optional[
         await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ",ephemeral=(se=='no'))
         return
     countrysearch=country.lower().strip()
-    res=countriesdata.filter((pl.col('name').str.to_lowercase()==countrysearch)|(pl.col('country').str.to_lowercase()==countrysearch))
+    res=countriesdata[((countriesdata['name'].str.lower()==countrysearch)|(countriesdata['country'].str.lower()==countrysearch))]
     if res.shape[0]!=0:
-        res = dict(zip(res.columns,res.row(0)))
+        res = res.iloc[0]
         # cur.execute("select sum(count) from count_info where server_id=? and (country_code=? or alt_country=?)",data=(interaction.guild_id,res['country'],res['country']))
         cur.execute("SELECT COUNT(*), SUM(CASE user_id WHEN ? THEN 1 ELSE 0 END) FROM chain_info WHERE server_id = ? AND valid = 1 AND user_id IS NOT NULL AND (country_code = ? OR alt_country = ?)", data=(interaction.user.id, interaction.guild_id, res['country'], res['country']))
         count, user_count=cur.fetchone()
-        aname=countriesdata.filter(pl.col('geonameid')==res['geonameid'])
-        default=dict(zip(countrydefaults.columns,countrydefaults.row(by_predicate=pl.col('country') == res['country'])))
+        aname=countriesdata[(countriesdata['geonameid']==res['geonameid'])]
+        default=countrydefaults.loc[res['country']]
         dname=default['name']
-        embed=discord.Embed(title='Information - %s %s (%s) - Count: %s'%(flags[res['country']],dname,res['country'],f"{count:,} ({user_count:,} uses by @{interaction.user.name})" if count else 0, ),color=GREEN)
-        alts=aname.filter(pl.col('default')==0)['name']
-        if alts.shape[0]:
+        embed=discord.Embed(title='Information - %s %s (%s) - Count: %s'%(flags[res['country']],dname,res['country'],f"{count:,} ({user_count:,} uses by @{interaction.user.global_name})" if count else 0, ),color=GREEN)
+        alts=aname[(aname['default']==0)]['name']
+        if alts.shape[0]!=0:
             joinednames='`'+'`,`'.join(alts)+'`'
             if (len(joinednames)<4096):
                 embed.description=joinednames
@@ -2203,7 +2120,7 @@ async def countryinfo(interaction: discord.Interaction, country:str,se:Optional[
             if cur.rowcount>0:
                 citylist=[]
                 for n,i in enumerate(cur.fetchall()):
-                    default = dict(zip(city_default.columns,city_default.row(by_predicate=pl.col('geonameid') == i[0])))
+                    default = city_default.loc[i[0]]
                     citylist.append(f'''{n+1}. {city_string(default['name'],admin1name(default['country'],default['admin1']),admin2name(default['country'],default['admin1'],default['admin2']),default['country'],default['alt-country'])}{':no_entry:' if default['deleted'] else ''} - **{i[1]:,}**''')
                 topcities.description='\n'.join(citylist)
                 tosend.append(topcities)
@@ -2323,35 +2240,215 @@ async def quit(interaction: discord.Interaction):
     await interaction.response.send_message(f"Disconnecting.")
     await client.close()
 
-import ast
+import zipfile, tarfile, requests, pandas as pd, io, re, time, json, datetime, pytz
 
-@tree.command(name='execute-sql',description="Executes SQL query. ")
+@tree.command(description="Updates cities list. ")
 @app_commands.default_permissions(moderate_members=True)
 @app_commands.guilds(1126556064150736999)
 @app_commands.guild_only()
-async def executesql(interaction: discord.Interaction, query: str, data: Optional[str]):
-    await interaction.response.defer()
-    try:
-        data_tuple = []
-        if data:
-            for i in data.split(','):
-                try:
-                    data_tuple.append(ast.literal_eval(i))
-                except:
-                    data_tuple.append(i)
-        cur.execute(query, data_tuple)
-        conn.commit()
-        await interaction.followup.send(f"Query executed:\n```sql\n{query}```\nData:\n```python\n{tuple(data_tuple)}```")
-    except:
-        await interaction.followup.send(f"Query could not be executed.")
+async def update(interaction: discord.Interaction):
+    await interaction.response.send_message(f"Updating.")
+    await client.close()
+    start = time.perf_counter()
+    t = tarfile.open(fileobj = io.BytesIO(requests.get('https://cityguesser.dbots.net/geobundles/geobundle.tgz', allow_redirects=1).content))
 
-@tree.command(name='send-logs',description="Sends last 500 lines of logs. ")
-@app_commands.default_permissions(moderate_members=True)
-@app_commands.guilds(1126556064150736999)
-@app_commands.guild_only()
-async def sendlogs(interaction: discord.Interaction):
-    lines = open(LOGGING_FILE+'.log').readlines()[-500:]
-    await interaction.response.send_message("Last 500 lines of logfile:",file=discord.File(io.StringIO(''.join(lines)),LOGGING_FILE+f'{datetime.datetime.now().strftime(r"-%Y%m%d-%H%M%S")}-500.log'))
+    metadata = json.load(t.extractfile('geobundle/metadata.json'))
+    metadata['GeobundleRunTimeUtc']=metadata.pop('RunTimeUtc')
+    metadata['CitiesChainRunTimeUtc']=datetime.datetime.now(pytz.utc).isoformat()
+    with open('data/metadata.json','w') as f:
+        json.dump(metadata, f, indent=2)
+    # metadata = json.load(open('data/metadata.json'))
+    deleted = set(metadata['AllDeletedIds'])
+
+    raw_data = pd.read_table(t.extractfile('geobundle/cities.tsv'),sep='\t',dtype={'name':str,'asciiname':str,'alternatenames':str,'cc2':str,'admin1 code':str,'admin2 code':str,'admin3 code':str,'admin4 code':str,'population':int,'elevation':str},keep_default_na=False,na_values='',index_col=0,names=['geonameid','name','asciiname','alternatenames','latitude','longitude','feature class','feature code','country code','cc2','admin1 code','admin2 code','admin3 code','admin4 code','population','elevation','dem','timezone','modification date'])
+
+    admin1data,admin2data=pd.read_table(t.extractfile('geobundle/admin1.tsv'),sep='\t',keep_default_na=False,names=['code','default_name','name','geonameid'],index_col='geonameid',dtype={'code':str,'default_name':str,'name':str,'geonameid':int}),pd.read_table(t.extractfile('geobundle/admin2.tsv'),sep='\t',keep_default_na=False,names=['code','default_name','name','geonameid'],index_col='geonameid',dtype={'code':str,'default_name':str,'name':str,'geonameid':int})
+
+    countrydata=pd.read_table(t.extractfile('geobundle/countries.tsv'),sep='\t',keep_default_na=False,index_col='geonameid',names=['ISO','ISO3','ISO-Numeric','fips','Country','Capital','Area(in sq km)','Population','Continent','tld','CurrencyCode','CurrencyName','Phone','Postal Code Format','Postal Code Regex','Languages','geonameid','neighbours','EquivalentFipsCode'])
+    countrydata = countrydata[~countrydata['ISO'].str.startswith('#')]
+    countrydata.index=countrydata.index.astype(int)
+
+    countrydata=countrydata[['ISO','ISO3','Country']].rename({'ISO':'country','ISO3':'iso3','Country':'name'},axis=1)
+    countrydata = countrydata.assign(default=1)
+    print(countrydata)
+    # split admin1 code column
+    admin1data[['country','admin1']] = admin1data['code'].str.split('.',n=2,expand=True)
+    admin1data = admin1data.assign(default=1)
+    print(admin1data)
+    admin2data[['country','admin1','admin2']] = admin2data['code'].str.split('.',n=3,expand=True)
+    admin2data = admin2data.assign(default=1)
+    print(admin2data)
+
+    z = zipfile.ZipFile(io.BytesIO(requests.get("https://download.geonames.org/export/dump/alternateNamesV2.zip").content))
+    alternate_names = pd.read_table(z.open('alternateNamesV2.txt'),sep='\t',index_col=0,names=['alternateNameId','geonameid','isolanguage','alternate name','isPreferredName','isShortName','isColloquial','isHistoric','from','to'],keep_default_na=False,dtype={'from':str,'to':str,'isolanguage':str,'geonameid':int})
+
+    alternate_names=alternate_names[((alternate_names['isolanguage'].str.len()!=4)&(alternate_names['isolanguage']!='geoid'))|(alternate_names['isolanguage']=='piny')|(alternate_names['isolanguage']=='abbr')].rename({'alternate name':'name'},axis=1)
+    print(alternate_names['name'].str.replace('[,،፣٬].*','',regex=True,n=1))
+    alternate_names['name']=alternate_names['name'].str.replace('[,،፣٬].*','',regex=True,n=1).str.strip()
+    print(alternate_names)
+    # move default_name to another row
+    c=pd.concat([pd.DataFrame(countrydata['country'].tolist(),index=countrydata.index).stack().reset_index([0,'geonameid']).rename({'country':'name'},axis=1),pd.DataFrame(countrydata['iso3'].tolist(),index=countrydata.index).stack().reset_index([0,'geonameid']).rename({'iso3':'name'},axis=1)])
+    c.columns = ['geonameid','name']
+    c=pd.concat([c,alternate_names[alternate_names['geonameid'].isin(c['geonameid'])][['geonameid','name']]])
+    for column in ('country','iso3'):
+        c[column] = c['geonameid'].apply(lambda x: countrydata.at[x, column])
+
+    a1=pd.DataFrame(admin1data['default_name'].tolist(),index=admin1data.index).stack().reset_index([0,'geonameid'])
+    a1.columns = ['geonameid','name']
+    a1 = pd.concat([a1,alternate_names[alternate_names['geonameid'].isin(a1['geonameid'])][['geonameid','name']]])
+    for column in ('country','admin1'):
+        a1[column] = a1['geonameid'].apply(lambda x: admin1data.at[x, column])
+
+    a2=pd.DataFrame(admin2data['default_name'].tolist(),index=admin2data.index).stack().reset_index([0,'geonameid'])
+    a2.columns = ['geonameid','name']
+    a2 = pd.concat([a2,alternate_names[alternate_names['geonameid'].isin(a2['geonameid'])][['geonameid','name']]])
+    for column in ('country','admin1','admin2'):
+        a2[column] = a2['geonameid'].apply(lambda x: admin2data.at[x, column])
+
+    print(c)
+    print(a1)
+    print(a2)
+
+    countrydata['geonameid'] = countrydata.index
+    countrydata = countrydata[['geonameid','country','iso3','name','default']]
+    countrydata=pd.concat([countrydata,c])
+    countrydata['default'] = countrydata['default'].fillna(0).astype(int)
+    countrydata['name']=countrydata['name'].str.replace(',','').str.strip()
+    countrydata=countrydata.sort_values(['country','geonameid','default','name'],ascending=[1,1,0,1])
+    countrydata=countrydata.drop_duplicates(['geonameid','name'])
+    countrydata=countrydata[countrydata['name'].str.strip().str.len()>0]
+    print(countrydata)
+    countrydata.to_csv('data/countries.txt',index=0,sep='\t')
+
+    admin1data['geonameid'] = admin1data.index
+    admin1data = admin1data[['geonameid','country','admin1','name','default']]
+    admin1data=pd.concat([admin1data,a1])
+    admin1data['default'] = admin1data['default'].fillna(0).astype(int)
+    admin1data['name']=admin1data['name'].str.replace(',','').str.strip()
+    admin1data=admin1data.sort_values(['country','geonameid','default','name'],ascending=[1,1,0,1])
+    admin1data=admin1data.drop_duplicates(['geonameid','name'])
+    admin1data=admin1data[admin1data['name'].str.strip().str.len()>0]
+    print(admin1data)
+    admin1data.to_csv('data/admin1.txt',index=0,sep='\t')
+
+    admin2data['geonameid'] = admin2data.index
+    admin2data = admin2data[['geonameid','country','admin1','admin2','name','default']]
+    admin2data=pd.concat([admin2data,a2])
+    admin2data['default'] = admin2data['default'].fillna(0).astype(int)
+    admin2data['name']=admin2data['name'].str.replace(',','').str.strip()
+    admin2data=admin2data.sort_values(['country','geonameid','default','name'],ascending=[1,1,0,1])
+    admin2data=admin2data.drop_duplicates(['geonameid','name'])
+    admin2data=admin2data[admin2data['name'].str.strip().str.len()>0]
+    print(admin2data)
+    admin2data.to_csv('data/admin2.txt',index=0,sep='\t')
+
+    # filling in asciinames that are nan
+    raw_data.loc[raw_data['asciiname'].isna(),'asciiname'] = raw_data.loc[raw_data['asciiname'].isna(),'name'].apply(lambda n: anyascii(n))
+    # use this for name
+    raw_data['use_name']=raw_data['name'].apply(anyascii)
+
+    # resolve alt countries
+    raw_data['country codes'] = list(zip(raw_data['country code'],raw_data['cc2']))
+    print(raw_data.loc[raw_data['cc2'].str.len()>2,'cc2'])
+    raw_data.loc[raw_data['cc2'].str.len()>2,'cc2'] = raw_data.loc[raw_data['cc2'].str.len()>2,'country codes'].apply(lambda name_tuple:name_tuple[1].replace(name_tuple[0],'').strip(','))
+
+    # fill in na values for altnames
+    raw_data['alternatenames'] = raw_data['alternatenames'].fillna('')
+
+    # check consistency with admin1 and admin2 data
+    has_admin1 = raw_data[raw_data['admin1 code'].notna()]
+    has_admin2 = raw_data[raw_data['admin2 code'].notna()]
+    raw_adm1 = set(zip(has_admin1['country code'],has_admin1['admin1 code']))
+    raw_adm2 = set(zip(has_admin2['country code'],has_admin2['admin1 code'],has_admin2['admin2 code']))
+    all_adm1 = set(zip(admin1data['country'],admin1data['admin1']))
+    all_adm2 = set(zip(admin2data['country'],admin2data['admin1'],admin2data['admin2']))
+    nonexistent_adm1 = raw_adm1-all_adm1
+    nonexistent_adm2 = raw_adm2-all_adm2
+    for i in nonexistent_adm2:
+        raw_data.loc[(raw_data['admin2 code']==i[2])&(raw_data['admin1 code']==i[1])&(raw_data['country code']==i[0]),'admin2 code'] = None  
+
+    for i in nonexistent_adm1:
+        raw_data.loc[(raw_data['admin1 code']==i[1])&(raw_data['country code']==i[0]),'admin1 code'] = None
+
+    # final table
+    citydata = raw_data[['use_name','population','country code','admin1 code','admin2 code','cc2','latitude','longitude']]
+    citydata = citydata.assign(default=1).rename({'use_name':'name'}, axis = 1)
+
+    # individual rows for each altname (will remove duplicates later)
+    alt_names = pd.DataFrame(raw_data['alternatenames'].str.split(',').tolist(),index=raw_data.index).stack().reset_index([0,'geonameid'])
+    alt_names.columns = ['geonameid','name']
+    alt_names = alt_names[alt_names['name']!='']
+    # add in name 
+    name = raw_data[['name']]
+    name = pd.melt(raw_data.reset_index(), value_vars=['name','asciiname'],id_vars='geonameid')[['geonameid','value']].rename({'value':'name'},axis=1)#name.rename_axis('geonameid').reset_index()
+
+    alt_names=pd.concat([alt_names, name])
+    # copy data for altnames
+    for column in ('population','country code','admin1 code','admin2 code','cc2'):
+        alt_names[column] = alt_names['geonameid'].apply(lambda x: citydata.at[x, column])
+    # add to df
+    citydata['geonameid'] = citydata.index
+    citydata = pd.concat([citydata,alt_names])
+
+    # replace all with single apostrophe type
+    print(citydata[citydata['name'].str.find("`")>-1])
+    citydata['name']=citydata['name'].str.replace("[`’ʻʼ]","'",regex=True)
+    print(citydata[citydata['name'].str.find("`")>-1])
+
+    # deleted column
+    citydata['deleted'] = citydata['geonameid'].isin(deleted).astype(int)
+    citydata = citydata.rename({'cc2':'alt-country','country code':'country','admin1 code':'admin1','admin2 code':'admin2'}, axis = 1).sort_values(['deleted','country','geonameid','default','name'],ascending=[1,1,1,0,1]).drop_duplicates(subset=('geonameid','name'))
+    citydata['default'] = citydata['default'].fillna(0).astype(int)
+    citydata.index = range(len(citydata.index))
+
+    # apply romanization
+    punctuation = r"[^\w\s]"
+    letter_search = r'[a-zA-Z]'
+    citydata['name'] = citydata['name'].apply(lambda name: re.sub(r'\s+',' ',name).strip())
+
+    # generate lowercase column, add zipped geonameid,lower columns to set, check for membership when making new columns
+    citydata['lower']=citydata['name'].str.lower()
+    citydata=citydata.drop_duplicates(['geonameid','lower'])
+    lower_names = set(zip(citydata['geonameid'],citydata['lower']))
+
+    citydata['decoded'] = citydata['name'].apply(lambda q: re.sub("[`’ʻʼ]","'",re.sub(r'\s+',' ',anyascii(q))).strip().replace(',',''))
+    citydata['punct-space'] = citydata['decoded'].apply(lambda q: re.sub(r'\s+',' ',(re.sub(punctuation,' ',q)).strip()))
+    citydata['punct-empty'] = citydata['decoded'].apply(lambda q: re.sub(r'\s+',' ',(re.sub(punctuation,'',q)).strip()))
+    citydata['first-letter'] = citydata['punct-space'].apply(lambda q: re.search(letter_search,q).group(0).lower() if re.search(letter_search,q) else None)
+    citydata['last-letter'] = citydata['punct-space'].apply(lambda q: re.search(letter_search,q[::-1]).group(0).lower() if re.search(letter_search,q[::-1]) else None)
+
+    # the ones that couldnt be romanized
+    citydata = citydata[citydata['first-letter'].notna()]
+
+    # clean up now?
+    # check for membership in other columns before removing duplicates
+    citydata['lower2'] = citydata['decoded'].str.lower()
+    citydata['zip2'] = list(zip(citydata['geonameid'],citydata['lower2']))
+    citydata['lower3'] = citydata['punct-space'].str.lower()
+    citydata['zip3'] = list(zip(citydata['geonameid'],citydata['lower3']))
+    citydata['lower4'] = citydata['punct-empty'].str.lower()
+    citydata['zip4'] = list(zip(citydata['geonameid'],citydata['lower4']))
+
+    citydata['decoded'] = citydata['decoded'].where(~citydata['zip2'].isin(lower_names),None)
+    lower_names.update(citydata['zip2'])
+    citydata['punct-space'] = citydata['punct-space'].where(~citydata['zip3'].isin(lower_names),None)
+    lower_names.update(citydata['zip3'])
+    citydata['punct-empty'] = citydata['punct-empty'].where(~citydata['zip4'].isin(lower_names),None)
+    lower_names.update(citydata['zip4'])
+
+    citydata['decoded'] = citydata['decoded'].where(~citydata['zip2'].duplicated(),None)
+    citydata['punct-space'] = citydata['punct-space'].where(~citydata['zip3'].duplicated(),None)
+    citydata['punct-empty'] = citydata['punct-empty'].where(~citydata['zip4'].duplicated(),None)
+
+    # sort columns and data
+    citydata = citydata[['geonameid','name','population','country','admin1','admin2','alt-country','default','latitude','longitude','decoded','punct-space','punct-empty','first-letter','last-letter','deleted']]
+    citydata['name']=citydata['name'].str.replace(',','').str.strip()
+    citydata=citydata.sort_values(['deleted','country','geonameid','default','name'],ascending=[1,1,1,0,1])
+
+    # save to tsv
+    print(time.perf_counter()-start)
+    citydata.to_csv('data/cities.txt',index=0,sep='\t')
+    print(time.perf_counter()-start)
 
 @tree.command(description="Gets information about the bot and the game. ")
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
@@ -2381,8 +2478,11 @@ async def help(interaction: discord.Interaction,se:Optional[Literal['yes','no']]
     headers = ['**Set Commands:**','**Features Commands:**','**Stats Commands:**','**Other Commands:**']
     for n in range(len(command_messages)):
         command_messages[n]=headers[n]+'\n\n'+'\n'.join(command_messages[n])
+
+
     embed.description="Choose a topic."
     await interaction.followup.send(embed=embed,view=Help(['''1. Find a channel that you want to use the bot in, and use `/set channel` to designate it as such.\n2. Using the `/set` commands listed in the Commands section of this help page, change around settings to your liking.\n3. Happy playing!''','''1. The next letter of each city must start with the same letter of the previous city. \n2. You may not go twice in a row. \n3. Cities must meet the minimum population requirement. This number may be checked with `/stats server`. \n4. Unless specified otherwise, cities cannot be repeated within a certain number of cities as each other. This number may be checked with `/stats server`. \n5. Cities must exist on Geonames and must have a minimum population of 1. \n6. Cities must have a prefix at the beginning of the message they are sent in for the bot to count them. This may be checked with `/stats server`, with `None` meaning that all messages will count. \n7. Cities with alternate names will be counted as the same city, but may start and end with different letters. (e.g., despite being the same city`The Hague` starts with `t` and ends with `e`, and `Den Haag` starts with `d` and ends with `g`)\n8. If need be, users may be banned from using the bot. Reasons for banning include, but are not limited to:\n\t- Placing deliberately incorrect cities\n\t- Falsifying cities on Geonames\n\t- Using slurs with this bot\n\t- Creating alternate accounts to sidestep bans''',None,''':white_check_mark: - valid addition to chain\n:ballot_box_with_check: - valid addition to chain, breaks server record\n:x: - invalid addition to chain\n:regional_indicator_a: - letter the city ends with\n:first_place: - first instance of the city being placed\n:no_pedestrians: - user is blocked from using this bot\n:no_entry: - city used to but no longer exists in the database\n\nIn addition, you can make the bot react to certain cities of your choosing using the `/add react` and `/remove react` commands.''','''- When many people are playing, play cities that start and end with the same letter to avoid breaking the chain. \n- If you want to specify a different city than the one the bot interprets, you can use commas to specify provinces, states, or countries: \nExamples: \n:white_check_mark: Atlanta\n:white_check_mark: Atlanta, United States\n:white_check_mark: Atlanta, Georgia\n:white_check_mark: Atlanta, Fulton County\n:white_check_mark: Atlanta, Georgia, United States\n:white_check_mark: Atlanta, Fulton County, United States\n:white_check_mark: Atlanta, Fulton County, Georgia\n:white_check_mark: Atlanta, Fulton County, Georgia, United States\nYou can specify a maximum of 2 administrative divisions, not including the country. \n- Googling cities is allowed. \n- Remember, at the end of the day, it is just a game, and the game is supposed to be lighthearted and fun.''','''**Q: Some cities aren't recognized by the bot. Why?**\nA: The bot takes its data from Geonames, and only cities with a listed population (that is, greater than 0 people listed) are considered by the bot.\n\n**Q: I added some cities to Geonames, but they still aren't recognized by the bot. Why?**\nA: The Geonames dump updates the cities list daily, but the bot's record of cities is not updated on a regular basis, so it might take until I decide to update it again for those cities to show up.\n\n**Q: Why does the bot go down sometimes for a few seconds before coming back up?**\nA: Usually, this is because I have just updated the bot. The way this is set up, the bot will check every 15 minutes whethere there is a new update, and if so, will restart. Just to be safe, when this happens, use `/stats server` to check what the next letter is.\n\n**Q: Why are some of the romanizations for cities incorrect?**\nA: That's a thing to do with the Python library I use to romanize the characters (`anyascii`) - characters are romanized one-by-one instead of with context. It is still better than the previous library I was using (`unidecode`), though. \n\n**Q: How do I suggest feedback to the bot?**\nA: There is a support server and support channels listed in the `/about` command for this bot.'''],command_messages,interaction.user.id),ephemeral=(se=='no'))
+
 @tree.command(description="Information about the bot.")
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
 @app_commands.rename(se='show-everyone')
@@ -2408,7 +2508,7 @@ tree.add_command(stats)
 # error handling
 async def on_command_error(interaction:discord.Interaction, error:discord.app_commands.errors.CommandInvokeError, *args, **kwargs):
     # suppress 404 Not Found errors w/ code 10062
-    # if not (isinstance(error.original, discord.errors.NotFound) and (error.original.code == 10062)):
+    if not (isinstance(error.original, discord.errors.NotFound) and (error.original.code == 10062)):
         embed = discord.Embed(title=f":x: Command Error", colour=BLUE)
         if 'options' in interaction.data['options'][0]:
             embed.add_field(name='Command', value=f"{interaction.data['name']} {interaction.data['options'][0]['name']}")
@@ -2426,7 +2526,7 @@ async def on_command_error(interaction:discord.Interaction, error:discord.app_co
         app_info = await client.application_info()
         owner = await client.fetch_user(app_info.team.owner_id)
         await owner.send(embed=embed)
-        await send_log(owner)
+
 tree.on_error=on_command_error
 
 @client.event
@@ -2448,16 +2548,6 @@ async def on_error(event, *args, **kwargs):
     app_info = await client.application_info()
     owner = await client.fetch_user(app_info.team.owner_id)
     await owner.send(embed=embed)
-    await send_log(owner)
 
-import logging
-
-async def send_log(owner):
-    lines = open(LOGGING_FILE+'.log').readlines()[-500:]
-    await owner.send("Last 500 lines of logfile:",file=discord.File(io.StringIO(''.join(lines)),LOGGING_FILE+f'{datetime.datetime.now().strftime(r"-%Y%m%d-%H%M%S")}-500.log'))
-
-dt_fmt = '%Y-%m-%d %H:%M:%S'
-formatter = logging.Formatter('{asctime} [{levelname:<8}] {name}: {message}', dt_fmt, style='{')
-handler = logging.FileHandler(filename=LOGGING_FILE+'.log', encoding='utf-8', mode='w')
 if __name__ == '__main__':
-    client.run(env["DISCORD_TOKEN"], reconnect=True, log_handler=handler, log_level=logging.INFO, log_formatter=formatter)
+    client.run(env["DISCORD_TOKEN"])

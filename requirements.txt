@@ -1,10 +1,10 @@
 discord
-polars
+pandas
 mariadb
 python-dotenv
 asyncio
 typing
 matplotlib
 basemap
+requests
 anyascii
-aiohttp
