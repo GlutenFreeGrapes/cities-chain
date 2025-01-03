@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 
 load_dotenv()
 
+LOGGING_FILE = 'cities-chain-discord'
+
 intents = discord.Intents.default()
 intents.message_content = True
 
@@ -152,10 +154,10 @@ cur.execute("SET @@session.interactive_timeout = 28800") # max 8hr interactive t
 # ADD CONSTRAINT FOREIGN KEY(user_id)
 #    REFERENCES global_user_info(user_id);''')
 
-cur.execute('''ALTER TABLE server_info ADD IF NOT EXISTS nice bool DEFAULT 1''')
+# cur.execute('''ALTER TABLE server_info ADD IF NOT EXISTS nice bool DEFAULT 1''')
 
-conn.commit()
-print("committed")
+# conn.commit()
+# print("committed")
 
 cur.execute('SELECT server_id, MIN(time_placed) FROM chain_info GROUP BY server_id')
 max_ages = {i[0]:i[1] for i in cur.fetchall()}
@@ -604,6 +606,10 @@ async def on_ready():
     app_info = await client.application_info()
     owner = await client.fetch_user(app_info.team.owner_id)
     max_ages.update({i.id:0 for i in client.guilds if i not in max_ages})
+    # prepare github messages
+    async with aiohttp.ClientSession() as session:
+        async with session.get("https://api.github.com/repos/GlutenFreeGrapes/cities-chain/commits",params={"since":(datetime.datetime.now(tz=pytz.utc)-datetime.timedelta(minutes=17)).isoformat()}) as resp:
+            json_response = await resp.json()
     cur.execute('SELECT server_id FROM server_info')
     alr={i for (i,) in cur.fetchall()}
     empty={i.id for i in client.guilds}-alr
@@ -640,10 +646,6 @@ async def on_ready():
     cur.execute('SELECT user_id, block_expiry FROM global_user_info WHERE blocked = 1 AND block_expiry > 0')
     for i in cur.fetchall():
         await timed_unblock(0, i[0],i[1],True)
-    # prepare github messages
-    async with aiohttp.ClientSession() as session:
-        async with session.get("https://api.github.com/repos/GlutenFreeGrapes/cities-chain/commits",params={"since":(datetime.datetime.now(tz=pytz.utc)-datetime.timedelta(minutes=17)).isoformat()}) as resp:
-            json_response = await resp.json()
     commit_list = [(datetime.datetime.fromisoformat(i['commit']['author']['date']),i['commit']['message']) for i in json_response][::-1]
     embeds=[]
     for timestamp,message in commit_list:
@@ -2311,6 +2313,14 @@ async def executesql(interaction: discord.Interaction, query: str, data: Optiona
     except:
         await interaction.followup.send(f"Query could not be executed.")
 
+@tree.command(name='send-logs',description="Sends last 500 lines of logs. ")
+@app_commands.default_permissions(moderate_members=True)
+@app_commands.guilds(1126556064150736999)
+@app_commands.guild_only()
+async def sendlogs(interaction: discord.Interaction):
+    lines = open(LOGGING_FILE+'.log').readlines()[-500:]
+    await interaction.response.send_message("Last 500 lines of logfile:",file=discord.File(io.StringIO(''.join(lines)),LOGGING_FILE+f'{datetime.datetime.now().strftime(r"-%Y%m%d-%H%M")}-500.log'))
+
 @tree.command(description="Gets information about the bot and the game. ")
 @app_commands.describe(se='Yes to show everyone stats, no otherwise')
 @app_commands.rename(se='show-everyone')
@@ -2369,7 +2379,7 @@ tree.add_command(stats)
 # error handling
 async def on_command_error(interaction:discord.Interaction, error:discord.app_commands.errors.CommandInvokeError, *args, **kwargs):
     # suppress 404 Not Found errors w/ code 10062
-    if not (isinstance(error.original, discord.errors.NotFound) and (error.original.code == 10062)):
+    # if not (isinstance(error.original, discord.errors.NotFound) and (error.original.code == 10062)):
         embed = discord.Embed(title=f":x: Command Error", colour=BLUE)
         if 'options' in interaction.data['options'][0]:
             embed.add_field(name='Command', value=f"{interaction.data['name']} {interaction.data['options'][0]['name']}")
@@ -2387,7 +2397,7 @@ async def on_command_error(interaction:discord.Interaction, error:discord.app_co
         app_info = await client.application_info()
         owner = await client.fetch_user(app_info.team.owner_id)
         await owner.send(embed=embed)
-
+        await send_log(owner)
 tree.on_error=on_command_error
 
 @client.event
@@ -2409,6 +2419,16 @@ async def on_error(event, *args, **kwargs):
     app_info = await client.application_info()
     owner = await client.fetch_user(app_info.team.owner_id)
     await owner.send(embed=embed)
+    await send_log(owner)
 
+import logging
+
+async def send_log(owner):
+    lines = open(LOGGING_FILE+'.log').readlines()[-500:]
+    await owner.send("Last 500 lines of logfile:",file=discord.File(io.StringIO(''.join(lines)),LOGGING_FILE+f'{datetime.datetime.now().strftime(r"-%Y%m%d-%H%M")}-500.log'))
+
+dt_fmt = '%Y-%m-%d %H:%M:%S'
+formatter = logging.Formatter('{asctime} [{levelname:<8}] {name}: {message}', dt_fmt, style='{')
+handler = logging.FileHandler(filename=LOGGING_FILE+'.log', encoding='utf-8', mode='w')
 if __name__ == '__main__':
-    client.run(env["DISCORD_TOKEN"], reconnect = True)
+    client.run(env["DISCORD_TOKEN"], reconnect=True, log_handler=handler, log_level=logging.INFO, log_formatter=formatter)
