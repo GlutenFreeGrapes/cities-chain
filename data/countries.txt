@@ -915,7 +915,6 @@ geonameid	country	iso3	name	default
 174982	AM	ARM	Ermenistan	0
 174982	AM	ARM	Ermənistan	0
 174982	AM	ARM	Hajio	0
-174982	AM	ARM	Hayasdani Hanrabedut’iun	0
 174982	AM	ARM	Hayastan	0
 174982	AM	ARM	Hayastani Hanrapetut’yun	0
 174982	AM	ARM	Jermenija	0
@@ -948,7 +947,6 @@ geonameid	country	iso3	name	default
 174982	AM	ARM	Әрмәнстан	0
 174982	AM	ARM	Հայաստան	0
 174982	AM	ARM	Հայաստանի Հանրապետութիւն	0
-174982	AM	ARM	Հայաստանի Հանրապետություն	0
 174982	AM	ARM	אַרמעניע	0
 174982	AM	ARM	ארמניה	0
 174982	AM	ARM	ארמעניע	0

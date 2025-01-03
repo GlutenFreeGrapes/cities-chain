@@ -1,5 +1,5 @@
 discord
-polars
+pandas
 mariadb
 python-dotenv
 asyncio
@@ -8,4 +8,3 @@ matplotlib
 basemap
 requests
 anyascii
-aiohttp
