@@ -375,7 +375,7 @@ def sanitize_query(query):
 
 @functools.cache
 def generate_map(city_id_list):
-    coords = list(city_default.loc[city_id_list][['latitude','longitude']].itertuples(index = False, name = None))
+    coords = list(city_default.loc[list(city_id_list)][['latitude','longitude']].itertuples(index = False, name = None))
     if len(coords):
         lats,lons = zip(*coords)
 
@@ -2379,7 +2379,7 @@ tree.add_command(stats)
 # error handling
 async def on_command_error(interaction:discord.Interaction, error:discord.app_commands.errors.CommandInvokeError, *args, **kwargs):
     # suppress 404 Not Found errors w/ code 10062
-    # if not (isinstance(error.original, discord.errors.NotFound) and (error.original.code == 10062)):
+    if not (isinstance(error.original, discord.errors.NotFound) and (error.original.code == 10062)):
         embed = discord.Embed(title=f":x: Command Error", colour=BLUE)
         if 'options' in interaction.data['options'][0]:
             embed.add_field(name='Command', value=f"{interaction.data['name']} {interaction.data['options'][0]['name']}")
@@ -2428,6 +2428,7 @@ async def send_log(owner):
     await owner.send("Last 500 lines of logfile:",file=discord.File(io.StringIO(''.join(lines)),LOGGING_FILE+f'{datetime.datetime.now().strftime(r"-%Y%m%d-%H%M")}-500.log'))
 
 dt_fmt = '%Y-%m-%d %H:%M:%S'
+logging.basicConfig(filename=LOGGING_FILE+'.log', filemode='w', level = logging.INFO, format = '{asctime} [{levelname:<8}] {name}: {message}', style = '{', datefmt=dt_fmt)
 formatter = logging.Formatter('{asctime} [{levelname:<8}] {name}: {message}', dt_fmt, style='{')
 handler = logging.FileHandler(filename=LOGGING_FILE+'.log', encoding='utf-8', mode='w')
 if __name__ == '__main__':
