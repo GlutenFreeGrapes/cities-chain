@@ -6,5 +6,5 @@ asyncio
 typing
 matplotlib
 basemap
-requests
+aiohttp
 anyascii

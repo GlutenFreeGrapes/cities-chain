@@ -1,4 +1,4 @@
-import discord, re, pandas as pd, math, mariadb, numpy as np, asyncio, io, traceback, datetime, json, requests, pytz, concurrent.futures
+import discord, re, pandas as pd, math, mariadb, numpy as np, asyncio, io, traceback, datetime, json, aiohttp, pytz, concurrent.futures
 from discord import app_commands
 from typing import Optional,Literal
 from os import environ as env
@@ -641,7 +641,9 @@ async def on_ready():
     for i in cur.fetchall():
         await timed_unblock(0, i[0],i[1],True)
     # prepare github messages
-    json_response = requests.get("https://api.github.com/repos/GlutenFreeGrapes/cities-chain/commits",params={"since":(datetime.datetime.now(tz=pytz.utc)-datetime.timedelta(minutes=17)).isoformat()}).json()
+    async with aiohttp.ClientSession() as session:
+        async with session.get("https://api.github.com/repos/GlutenFreeGrapes/cities-chain/commits",params={"since":(datetime.datetime.now(tz=pytz.utc)-datetime.timedelta(minutes=17)).isoformat()}) as resp:
+            json_response = await resp.json()
     commit_list = [(datetime.datetime.fromisoformat(i['commit']['author']['date']),i['commit']['message']) for i in json_response][::-1]
     embeds=[]
     for timestamp,message in commit_list:
