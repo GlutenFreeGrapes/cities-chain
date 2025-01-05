@@ -1,5 +1,5 @@
 discord
-polars
+pandas
 mariadb
 python-dotenv
 asyncio
