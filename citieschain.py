@@ -1403,15 +1403,18 @@ async def fail(message:discord.Message,reason,citieslist,res,n,cityfound,msgref)
         
         cur.execute('''insert into chain_info(server_id,city_id,round_number,count,name,admin2,admin1,country,country_code,alt_country,time_placed,valid)
                     values (?,?,?,?,?,?,?,?,?,?,?,?)''',data=(guildid,int(newid),cache[guildid]["round_number"]+1,1,n[0],n[4],n[3],n[1],n[2],n[5],int(message.created_at.timestamp()),True))
-    conn.commit()
-
-    try:
-        await message.add_reaction('\N{CROSS MARK}')
-    except:
-        pass
-    if cache[guildid]["choose_city"]:
+        conn.commit()
+        try:
+            await message.add_reaction('\N{CROSS MARK}')
+        except:
+            pass
         await message.channel.send('<@%s> RUINED IT AT **%s**!! Start again from `%s` (next letter `%s`). %s'%(authorid,f"{len(citieslist):,}",entr['name'],entr['last-letter'],reason), reference = msgref)
     else:
+        conn.commit()
+        try:
+            await message.add_reaction('\N{CROSS MARK}')
+        except:
+            pass
         await message.channel.send('<@%s> RUINED IT AT **%s**!! %s'%(authorid,f"{len(citieslist):,}",reason), reference = msgref)
     # remove this from the queue of messages to process
     processes[guildid].pop(0)
