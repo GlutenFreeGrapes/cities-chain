@@ -693,6 +693,11 @@ async def on_ready():
         cur.execute('select server_id,channel_id from server_info where updates=1')
         guild_to_channel = {i[0]:i[1] for i in cur.fetchall()}
         for g in client.guilds:
+            try:
+                client_member = g.get_member(client.user.id)
+            except:
+                client_member = None
+                open(LOGGING_FILE+".log",'a').write(f"unable to write to fetch client user in server {g.id} ({g.name})\n")
             if g.id in guild_to_channel:
                 # guild has updates on
                 id_to_channel = {c.id:c for c in g.text_channels}
@@ -702,10 +707,11 @@ async def on_ready():
                 else:
                     chosen_channel = None
                     # first one with messaging permissions
-                    for c in id_to_channel.values():
-                        if c.permissions_for(client.user).send_messages:
-                            chosen_channel = c
-                            break
+                    if client_member:
+                        for c in id_to_channel.values():
+                            if c.permissions_for(client_member).send_messages:
+                                chosen_channel = c
+                                break
                 if chosen_channel:
                     try:
                         await chosen_channel.send(embeds=embeds)
@@ -1609,18 +1615,18 @@ async def roundinfo(interaction: discord.Interaction,round_num:int,showmap:Optio
         else:
             await interaction.followup.send("No rounds played yet.",ephemeral=(se=='no'))
 
-def max_age_to_timestamp(interaction, max_age, is_global):
+def max_age_to_timestamp(interaction:discord.Interaction, max_age, is_global):
     if max_age == "All Time":
         if is_global:
             return earliest_time
         else:
-            if interaction.guild_id in max_ages:
+            if interaction.guild_id not in max_ages:
                 cur.execute('SELECT MIN(time_placed) FROM chain_info WHERE server_id = ?', (interaction.guild_id,))
                 since_time = cur.fetchone()[0]
                 if since_time:
                     max_ages[interaction.guild_id]=since_time
                 else: 
-                    return 0
+                    return client.user.created_at
             return max_ages[interaction.guild_id]
     else:
         return int((interaction.created_at - stats_time_offset[max_age]).timestamp())
@@ -1806,6 +1812,7 @@ async def popular(interaction: discord.Interaction,se:Optional[Literal['yes','no
         await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ",ephemeral=(se=='no'))
         return
     since = max_age_to_timestamp(interaction, max_age, 0)
+    # check if all time equals since
     cur.execute('SELECT city_id, COUNT(*) as city_counts FROM chain_info WHERE valid = 1 AND server_id = ? AND user_id IS NOT NULL AND time_placed >= ? GROUP BY city_id ORDER BY city_counts DESC, city_id ASC',data=(interaction.guild_id,since))
     cities=[i for i in cur.fetchall()]
     cur.execute('''select city_id from repeat_info where server_id = ?''', data=(interaction.guild_id,))
