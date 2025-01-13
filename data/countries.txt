@@ -8891,6 +8891,7 @@ geonameid	country	iso3	name	default
 2205218	FJ	FJI	Fîjî	0
 2205218	FJ	FJI	Insulae Vitienses	0
 2205218	FJ	FJI	Ishujt e Fildisht	0
+2205218	FJ	FJI	Matanitu ko Viti	0
 2205218	FJ	FJI	Phi-gi	0
 2205218	FJ	FJI	Piyi	0
 2205218	FJ	FJI	Republic of Fiji	0
@@ -8917,6 +8918,7 @@ geonameid	country	iso3	name	default
 2205218	FJ	FJI	فیجی	0
 2205218	FJ	FJI	فېجي	0
 2205218	FJ	FJI	फ़िजी	0
+2205218	FJ	FJI	फ़िजी गणराज्य	0
 2205218	FJ	FJI	फिजी	0
 2205218	FJ	FJI	ফিজি	0
 2205218	FJ	FJI	ਫ਼ਿਜੀ	0
@@ -10016,6 +10018,7 @@ geonameid	country	iso3	name	default
 614540	GE	GEO	Sak’art’velos Respublika	0
 614540	GE	GEO	Seworsi	0
 614540	GE	GEO	Seōsia	0
+614540	GE	GEO	Vrastan	0
 614540	GE	GEO	Xeorxa	0
 614540	GE	GEO	Xeorxia	0
 614540	GE	GEO	Xorxa	0

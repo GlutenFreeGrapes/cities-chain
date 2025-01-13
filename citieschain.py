@@ -336,7 +336,7 @@ def search_cities(city,other_arguments,min_pop,include_deleted,country_list_mode
         if results.row(0)[city_default.get_column_index('population')] < min_pop:
             if results['population'].max() >= min_pop:
                 results = results.sort(['population','default','match'],descending=[True,True,False])
-        r = dict(zip(results.columns,results.row(0)))
+        r = results.row(0, named=True)
         if country_list_mode:
             allowed_countries = country_list.split(',')
             country_selection = (pl.col('country').is_in(allowed_countries))|(pl.col('alt-country').is_in(allowed_countries))
@@ -348,7 +348,7 @@ def search_cities(city,other_arguments,min_pop,include_deleted,country_list_mode
                 results = results.filter(country_selection)
             # choose top of those results, failing that choose the default result
             if results.shape[0]:
-                r = dict(zip(results.columns,results.row(0)))
+                r = results.row(0, named=True)
         return r['geonameid'], r, r[('name','decoded','punct-space','punct-empty')[r['match']]]
     return None
 
@@ -383,7 +383,7 @@ def search_cities_command(city,province,otherprovince,country,min_pop,include_de
         if results.row(0)[city_default.get_column_index('population')] < min_pop:
             if results['population'].max() >= min_pop:
                 results = results.sort(['population','default','match'],descending=[True,True,False])
-        r = dict(zip(results.columns,results.row(0)))
+        r = results.row(0, named=True)
         if country_list_mode:
             allowed_countries = country_list.split(',')
             country_selection = (pl.col('country').is_in(allowed_countries))|(pl.col('alt-country').is_in(allowed_countries))
@@ -395,7 +395,7 @@ def search_cities_command(city,province,otherprovince,country,min_pop,include_de
                 results = results.filter(country_selection)
             # choose top of those results, failing that choose the default result
             if results.shape[0]:
-                r = dict(zip(results.columns,results.row(0)))
+                r = results.row(0, named=True)
         return r['geonameid'], r, r[('name','decoded','punct-space','punct-empty')[r['match']]]
     return None
 
@@ -640,10 +640,10 @@ async def on_ready():
     await tree.sync(guild=discord.Object(1126556064150736999))
     app_info = await client.application_info()
     owner = await client.fetch_user(app_info.team.owner_id)
-    max_ages.update({i.id:0 for i in client.guilds if i not in max_ages})
+    max_ages.update({i.id:0 for i in client.guilds if i.id not in max_ages})
     # prepare github messages
     async with aiohttp.ClientSession() as session:
-        async with session.get("https://api.github.com/repos/GlutenFreeGrapes/cities-chain/commits",params={"since":(datetime.datetime.now(tz=pytz.utc)-datetime.timedelta(minutes=17)).isoformat()}) as resp:
+        async with session.get("https://api.github.com/repos/GlutenFreeGrapes/cities-chain/commits",params={"since":(datetime.datetime.now(tz=pytz.utc)-datetime.timedelta(minutes=20)).isoformat()}) as resp:
             json_response = await resp.json()
     cur.execute('SELECT server_id FROM server_info')
     alr={i for (i,) in cur.fetchall()}
@@ -715,6 +715,7 @@ async def on_ready():
                 if chosen_channel:
                     try:
                         await chosen_channel.send(embeds=embeds)
+                        open(LOGGING_FILE+".log",'a').write(f"successfully sent to channel {chosen_channel.id} ({chosen_channel.name}) of server {g.id} ({g.name})\n")
                     except:
                         open(LOGGING_FILE+".log",'a').write(f"unable to write to channel {chosen_channel.id} ({chosen_channel.name}) of server {g.id} ({g.name})\n")
     print(f'Logged in as {client.user} (ID: {client.user.id})\n------')
@@ -862,7 +863,7 @@ async def choosecity(interaction: discord.Interaction, option:Literal["on","off"
                         else:
                             poss=poss.filter(pl.col('country').is_in(countrieslist)|pl.col('alt-country').is_in(countrieslist))
                 if poss.shape[0]:
-                    entr=dict(zip(poss.columns,poss.sample(1).row(0)))
+                    entr=poss.sample(1).row(0, named=True)
                     nname=entr['name']
                     newid=entr['geonameid']
                     n=(nname,iso2[entr['country']],entr['country'],admin1name(entr['country'],entr['admin1']),admin2name(entr['country'],entr['admin1'],entr['admin2']),entr['alt-country'])
@@ -1031,7 +1032,7 @@ async def countrylist(interaction: discord.Interaction, country:str):
         countrysearch=country.lower().strip()
         res=countriesdata.filter((pl.col('name').str.to_lowercase()==countrysearch)|(pl.col('country').str.to_lowercase()==countrysearch))
         if res.shape[0]:
-            res = dict(zip(res.columns,res.row(0)))
+            res = res.row(0, named=True)
             country_list=cache[interaction.guild_id]["list"]
             dname = countriesdata.row(by_predicate=(pl.col('default')==1)&(pl.col('geonameid')==res['geonameid']))[countriesdata.get_column_index('name')]
             if res['country'] not in country_list.split(','):
@@ -1111,7 +1112,7 @@ async def countrylist(interaction: discord.Interaction, country:str):
         countrysearch=country.lower().strip()
         res=countriesdata.filter((pl.col('name').str.to_lowercase()==countrysearch)|(pl.col('country').str.to_lowercase()==countrysearch))
         if res.shape[0]:
-            res = dict(zip(res.columns,res.row(0)))
+            res = res.row(0, named=True)
             country_list=cache[interaction.guild_id]["list"]
             dname = countriesdata.row(by_predicate=(pl.col('default')==1)&(pl.col('geonameid')==res['geonameid']))[countriesdata.get_column_index('name')]
             if res['country'] in country_list.split(','):
@@ -1246,7 +1247,7 @@ async def process_chain(message:discord.Message,guildid,authorid,original_conten
         return
     
     # default names
-    j=dict(zip(city_default.columns,city_default.row(by_predicate=pl.col('geonameid') == res[0])))
+    j=city_default.row(by_predicate=pl.col('geonameid') == res[0], named=True)
     name,adm2,adm1,country,altcountry=j['name'],j['admin2'],j['admin1'],j['country'],j['alt-country']
     if adm1:
         adm1=admin1name(country,adm1)
@@ -1397,7 +1398,7 @@ async def fail(message:discord.Message,reason,citieslist,res,n,cityfound,msgref)
                     poss=poss.filter(~(pl.col('country').is_in(countrieslist)|pl.col('alt-country').is_in(countrieslist)))
                 else:
                     poss=poss.filter(pl.col('country').is_in(countrieslist)|pl.col('alt-country').is_in(countrieslist))
-        entr=dict(zip(poss.columns,poss.sample(1).row(0)))
+        entr=poss.sample(1).row(0, named=True)
 
         nname=entr['name']
         newid=entr['geonameid']
@@ -1496,7 +1497,7 @@ async def user(interaction: discord.Interaction, member:Optional[discord.User|di
                 if len(favc)==10:
                     break
                 if i[0] in city_default['geonameid']:
-                    cityrow = dict(zip(city_default.columns, city_default.row(by_predicate=pl.col('geonameid') == i[0])))
+                    cityrow = city_default.row(by_predicate=pl.col('geonameid') == i[0], named=True)
                     favc.append(city_string(cityrow['name'],admin1name(cityrow['country'],cityrow['admin1']),admin2name(cityrow['country'],cityrow['admin1'],cityrow['admin2']),cityrow['country'],cityrow['alt-country'])+f' - **{i[1]:,}**')
             favcities.add_field(name='Cities',value='\n'.join([f"{n+1}. "+i for n,i in enumerate(favc)]))
             
@@ -1508,7 +1509,7 @@ async def user(interaction: discord.Interaction, member:Optional[discord.User|di
                     countryuses[i[0]]+=i[1]
                 else:
                     countryuses[i[0]]=i[1]
-            fav_countries = [f"{j[1]} {j[2]} - **{j[0]:,}**" for j in sorted([(countryuses[i],iso2[i],flags[i]) for i in countryuses],reverse=1)[:10]]
+            fav_countries = [f"{j[1]} {j[2]} - **{j[0]:,}**" for j in sorted([(countryuses[i],iso2[i],flags[i]) for i in countryuses],key = lambda x:(-x[0],x[1],x[2]))[:10]]
             favcities.add_field(name='Countries',value='\n'.join([f"{n+1}. "+i for n,i in enumerate(fav_countries)]))
            
             if member.avatar:
@@ -1540,7 +1541,7 @@ async def cities(interaction: discord.Interaction,order:Literal['sequential','al
         countries = set()
         
         for i in cur.fetchall():
-            r = dict(zip(city_default.columns, city_default.row(by_predicate=pl.col('geonameid') == i[5])))
+            r = city_default.row(by_predicate=pl.col('geonameid') == i[5], named=True)
             if i[6]:
                 cityids.append(i[5])
             if i[4]:
@@ -1616,20 +1617,25 @@ async def roundinfo(interaction: discord.Interaction,round_num:int,showmap:Optio
             await interaction.followup.send("No rounds played yet.",ephemeral=(se=='no'))
 
 def max_age_to_timestamp(interaction:discord.Interaction, max_age, is_global):
+    # get all time
+    if interaction.guild_id not in max_ages:
+        cur.execute('SELECT MIN(time_placed) FROM chain_info WHERE server_id = ?', (interaction.guild_id,))
+        since_time = cur.fetchone()[0]
+        if since_time:
+            max_ages[interaction.guild_id]=since_time
+            alltime = max_ages[interaction.guild_id]
+        else: 
+            alltime = 0
+    else:
+        alltime = max_ages[interaction.guild_id]
+
     if max_age == "All Time":
         if is_global:
             return earliest_time
         else:
-            if interaction.guild_id not in max_ages:
-                cur.execute('SELECT MIN(time_placed) FROM chain_info WHERE server_id = ?', (interaction.guild_id,))
-                since_time = cur.fetchone()[0]
-                if since_time:
-                    max_ages[interaction.guild_id]=since_time
-                else: 
-                    return client.user.created_at
-            return max_ages[interaction.guild_id]
+            return alltime  
     else:
-        return int((interaction.created_at - stats_time_offset[max_age]).timestamp())
+        return max(alltime, int((interaction.created_at - stats_time_offset[max_age]).timestamp()))
 
 @stats.command(description="Displays serverwide user leaderboard.")
 @app_commands.rename(se='show-everyone', max_age = 'max-age')
@@ -1768,7 +1774,7 @@ async def react(interaction: discord.Interaction,se:Optional[Literal['yes','no']
     if cur.rowcount>0:
         fmt=[]
         for (i,r) in cur.fetchall():
-            j=dict(zip(city_default.columns, city_default.row(by_predicate=pl.col('geonameid') == i)))
+            j=city_default.row(by_predicate=pl.col('geonameid') == i, named=True)
             fmt.append(f"- {city_string(j['name'],admin1name(j['country'],j['admin1']),admin2name(j['country'],j['admin1'],j['admin2']),j['country'],j['alt-country'])} - {r}")
         fmt=sorted(fmt)
         embed.description='\n'.join(fmt[:25])
@@ -1792,7 +1798,7 @@ async def repeat(interaction: discord.Interaction,se:Optional[Literal['yes','no'
     if cur.rowcount>0:
         fmt=[]
         for (i,) in cur.fetchall():
-            j=dict(zip(city_default.columns, city_default.row(by_predicate=pl.col('geonameid') == i)))
+            j=city_default.row(by_predicate=pl.col('geonameid') == i, named=True)
             fmt.append(f"- {city_string(j['name'],admin1name(j['country'],j['admin1']),admin2name(j['country'],j['admin1'],j['admin2']),j['country'],j['alt-country'])}")
         fmt=sorted(fmt)
         embed.description='\n'.join(fmt[:25])
@@ -1825,14 +1831,15 @@ async def popular(interaction: discord.Interaction,se:Optional[Literal['yes','no
     if len(cities)>0:
         fmt=[]
         countries={ccode:0 for ccode in iso2}
-        for n,i in enumerate(cities):
-            c=i[1]
-            j=dict(zip(city_default.columns, city_default.row(by_predicate=pl.col('geonameid') == i[0])))
-            countries[j['country']]+=c
+        df = pl.DataFrame(cities, schema={'geonameid':pl.Int32, 'count':pl.UInt32})
+        counts = city_default.join(df, ['geonameid'], 'inner').sort(['count','geonameid'],descending=[True,False])
+
+        for n,j in enumerate(counts.iter_rows(named=True)):
+            countries[j['country']]+=j['count']
             if j['alt-country']:
-                countries[j['alt-country']]+=c
+                countries[j['alt-country']]+=j['count']
             if n < 10:
-                fmt.append((c,city_string(j['name'],admin1name(j['country'],j['admin1']),admin2name(j['country'],j['admin1'],j['admin2']),j['country'],j['alt-country'])+(f'{":no_entry:" if j["deleted"] else ""}{":repeat:" if i[0] in repeated else ""}')))
+                fmt.append((j['count'],city_string(j['name'],admin1name(j['country'],j['admin1']),admin2name(j['country'],j['admin1'],j['admin2']),j['country'],j['alt-country'])+(f'{":no_entry:" if j["deleted"] else ""}{":repeat:" if j["geonameid"] in repeated else ""}')))
         fmt=sorted(fmt,key = lambda x:(-x[0],x[1]))
         embed.add_field(name='Cities',value='\n'.join(['%s. %s - **%s**' %(n+1,i[1],f"{i[0]:,}") for (n,i) in enumerate(fmt)]))
         fmt=[]
@@ -1888,7 +1895,7 @@ async def bestrds(interaction: discord.Interaction,se:Optional[Literal['yes','no
                 # get first city
                 cur.execute('SELECT city_id, name FROM chain_info WHERE server_id = ? AND round_number = ? AND (count = ? OR count = ?) AND valid = 1 ORDER BY count ASC', (interaction.guild_id, round_num, 1, length))
                 first_id, first_name = cur.fetchone()
-                f_c = dict(zip(city_default.columns,city_default.row(by_predicate=pl.col('geonameid') == first_id)))
+                f_c = city_default.row(by_predicate=pl.col('geonameid') == first_id, named=True)
                 name_str = city_string(first_name if first_name == f_c['name'] else f"{first_name} ({f_c['name']})", 
                                         admin1_default.row(by_predicate=(pl.col('country') == f_c['country']) & (pl.col('admin1') == f_c['admin1']))[admin1_default.get_column_index('name')] if f_c['admin1'] else None,
                                         admin2_default.row(by_predicate=(pl.col('country') == f_c['country']) & (pl.col('admin1') == f_c['admin1']) & (pl.col('admin2') == f_c['admin2']))[admin2_default.get_column_index('name')] if f_c['admin2'] else None,
@@ -1897,7 +1904,7 @@ async def bestrds(interaction: discord.Interaction,se:Optional[Literal['yes','no
                     # get last city
                     # cur.execute('SELECT city_id,name FROM chain_info WHERE server_id = ? AND round_number = ? AND count = ? AND valid = 1', (interaction.guild_id, round_num, length))
                     last_id, last_name = cur.fetchone()
-                    l_c = dict(zip(city_default.columns,city_default.row(by_predicate=pl.col('geonameid') == last_id)))
+                    l_c = city_default.row(by_predicate=pl.col('geonameid') == last_id, named=True)
                     name_str += ' - ' +  city_string(last_name if last_name == l_c['name'] else f"{last_name} ({l_c['name']})", 
                                         admin1_default.row(by_predicate=(pl.col('country') == l_c['country']) & (pl.col('admin1') == l_c['admin1']))[admin1_default.get_column_index('name')] if l_c['admin1'] else None,
                                         admin2_default.row(by_predicate=(pl.col('country') == l_c['country']) & (pl.col('admin1') == l_c['admin1']) & (pl.col('admin2') == l_c['admin2']))[admin2_default.get_column_index('name')] if l_c['admin2'] else None,
@@ -2008,7 +2015,7 @@ async def cityinfo(interaction: discord.Interaction, query:str,include_deletes:O
             cur.execute('''select * from repeat_info where server_id = ? and city_id=?''', data=(interaction.guild_id,res[0]))
             repeatable=cur.rowcount
             aname=citydata.filter(pl.col('geonameid')==res[0])
-            default=dict(zip(city_default.columns,city_default.row(by_predicate=pl.col('geonameid') == res[0])))
+            default=city_default.row(by_predicate=pl.col('geonameid') == res[0], named=True)
             dname=default['name']
             embed=discord.Embed(title='Information - %s'%dname,color = GREEN if not default['deleted'] else RED)
             embed.add_field(name='Geonames ID',value=res[0],inline=True)
@@ -2100,14 +2107,13 @@ async def subdivisioninfo(interaction: discord.Interaction, sd_name:str, admin1:
     res = res.sort(['default','country','admin1','geonameid'],descending=[True,False,False,False])
 
     if res.shape[0]:
-        res = dict(zip(res.columns,res.row(0)))
+        res = res.row(0, named=True)
         # query was admin2
         if admin1:
             cities_in_admin = city_default.filter((pl.col('country')==res['country'])&(pl.col('admin1')==res['admin1'])&(pl.col('admin2')==res['admin2']))
         # query was admin1
         else:
             cities_in_admin = city_default.filter((pl.col('country')==res['country'])&(pl.col('admin1')==res['admin1']))
-        # get cities in country, make pandas df, pd.merge to inner join two
 
         # cur.execute("select city_id, count from count_info WHERE server_id = ? AND country_code = ?",data=(interaction.guild_id,res['country']))
         cur.execute('SELECT city_id, COUNT(*), SUM(CASE user_id WHEN ? THEN 1 ELSE 0 END) FROM `chain_info` WHERE server_id = ? AND country_code = ? AND valid = 1 AND user_id IS NOT NULL GROUP BY city_id;', (interaction.user.id,interaction.guild_id, res['country']))
@@ -2118,10 +2124,10 @@ async def subdivisioninfo(interaction: discord.Interaction, sd_name:str, admin1:
             filtered_cities = pl.DataFrame(schema={'geonameid':pl.Int32,'count':pl.Int16,'user_counts':pl.Int16}, orient='row')
         if admin1:
             aname=admin2data.filter(pl.col('geonameid')==res['geonameid'])
-            default=dict(zip(admin2_default.columns,admin2_default.row(by_predicate=(pl.col('country')==res['country'])&(pl.col('admin1')==res['admin1'])&(pl.col('admin2')==res['admin2']))))
+            default=admin2_default.row(by_predicate=(pl.col('country')==res['country'])&(pl.col('admin1')==res['admin1'])&(pl.col('admin2')==res['admin2']), named=True)
         else:
             aname=admin1data.filter(pl.col('geonameid')==res['geonameid'])
-            default=dict(zip(admin1_default.columns,admin1_default.row(by_predicate=(pl.col('country')==res['country'])&(pl.col('admin1')==res['admin1']))))
+            default=admin1_default.row(by_predicate=(pl.col('country')==res['country'])&(pl.col('admin1')==res['admin1']), named=True)
         dname=default['name']
 
         a1d = admin1name(res['country'], res['admin1']) if admin1 else ''
@@ -2145,7 +2151,7 @@ async def subdivisioninfo(interaction: discord.Interaction, sd_name:str, admin1:
             if filtered_cities.shape[0]:
                 citylist=[]
                 for n in range(min(10,filtered_cities.shape[0])):
-                    i = dict(zip(filtered_cities.columns,filtered_cities.row(n)))
+                    i = filtered_cities.row(n, named=True)
                     citylist.append(f"{n+1}. {city_string(i['name'], a1d if admin1 else dname, dname if admin1 else admin2name(i['country'], i['admin1'], i['admin2']), i['country'], i['alt-country'])} - **{i['count']:,}**")
                     
             #     citylist=[]
@@ -2180,12 +2186,12 @@ async def countryinfo(interaction: discord.Interaction, country:str,se:Optional[
     countrysearch=country.lower().strip()
     res=countriesdata.filter((pl.col('name').str.to_lowercase()==countrysearch)|(pl.col('country').str.to_lowercase()==countrysearch))
     if res.shape[0]!=0:
-        res = dict(zip(res.columns,res.row(0)))
+        res = res.row(0, named=True)
         # cur.execute("select sum(count) from count_info where server_id=? and (country_code=? or alt_country=?)",data=(interaction.guild_id,res['country'],res['country']))
         cur.execute("SELECT COUNT(*), SUM(CASE user_id WHEN ? THEN 1 ELSE 0 END) FROM chain_info WHERE server_id = ? AND valid = 1 AND user_id IS NOT NULL AND (country_code = ? OR alt_country = ?)", data=(interaction.user.id, interaction.guild_id, res['country'], res['country']))
         count, user_count=cur.fetchone()
         aname=countriesdata.filter(pl.col('geonameid')==res['geonameid'])
-        default=dict(zip(countrydefaults.columns,countrydefaults.row(by_predicate=pl.col('country') == res['country'])))
+        default=countrydefaults.row(by_predicate=pl.col('country') == res['country'], named=True)
         dname=default['name']
         embed=discord.Embed(title='Information - %s %s (%s) - Count: %s'%(flags[res['country']],dname,res['country'],f"{count:,} ({user_count:,} uses by @{interaction.user.name})" if count else 0, ),color=GREEN)
         alts=aname.filter(pl.col('default')==0)['name']
@@ -2206,7 +2212,7 @@ async def countryinfo(interaction: discord.Interaction, country:str,se:Optional[
             if cur.rowcount>0:
                 citylist=[]
                 for n,i in enumerate(cur.fetchall()):
-                    default = dict(zip(city_default.columns,city_default.row(by_predicate=pl.col('geonameid') == i[0])))
+                    default = city_default.row(by_predicate=pl.col('geonameid') == i[0], named=True)
                     citylist.append(f'''{n+1}. {city_string(default['name'],admin1name(default['country'],default['admin1']),admin2name(default['country'],default['admin1'],default['admin2']),default['country'],default['alt-country'])}{':no_entry:' if default['deleted'] else ''} - **{i[1]:,}**''')
                 topcities.description='\n'.join(citylist)
                 tosend.append(topcities)
