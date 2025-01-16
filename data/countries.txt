@@ -5648,7 +5648,7 @@ geonameid	country	iso3	name	default
 2287781	CI	CIV	Peravê Diranfîl	0
 2287781	CI	CIV	Pobrežie Slonoviny	0
 2287781	CI	CIV	Republic of Côte d’Ivoire	0
-2287781	CI	CIV	Republik  Côte d’Ivoire	0
+2287781	CI	CIV	Republik Côte d’Ivoire	0
 2287781	CI	CIV	Republika Côte d'Ivoire	0
 2287781	CI	CIV	République de Côte d'Ivoire	0
 2287781	CI	CIV	i-Ivory Coast	0
@@ -15634,7 +15634,7 @@ geonameid	country	iso3	name	default
 3576468	LC	LCA	Sênt-Lisïi	0
 3576468	LC	LCA	Sā Lūsia	0
 3576468	LC	LCA	Xan Lu-xi	0
-3576468	LC	LCA	Xanh Lu-xi  (Saint Lucia)	0
+3576468	LC	LCA	Xanh Lu-xi (Saint Lucia)	0
 3576468	LC	LCA	i-Saint Lucia	0
 3576468	LC	LCA	Šventoji Liucija	0
 3576468	LC	LCA	Αγία Λουκία	0
@@ -22453,7 +22453,7 @@ geonameid	country	iso3	name	default
 102358	SA	SAU	ስዑዲ ዓረብ	0
 102358	SA	SAU	អារ៉ាប៊ីសាអូឌីត	0
 102358	SA	SAU	Ả Rập Saudi	0
-102358	SA	SAU	Ả-rập Xê-út  (Saudi Arabia)	0
+102358	SA	SAU	Ả-rập Xê-út (Saudi Arabia)	0
 102358	SA	SAU	サウジアラビア	0
 102358	SA	SAU	サウジアラビア王国	0
 102358	SA	SAU	沙烏地阿拉伯	0
