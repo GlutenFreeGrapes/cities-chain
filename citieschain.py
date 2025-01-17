@@ -61,7 +61,8 @@ GREEN = discord.Colour.from_rgb(0,255,0)
 RED = discord.Colour.from_rgb(255,0,0)
 BLUE = discord.Color.from_rgb(0,0,255)
 
-client = discord.Client(intents=intents)
+# client = discord.Client(intents=intents)
+client = discord.AutoShardedClient(intents=intents)
 tree=app_commands.tree.CommandTree(client)
 
 city_default=citydata.filter(pl.col('default') == 1)
@@ -1190,12 +1191,13 @@ async def on_message(message:discord.Message):
                     # processes[guildid].append((message,guildid,authorid,content,msgref))
                     # processes[guildid].append((message,guildid,authorid,content,msgref,client.loop.run_in_executor(chain_pool, search_cities, *args)))
                     # processes[guildid].append((message,guildid,authorid,content,msgref,chain_pool.submit(search_cities,*args)))
-                    processes[guildid].append((message,guildid,authorid,content,msgref,search_cities(*args)))
+
+                    processes[guildid].append((message,guildid,authorid,content,msgref,asyncio.to_thread(search_cities,*args)))
                 else:
                     # processes[guildid]=[(message,guildid,authorid,content,msgref)]
                     # processes[guildid]=[(message,guildid,authorid,content,msgref,client.loop.run_in_executor(chain_pool, search_cities, *args))]
                     # processes[guildid]=[(message,guildid,authorid,content,msgref,chain_pool.submit(search_cities,*args))]
-                    processes[guildid]=[(message,guildid,authorid,content,msgref,search_cities(*args))]
+                    processes[guildid]=[(message,guildid,authorid,content,msgref,asyncio.to_thread(search_cities,*args))]
                 # IF THERE IS A CITY BEING PROCESSED, ADD IT TO THE QUEUE AND EVENTUALLY IT WILL BE REACHED. OTHERWISE PROCESS IMMEDIATELY WHILE KEEPING IN MIND THAT IT IS CURRENTLY BEING PROCESSED
                 # does city exist
                 # res = pool.apply_async(search_cities,(sanitized_query[0],sanitized_query[1:],cache[guildid]["min_pop"],0,cache[guildid]["list_mode"],cache[guildid]["list"])).get()
@@ -1216,12 +1218,21 @@ async def on_message(message:discord.Message):
                 # res = search_thread.join()
 
                 # processes[guildid][index_in_process]+=(res,)
+
+                # hastily bodged-together code to allow searching cities to continue without disturbing order
+                # r = search_cities(*args)
+                # for n in range(len(processes[guildid])):
+                #     if processes[guildid][0][0].id == message.id:
+                #         processes[guildid][n] += (r,)
+                #         break
                 if processes[guildid][0][0].id==message.id:#index_in_process==0:
                     await asyncio.create_task(process_chain(*processes[guildid][0]))
             elif cache[guildid]["nice"] and re.search(r"(?<!not )\b(("+')|('.join(RESPOND_WORDS)+r"))\b",message.content,re.I):
                 await message.reply("it's ok")
 
 async def process_chain(message:discord.Message,guildid,authorid,original_content,ref,res):
+    res = await res
+
     round_num,chain_ended = cache[guildid]["round_number"], cache[guildid]["chain_end"]
     cur.execute('''select * from server_user_info where user_id = ? and server_id = ?''',data=(authorid,guildid))
     if cur.rowcount==0:
@@ -1364,6 +1375,7 @@ async def process_chain(message:discord.Message,guildid,authorid,original_conten
     processes[guildid].pop(0)
     # if queue of other cities to process empty, set to none again. otherwise, process next city
     if len(processes[guildid])>0:
+        # check if next one is ready; if not, wait
         await asyncio.create_task(process_chain(*processes[guildid][0]))
 
 async def fail(message:discord.Message,reason,citieslist,res,n,cityfound,msgref):
