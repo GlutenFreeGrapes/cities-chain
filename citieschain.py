@@ -294,8 +294,8 @@ def search_cities(city,other_arguments,min_pop,include_deleted,country_list_mode
 
     # length of other arguments is 1
     if len(other_arguments)==1:
-        a1choice=admin1data.filter((pl.col('name').str.to_lowercase()==other_arguments[0].lower())|(pl.col('admin1').str.to_lowercase()==other_arguments[0].lower()))
-        a2choice=admin2data.filter((pl.col('name').str.to_lowercase()==other_arguments[0].lower())|(pl.col('admin2').str.to_lowercase()==other_arguments[0].lower()))
+        a1choice=admin1data.filter((pl.col('name').str.to_lowercase()==other_arguments[0].lower()))
+        a2choice=admin2data.filter((pl.col('name').str.to_lowercase()==other_arguments[0].lower()))
         cchoice=set(countriesdata.filter((pl.col('name').str.to_lowercase()==other_arguments[0].lower())|(pl.col('country').str.to_lowercase()==other_arguments[0].lower()))['country'])
         results = pl.concat([
             city_names.join(a1choice[['country', 'admin1']],['country', 'admin1'], 'inner'),
@@ -304,10 +304,10 @@ def search_cities(city,other_arguments,min_pop,include_deleted,country_list_mode
         ]).unique()
     elif len(other_arguments)==2:
         # other_args[0] is admin2 or admin1
-        a2choice=admin2data.filter((pl.col('name').str.to_lowercase()==other_arguments[0].lower())|(pl.col('admin2').str.to_lowercase()==other_arguments[0].lower()))
-        a1choice_1=admin1data.filter((pl.col('name').str.to_lowercase()==other_arguments[1].lower())|(pl.col('admin1').str.to_lowercase()==other_arguments[1].lower()))
+        a2choice=admin2data.filter((pl.col('name').str.to_lowercase()==other_arguments[0].lower()))
+        a1choice_1=admin1data.filter((pl.col('name').str.to_lowercase()==other_arguments[1].lower()))
         # other_args[1] is admin1 or country
-        a1choice_2=admin1data.filter((pl.col('name').str.to_lowercase()==other_arguments[0].lower())|(pl.col('admin1').str.to_lowercase()==other_arguments[0].lower()))
+        a1choice_2=admin1data.filter((pl.col('name').str.to_lowercase()==other_arguments[0].lower()))
         cchoice=set(countriesdata.filter((pl.col('name').str.to_lowercase()==other_arguments[1].lower())|(pl.col('country').str.to_lowercase()==other_arguments[1].lower()))['country'])
 
         # admin1 & admin2
@@ -322,9 +322,9 @@ def search_cities(city,other_arguments,min_pop,include_deleted,country_list_mode
         a2cchoice=a2cchoice.filter(pl.col('country').is_in(cchoice)|pl.col('alt-country').is_in(cchoice))
         results = pl.concat([results, a2cchoice]).unique()
     elif len(other_arguments) >= 3:
-        a1choice=admin1data.filter((pl.col('name').str.to_lowercase()==other_arguments[1].lower())|(pl.col('admin1').str.to_lowercase()==other_arguments[1].lower()))
+        a1choice=admin1data.filter((pl.col('name').str.to_lowercase()==other_arguments[1].lower()))
         a2choice=admin2data.join(a1choice,['country','admin1'],'inner')
-        a2choice=a2choice.filter((pl.col('name').str.to_lowercase()==other_arguments[0].lower())|(pl.col('admin2').str.to_lowercase()==other_arguments[0].lower()))
+        a2choice=a2choice.filter((pl.col('name').str.to_lowercase()==other_arguments[0].lower()))
         cchoice=set(countriesdata.filter((pl.col('name').str.to_lowercase()==other_arguments[2].lower())|(pl.col('country').str.to_lowercase()==other_arguments[2].lower()))['country'])
         results = city_names.join(a2choice[['country','admin1','admin2']],['country','admin1','admin2'],'inner')
         results=results.filter(pl.col('country').is_in(cchoice)|pl.col('alt-country').is_in(cchoice)).unique()
@@ -363,13 +363,13 @@ def search_cities_command(city,province,otherprovince,country,min_pop,include_de
     if province:
         if otherprovince:
             # (admin1, admin2) = (province, otherprovince)
-            a1choice=admin1data.filter((pl.col('name').str.to_lowercase()==province.lower())|(pl.col('admin1').str.to_lowercase()==province.lower()))
+            a1choice=admin1data.filter((pl.col('name').str.to_lowercase()==province.lower()))
             a2choice=admin2data.join(a1choice[['country','admin1']],['country','admin1'],'inner')
-            a2choice=a2choice.filter((pl.col('name').str.to_lowercase()==otherprovince.lower())|(pl.col('admin2').str.to_lowercase()==otherprovince.lower()))
+            a2choice=a2choice.filter((pl.col('name').str.to_lowercase()==otherprovince.lower()))
             results = results.join(a2choice[['country','admin1','admin2']],['country','admin1','admin2'],'inner')
         else:    
-            a1choice=admin1data.filter((pl.col('name').str.to_lowercase()==province.lower())|(pl.col('admin1').str.to_lowercase()==province.lower()))
-            a2choice=admin2data.filter((pl.col('name').str.to_lowercase()==province.lower())|(pl.col('admin2').str.to_lowercase()==province.lower()))
+            a1choice=admin1data.filter((pl.col('name').str.to_lowercase()==province.lower()))
+            a2choice=admin2data.filter((pl.col('name').str.to_lowercase()==province.lower()))
             results = pl.concat([results.join(a1choice[['country','admin1']],['country','admin1'],'inner'), 
                                  results.join(a2choice[['country','admin1','admin2']],['country','admin1','admin2'],'inner')])
     # if country is specified
