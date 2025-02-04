@@ -1647,7 +1647,10 @@ def max_age_to_timestamp(interaction:discord.Interaction, max_age, is_global):
         else:
             return alltime  
     else:
-        return max(alltime, int((interaction.created_at - stats_time_offset[max_age]).timestamp()))
+        if is_global:
+            return max(earliest_time, int((interaction.created_at - stats_time_offset[max_age]).timestamp()))
+        else:
+            return max(alltime, int((interaction.created_at - stats_time_offset[max_age]).timestamp()))
 
 @stats.command(description="Displays serverwide user leaderboard.")
 @app_commands.rename(se='show-everyone', max_age = 'max-age')
