@@ -15,7 +15,7 @@ LOGGING_FILE = 'cities-chain-discord'
 intents = discord.Intents.default()
 intents.message_content = True
 
-citydata=pl.read_csv('data/cities.txt',separator='\t',null_values='',schema=pl.Schema({
+citydata=pl.read_csv('data/cities.txt',separator='\t',null_values='',quote_char=None,schema=pl.Schema({
     'geonameid':pl.Int32,
     'name':pl.String,
     'population':pl.Int32,
@@ -33,21 +33,21 @@ citydata=pl.read_csv('data/cities.txt',separator='\t',null_values='',schema=pl.S
     'last-letter':pl.String,
     'deleted':pl.Int8
 }))
-countriesdata=pl.read_csv('data/countries.txt',separator='\t',null_values='', schema = pl.Schema({
+countriesdata=pl.read_csv('data/countries.txt',separator='\t',null_values='',quote_char=None,schema = pl.Schema({
     'geonameid':pl.Int32,
     'country':pl.String,
     'iso3':pl.String,
     'name':pl.String,
     'default':pl.Int8,
 }))
-admin1data=pl.read_csv('data/admin1.txt',separator='\t',null_values='',schema=pl.Schema({
+admin1data=pl.read_csv('data/admin1.txt',separator='\t',null_values='',quote_char=None,schema=pl.Schema({
     'geonameid':pl.Int32,
     'country':pl.String,
     'admin1':pl.String,
     'name':pl.String,
     'default':pl.Int8,
 }))
-admin2data=pl.read_csv('data/admin2.txt',separator='\t',null_values='',schema=pl.Schema({
+admin2data=pl.read_csv('data/admin2.txt',separator='\t',null_values='',quote_char=None,schema=pl.Schema({
     'geonameid':pl.Int32,
     'country':pl.String,
     'admin1':pl.String,
