@@ -288,7 +288,7 @@ def city_name_matches(city, min_pop, check_apostrophes, include_deleted):
         else:
             return city_name_matches(re.sub("[`’ʻʼ]","'",city),min_pop,1,include_deleted)
 
-@functools.cache
+# @functools.cache
 def search_cities(city,other_arguments,min_pop,include_deleted,country_list_mode, country_list):
     city_names = city_name_matches(city, min_pop, 0, include_deleted)
 
@@ -353,7 +353,7 @@ def search_cities(city,other_arguments,min_pop,include_deleted,country_list_mode
         return r['geonameid'], r, r[('name','decoded','punct-space','punct-empty')[r['match']]]
     return None
 
-@functools.cache
+# @functools.cache
 def search_cities_command(city,province,otherprovince,country,min_pop,include_deleted,country_list_mode,country_list):
     # otherprovince only used if specified, other administrative division
     # maybe also specify geonameid? 
@@ -408,7 +408,7 @@ def sanitize_query(query):
         query=query[1:]
     return tuple(i for i in query.split(',') if i!='')
 
-@functools.cache
+# @functools.cache
 def generate_map(city_id_list):
     coordinates = {i[city_default.get_column_index('geonameid')]:(i[city_default.get_column_index('latitude')],i[city_default.get_column_index('longitude')]) for i in city_default.filter(pl.col("geonameid").is_in(city_id_list)).iter_rows()}
     coords = [coordinates[i] for i in city_id_list]
