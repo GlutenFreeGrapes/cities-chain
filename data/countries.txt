@@ -9273,7 +9273,7 @@ geonameid	country	iso3	name	default
 2622320	FO	FRO	Fearsullot	0
 2622320	FO	FRO	Feroe Uharteak	0
 2622320	FO	FRO	Feroe nga Islas	0
-2622320	FO	FRO	Ferojski otoci	0
+2622320	FO	FRO	Ferojski Otoci	0
 2622320	FO	FRO	Ferooj	0
 2622320	FO	FRO	Ferski otoki	0
 2622320	FO	FRO	Fersko otočje	0
@@ -24557,7 +24557,7 @@ geonameid	country	iso3	name	default
 934841	SZ	SWZ	Pow Swati	0
 934841	SZ	SWZ	Regatul eSwatini	0
 934841	SZ	SWZ	Reino de eSwatini	0
-934841	SZ	SWZ	Royaume du Swaziland	0
+934841	SZ	SWZ	Royaume d’Eswatini	0
 934841	SZ	SWZ	SWZ	0
 934841	SZ	SWZ	SZ	0
 934841	SZ	SWZ	Saṣiland	0
