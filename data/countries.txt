@@ -1979,6 +1979,7 @@ geonameid	country	iso3	name	default
 587116	AZ	AZE	Азарбижан	0
 587116	AZ	AZE	Азербайджан	0
 587116	AZ	AZE	Азербайжан	0
+587116	AZ	AZE	Азербајџан	0
 587116	AZ	AZE	Азербејџан	0
 587116	AZ	AZE	Азејберџан	0
 587116	AZ	AZE	Азэрбайджан	0
