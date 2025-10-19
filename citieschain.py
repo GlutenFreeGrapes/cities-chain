@@ -2432,7 +2432,7 @@ tree.add_command(stats)
 # error handling
 async def on_command_error(interaction:discord.Interaction, error:discord.app_commands.errors.CommandInvokeError, *args, **kwargs):
     # suppress 404 Not Found errors w/ code 10062
-    # if not (isinstance(error.original, discord.errors.NotFound) and (error.original.code == 10062)):
+    if not (isinstance(error.original, discord.errors.NotFound) and (error.original.code == 10062)):
         embed = discord.Embed(title=f":x: Command Error", colour=BLUE)
         if 'options' in interaction.data['options'][0]:
             embed.add_field(name='Command', value=f"{interaction.data['name']} {interaction.data['options'][0]['name']}")
