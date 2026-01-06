@@ -915,7 +915,8 @@ geonameid	country	iso3	name	default
 174982	AM	ARM	Ermenistan	0
 174982	AM	ARM	Ermənistan	0
 174982	AM	ARM	Hajio	0
-174982	AM	ARM	Hayasdani Hanrabedut’iun	0
+174982	AM	ARM	Hayasdan	0
+174982	AM	ARM	Hayasdani Hanrabedoutiun	0
 174982	AM	ARM	Hayastan	0
 174982	AM	ARM	Hayastani Hanrapetut’yun	0
 174982	AM	ARM	Jermenija	0
@@ -3100,6 +3101,7 @@ geonameid	country	iso3	name	default
 433561	BI	BDI	Puluniti	0
 433561	BI	BDI	Republic of Burundi	0
 433561	BI	BDI	Republika y’u Burundi	0
+433561	BI	BDI	Repuburika y’Uburundi	0
 433561	BI	BDI	República de Burundi	0
 433561	BI	BDI	Rundiyän	0
 433561	BI	BDI	République du Burundi	0
@@ -5148,7 +5150,6 @@ geonameid	country	iso3	name	default
 239880	CF	CAF	Republika ng Gitnang Aprika	0
 239880	CF	CAF	Republika ning Central Aprika	0
 239880	CF	CAF	Republika ti Tengnga nga Aprika	0
-239880	CF	CAF	Republika Środkowej Afryki	0
 239880	CF	CAF	Republika Środkowoafrykańska	0
 239880	CF	CAF	Republikang Sentral Aprikano	0
 239880	CF	CAF	Repubulika ya Santara Afurika	0
@@ -5652,6 +5653,7 @@ geonameid	country	iso3	name	default
 2287781	CI	CIV	Republik Côte d’Ivoire	0
 2287781	CI	CIV	Republika Côte d'Ivoire	0
 2287781	CI	CIV	République de Côte d'Ivoire	0
+2287781	CI	CIV	Wybrzeże Kości Słoniowej	0
 2287781	CI	CIV	i-Ivory Coast	0
 2287781	CI	CIV	il-Kosta tal-Avorju	0
 2287781	CI	CIV	Ακτή Ελεφαντοστού	0
@@ -8272,6 +8274,7 @@ geonameid	country	iso3	name	default
 2461445	EH	ESH	República Àrab Saharauí Democràtica	0
 2461445	EH	ESH	República Árabe Saharaui Democrática	0
 2461445	EH	ESH	Rietumsahāra	0
+2461445	EH	ESH	SADR	0
 2461445	EH	ESH	Saara Ocidental	0
 2461445	EH	ESH	Sahala fakahihifo	0
 2461445	EH	ESH	Sahara Barat	0
@@ -17551,6 +17554,7 @@ geonameid	country	iso3	name	default
 1327865	MM	MMR	Miyanmaar	0
 1327865	MM	MMR	Miànmar	0
 1327865	MM	MMR	Miến Điện (Myanmar)	0
+1327865	MM	MMR	Mjanma	0
 1327865	MM	MMR	Mjanma (Birma)	0
 1327865	MM	MMR	Mjanmao	0
 1327865	MM	MMR	Mjanmar	0
@@ -26756,6 +26760,7 @@ geonameid	country	iso3	name	default
 6252001	US	USA	Spojené štáty	0
 6252001	US	USA	Spojené štáty americké	0
 6252001	US	USA	Stadis Unids da l’America	0
+6252001	US	USA	Stany Zjednoczone	0
 6252001	US	USA	Statele Unite ale Americii	0
 6252001	US	USA	Stati Uniti	0
 6252001	US	USA	Statys Unys	0
