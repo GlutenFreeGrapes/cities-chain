@@ -234,7 +234,7 @@ def search_cities(city,other_arguments,min_pop,include_deleted,country_list_mode
         a2choice_alt=admin2data.filter((pl.col('name').str.to_lowercase()==other_arguments[0].lower()))
         cchoice_alt=set(countriesdata.filter((pl.col('name').str.to_lowercase()==other_arguments[0].lower())|(pl.col('country').str.to_lowercase()==other_arguments[0].lower()))['country'])
         results = pl.concat([
-            city_names.join(cchoice_def[['country', 'admin1']],['country', 'admin1'], 'inner').with_columns(pl.lit(1).alias("match-province")),
+            city_names.join(cchoice_def[['country']],['country'], 'inner').with_columns(pl.lit(1).alias("match-province")),
             city_names.join(a1choice_def[['country', 'admin1']],['country', 'admin1'], 'inner').with_columns(pl.lit(1).alias("match-province")),
             city_names.join(a2choice_def[['country', 'admin1', 'admin2']],['country', 'admin1', 'admin2'], 'inner').with_columns(pl.lit(1).alias("match-province")),
             city_names.filter(pl.col('country').is_in(cchoice_alt)|pl.col('alt-country').is_in(cchoice_alt)).with_columns(pl.lit(2).alias("match-province")),
