@@ -1,0 +1,15 @@
+# Tips on playing
+- When many people are playing, play cities that start and end with the same letter to avoid breaking the chain. 
+- If you want to specify a different city than the one the bot interprets, you can use commas to specify provinces, states, or countries:
+  - Examples (all valid, and would point to the same city): 
+    - Atlanta
+    - Atlanta, United States
+    - Atlanta, Georgia
+    - Atlanta, Fulton County
+    - Atlanta, Georgia, United States
+    - Atlanta, Fulton County, United States
+    - Atlanta, Fulton County, Georgia
+    - Atlanta, Fulton County, Georgia, United States
+  - You can specify a maximum of 2 administrative divisions, not including the country. 
+- Googling cities is allowed. 
+- Remember, at the end of the day, it is just a game, and the game is supposed to be lighthearted and fun.
