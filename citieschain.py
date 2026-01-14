@@ -145,7 +145,7 @@ cur.execute("SELECT server_id, MIN(time_placed) FROM chain_info GROUP BY server_
 max_ages = {i[0]:i[1] for i in cur.fetchall()}
 earliest_time = min(max_ages.values()) if len(max_ages) else datetime.datetime.fromtimestamp(0)
 
-server_info = pl.read_database("SELECT * FROM server_info", conn)
+server_info = pl.read_database("SELECT * FROM server_info", cur)
 server_info_dicts = server_info.to_dicts()
 cache = {}
 for d in server_info_dicts:
@@ -612,7 +612,7 @@ async def on_ready():
     for i in empty:
         cur.execute("INSERT INTO server_info(server_id) VALUES (?)", (i,))
 
-    server_info = pl.read_database("SELECT * FROM server_info", conn)
+    server_info = pl.read_database("SELECT * FROM server_info", cur)
     server_info_dicts = server_info.to_dicts()
     cache = {}
     for d in server_info_dicts:
@@ -677,10 +677,15 @@ async def on_guild_join(guild:discord.Guild):
     cur.execute("SELECT * FROM server_info WHERE server_id = ?", (guild.id,))
     if cur.rowcount==0:
         cur.execute("INSERT INTO server_info(server_id) VALUES (?)", (guild.id,))
-        server_info_new = pl.read_database("SELECT * FROM server_info WHERE server_id = ?", conn, execute_options={"parameters":(guild.id,)})
-        d = server_info_new.to_dicts()[0]
-        del d["server_id"]
-        cache[guild.id] = d
+        conn.commit()
+        # remake entire cache because read_database did not work with parameters
+        server_info = pl.read_database("SELECT * FROM server_info", cur)
+        server_info_dicts = server_info.to_dicts()
+        cache = {}
+        for d in server_info_dicts:
+            guildid = d["server_id"]
+            del d["server_id"]
+            cache[guildid] = d
     for channel in guild.text_channels:
         if channel.permissions_for(guild.me).send_messages:
             await channel.send('Hi! use /help to get more information on how to use this bot. ')
@@ -2285,6 +2290,49 @@ async def clearprocesses(interaction: discord.Interaction, guild: str):
 async def quit(interaction: discord.Interaction):
     await interaction.response.send_message(f"Disconnecting.")
     await client.close()
+
+@tree.command(name="send-message", description="Sends message to given server. ")
+@app_commands.default_permissions(moderate_members=True)
+@app_commands.guilds(1126556064150736999)
+@app_commands.guild_only()
+async def sendmessage(interaction: discord.Interaction, server_id: str, message: str):
+    await interaction.response.defer()
+    server_id = int(server_id)
+    # get server
+    cur.execute("SELECT channel_id FROM server_info WHERE server_id = ?", (server_id,))
+    # get channel/first channel w/ messaging perms
+    channel_id = -1
+    if cur.rowcount > 0:
+        channel_id = cur.fetchone()[0]
+        channel = None
+        if channel_id != -1:
+            try:
+                channel = await client.fetch_channel(channel_id)
+            except:
+                channel_id = -1
+
+    # first channel w/ messaging perms
+    if channel_id == -1:
+        try:
+            guild = await client.fetch_guild(server_id)
+            for c in guild.text_channels:
+                if c.permissions_for(guild.me).send_messages:
+                    channel = c
+                    break
+        except:
+            channel = None
+
+    if channel:
+        # construct embed
+        embed = discord.Embed(color=discord.Color.from_rgb(255,255,0))
+        embed.set_author(name = interaction.user.name, icon_url = interaction.user.avatar.url)
+        embed.description = message
+        embed.set_footer(text = "I cannot see responses to this message or anything else in this server. For further discussion, join the support server linked in the /about command.")
+        embed.timestamp = datetime.datetime.now()
+        await channel.send(embed = embed)
+        await interaction.followup.send("Message sent:", embed = embed)
+    else:
+        await interaction.followup.send("Channel not found for server %s"%server_id)
 
 
 @tree.command(name='execute-sql',description="Executes SQL query. ")
