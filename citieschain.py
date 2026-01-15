@@ -671,7 +671,7 @@ async def on_ready():
 
 @client.event
 async def on_guild_join(guild:discord.Guild):
-    global processes
+    global processes, cache
     processes[guild.id]=[]
 
     cur.execute("SELECT * FROM server_info WHERE server_id = ?", (guild.id,))
@@ -681,11 +681,11 @@ async def on_guild_join(guild:discord.Guild):
         # remake entire cache because read_database did not work with parameters
         server_info = pl.read_database("SELECT * FROM server_info", cur)
         server_info_dicts = server_info.to_dicts()
-        cache = {}
         for d in server_info_dicts:
             guildid = d["server_id"]
-            del d["server_id"]
-            cache[guildid] = d
+            if guildid == guild.id:
+                del d["server_id"]
+                cache[guildid] = d
     for channel in guild.text_channels:
         if channel.permissions_for(guild.me).send_messages:
             await channel.send('Hi! use /help to get more information on how to use this bot. ')
@@ -2302,9 +2302,9 @@ async def sendmessage(interaction: discord.Interaction, server_id: str, message:
     cur.execute("SELECT channel_id FROM server_info WHERE server_id = ?", (server_id,))
     # get channel/first channel w/ messaging perms
     channel_id = -1
+    channel = None
     if cur.rowcount > 0:
         channel_id = cur.fetchone()[0]
-        channel = None
         if channel_id != -1:
             try:
                 channel = await client.fetch_channel(channel_id)
@@ -2314,7 +2314,7 @@ async def sendmessage(interaction: discord.Interaction, server_id: str, message:
     # first channel w/ messaging perms
     if channel_id == -1:
         try:
-            guild = await client.fetch_guild(server_id)
+            guild = client.get_guild(server_id)
             for c in guild.text_channels:
                 if c.permissions_for(guild.me).send_messages:
                     channel = c
