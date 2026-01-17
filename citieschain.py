@@ -601,7 +601,7 @@ async def on_ready():
     await tree.sync(guild=discord.Object(1126556064150736999))
     app_info = await client.application_info()
     owner = await client.fetch_user(app_info.team.owner_id)
-    max_ages.update({i.id:0 for i in client.guilds if i.id not in max_ages})
+    max_ages.update({i.id:datetime.datetime.fromtimestamp(0) for i in client.guilds if i.id not in max_ages})
     # prepare github messages
     async with aiohttp.ClientSession() as session:
         async with session.get("https://api.github.com/repos/GlutenFreeGrapes/cities-chain/commits",params={"since":(datetime.datetime.now(tz=pytz.utc)-datetime.timedelta(minutes=20)).isoformat()}) as resp:
