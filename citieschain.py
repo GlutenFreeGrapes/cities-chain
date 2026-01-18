@@ -596,7 +596,7 @@ async def timed_unblock(server_id, user_id, dt, is_global):
 
 @client.event
 async def on_ready():
-    global owner
+    global owner, cache
     await tree.sync()
     await tree.sync(guild=discord.Object(1126556064150736999))
     app_info = await client.application_info()
@@ -614,11 +614,11 @@ async def on_ready():
 
     server_info = pl.read_database("SELECT * FROM server_info", cur)
     server_info_dicts = server_info.to_dicts()
-    cache = {}
     for d in server_info_dicts:
         guildid = d["server_id"]
-        del d["server_id"]
-        cache[guildid] = d
+        if guildid not in cache:
+            del d["server_id"]
+            cache[guildid] = d
     conn.commit()
     # timed blocks
 
