@@ -124,8 +124,13 @@ def exec_sql_file(cursor, sql_file):
                 print ("\n[WARN] MySQLError during execute statement \n\tArgs: '%s'" % (str(e.args)))
 
             statement = ""
+    conn.commit()
 exec_sql_file(cur, "pre_run_tasks.sql")
 
+# fix blocks
+cur.execute("UPDATE global_user_info SET block_expiry = ? WHERE block_expiry IS NULL AND blocked = ?", (NEVER_TIMESTAMP, True))
+cur.execute("UPDATE server_user_info SET block_expiry = ? WHERE block_expiry IS NULL AND blocked = ?", (NEVER_TIMESTAMP, True))
+conn.commit()
 # round_info
 # cur.execute('''CREATE TABLE IF NOT EXISTS round_info(
 #             server_id BIGINT PRIMARY KEY,
@@ -1174,20 +1179,23 @@ async def process_chain(message:discord.Message,guildid,authorid,original_conten
         cache[guildid]["round_number"] = round_num+1
         cache[guildid]["leaderboard_eligible"] = True
 
+    # select all cities
+    cur.execute("SELECT city_id, message_id, user_id FROM chain_info WHERE server_id = ? AND round_number = ? ORDER BY count DESC", (guildid, cache[guildid]["round_number"]))
+
+    # if repeats enabled:
+        # round_length = full list of cities
+        # illegal_repeats = list of min_repeat most recent cities
+    # else:
+        # round_length = full list of cities
+        # illegal_repeats = full list of cities
+    current_round_length = cur.rowcount
     if cache[guildid]["repeats"]:
-        cur.execute("SELECT city_id, message_id, user_id FROM chain_info WHERE server_id = ? AND round_number = ? ORDER BY count DESC LIMIT ?", (guildid, cache[guildid]["round_number"], cache[guildid]["min_repeat"]))
+        illegal_repeats = {city:(message_id, author_id) for (city, message_id, author_id) in cur.fetchmany(cache[guildid]["min_repeat"])}
     else:
-        cur.execute("SELECT city_id, message_id, user_id FROM chain_info WHERE server_id = ? AND round_number = ? ORDER BY count DESC", (guildid, cache[guildid]["round_number"]))
-    # run is leaderboard eligible
-    if cur.rowcount:
-        citieslist = {city:(message_id, author_id) for (city, message_id, author_id) in cur.fetchall()}
-    #     l_eligible=l_eligibles[0]
-    else:
-        citieslist=[]
-    #     l_eligible=1
-    # l_eligible = cache[guildid]["leaderboard_eligible"]
+        illegal_repeats = {city:(message_id, author_id) for (city, message_id, author_id) in cur.fetchall()}
+
     if not res:
-        await fail(message,"**City not recognized.**",citieslist,None,None,False,ref)
+        await fail(message,"**City not recognized.**",current_round_length,None,None,False,ref)
         return
     
     # default names
@@ -1203,12 +1211,12 @@ async def process_chain(message:discord.Message,guildid,authorid,original_conten
 
     # correct letter
     if not (cache[guildid]["current_letter"]=='-' or cache[guildid]["current_letter"]==letters[0]):
-        await fail(message,"**Wrong letter.**",citieslist,res,n,True,ref)
+        await fail(message,"**Wrong letter.**",current_round_length,res,n,True,ref)
         return
     
     # minimum population
     if cache[guildid]["min_pop"]>res[1]['population']:
-        await fail(message,"**City must have a population of at least `%s`.**"%f"{cache[guildid]['min_pop']:,}",citieslist,res,n,True,ref)
+        await fail(message,"**City must have a population of at least `%s`.**"%f"{cache[guildid]['min_pop']:,}",current_round_length,res,n,True,ref)
         return
     
     # within repeats
@@ -1221,24 +1229,24 @@ async def process_chain(message:discord.Message,guildid,authorid,original_conten
     # not in repeat set and
     # - in past x cities if repeats on
     # - already said if repeats off
-    if (res[0] not in repeatset) and ((cache[guildid]["repeats"] and res[0] in set(citieslist)) or (not cache[guildid]["repeats"] and res[0] in set(citieslist))):
+    if (res[0] not in repeatset) and ((cache[guildid]["repeats"] and res[0] in set(illegal_repeats)) or (not cache[guildid]["repeats"] and res[0] in set(illegal_repeats))):
         
         # find the repeated message id and its author
-        repeated_message_id, repeated_author_id = citieslist[res[0]]
+        repeated_message_id, repeated_author_id = illegal_repeats[res[0]]
         # get link to message
         
         try:
             repeated_message = await message.channel.fetch_message(repeated_message_id)
 
             if cache[guildid]["repeats"]:
-                await fail(message,"[**No repeats within `%s` cities.**](%s)"%(f"{cache[guildid]['min_repeat']:,}",repeated_message.jump_url),citieslist,res,n,True,ref)
+                await fail(message,"[**No repeats within `%s` cities.**](%s)"%(f"{cache[guildid]['min_repeat']:,}",repeated_message.jump_url),current_round_length,res,n,True,ref)
             else:
-                await fail(message,"[**No repeats.**](%s)"%repeated_message.jump_url,citieslist,res,n,True,ref)
+                await fail(message,"[**No repeats.**](%s)"%repeated_message.jump_url,current_round_length,res,n,True,ref)
         except: 
             if cache[guildid]["repeats"]:
-                await fail(message,"**No repeats within `%s` cities.**"%(f"{cache[guildid]['min_repeat']:,}",),citieslist,res,n,True,ref)
+                await fail(message,"**No repeats within `%s` cities.**"%(f"{cache[guildid]['min_repeat']:,}",),illegal_repeats,res,n,True,ref)
             else:
-                await fail(message,"**No repeats.**",citieslist,res,n,True,ref)
+                await fail(message,"**No repeats.**",current_round_length,res,n,True,ref)
         return
 
     # country is not blacklisted/is whitelisted
@@ -1251,14 +1259,14 @@ async def process_chain(message:discord.Message,guildid,authorid,original_conten
         ((cache[guildid]["list_mode"]==1 and (country in countrylist or altcountry in countrylist)) or 
          (cache[guildid]["list_mode"]==2 and (country not in countrylist and altcountry not in countrylist)))):
         if cache[guildid]["list_mode"]==1:
-            await fail(message,f"**No using cities from the following countries: {','.join(['`%s`'%i for i in countrylist])}.**",citieslist,res,n,True,ref)
+            await fail(message,f"**No using cities from the following countries: {','.join(['`%s`'%i for i in countrylist])}.**",current_round_length,res,n,True,ref)
         elif cache[guildid]["list_mode"]==2:
-            await fail(message,f"**Only use cities from the following countries: {','.join(['`%s`'%i for i in countrylist])}.**",citieslist,res,n,True,ref)
+            await fail(message,f"**Only use cities from the following countries: {','.join(['`%s`'%i for i in countrylist])}.**",current_round_length,res,n,True,ref)
         return
     
     # last user
     if cache[guildid]["last_user"]==message.author.id:
-        await fail(message,"**No going twice.**",citieslist,res,n,True,ref)
+        await fail(message,"**No going twice.**",current_round_length,res,n,True,ref)
         return
         
     cur.execute("SELECT correct, score FROM server_user_info WHERE server_id = ? AND user_id = ?", (guildid, authorid))
@@ -1272,10 +1280,12 @@ async def process_chain(message:discord.Message,guildid,authorid,original_conten
     cache[guildid]["current_letter"] = letters[1]
     cache[guildid]["last_message"] = message.id
     
-    if res[0] in set(citieslist):
+    new_length = current_round_length + 1
+
+    if res[0] in set(illegal_repeats):
         cur.execute("UPDATE server_info SET leaderboard_eligible = ? WHERE server_id = ?", (False,guildid))
         cache[guildid]["leaderboard_eligible"] = False
-    cur.execute("INSERT INTO chain_info(server_id, user_id, round_number, count, city_id, name, admin2, admin1, country, country_code, alt_country, time_placed, valid, message_id, leaderboard_eligible) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (guildid, authorid, cache[guildid]["round_number"], len(citieslist)+1, res[0], n[0], n[3], n[2], n[1][0], n[1][1], n[4], message.created_at, True, message.id, (cache[guildid]["leaderboard_eligible"])))
+    cur.execute("INSERT INTO chain_info(server_id, user_id, round_number, count, city_id, name, admin2, admin1, country, country_code, alt_country, time_placed, valid, message_id, leaderboard_eligible) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (guildid, authorid, cache[guildid]["round_number"], new_length, res[0], n[0], n[3], n[2], n[1][0], n[1][1], n[4], message.created_at, True, message.id, (cache[guildid]["leaderboard_eligible"])))
     
     cur.execute("SELECT count FROM count_info WHERE server_id = ? AND city_id = ?", (guildid, res[0]))
     new_city = False
@@ -1286,12 +1296,12 @@ async def process_chain(message:discord.Message,guildid,authorid,original_conten
         citycount = cur.fetchone()[0]
         cur.execute("UPDATE count_info SET count = ? WHERE server_id = ? AND city_id = ?", (citycount+1, guildid, res[0]))
 
-    length = len(citieslist)+1
+    # illegal_repeats should be the length of the current chain. select count(*) from chain_info where current server
     new_high = False
-    if cache[guildid]["max_chain"]<(length):
+    if cache[guildid]["max_chain"]<(new_length):
         current_time = message.created_at
-        cur.execute("UPDATE server_info SET max_chain = ?, last_best = ? WHERE server_id = ?",(length, current_time, guildid))
-        cache[guildid]["max_chain"] = length
+        cur.execute("UPDATE server_info SET max_chain = ?, last_best = ? WHERE server_id = ?",(new_length, current_time, guildid))
+        cache[guildid]["max_chain"] = new_length
         cache[guildid]["last_best"] = current_time
         new_high = True
     conn.commit()
@@ -1301,9 +1311,6 @@ async def process_chain(message:discord.Message,guildid,authorid,original_conten
             await message.add_reaction('\N{BALLOT BOX WITH CHECK}')
         else:
             await message.add_reaction('\N{WHITE HEAVY CHECK MARK}')
-        
-        if not ((res[2].replace(' ','').isalpha() and res[2].isascii() and original_content[len(cache[guildid]["prefix"]):].find(',')<0)):
-            await message.add_reaction(regionalindicators[letters[1]])
         
         if cache[guildid]["emoji"]:
             await message.add_reaction(regionalindicators[country[0].lower()]+regionalindicators[country[1].lower()])
@@ -1320,6 +1327,10 @@ async def process_chain(message:discord.Message,guildid,authorid,original_conten
             if cur.rowcount>0:
                 await message.add_reaction(cur.fetchone()[0])
 
+        if not ((res[2].replace(' ','').isalpha() and res[2].isascii() and original_content[len(cache[guildid]["prefix"]):].find(',')<0)):
+            await message.add_reaction(regionalindicators[letters[1]])
+
+        if cache[guildid]["emoji"]:
             if new_city:
                 await message.add_reaction('\N{FIRST PLACE MEDAL}')
     except:
@@ -1331,7 +1342,7 @@ async def process_chain(message:discord.Message,guildid,authorid,original_conten
         # check if next one is ready; if not, wait
         await asyncio.create_task(process_chain(*processes[guildid][0]))
 
-async def fail(message:discord.Message,reason,citieslist,res,n,cityfound,msgref):
+async def fail(message:discord.Message,reason,current_round_length,res,n,cityfound,msgref):
     guildid=message.guild.id
     authorid=message.author.id
 
@@ -1343,9 +1354,9 @@ async def fail(message:discord.Message,reason,citieslist,res,n,cityfound,msgref)
     cur.execute("UPDATE global_user_info SET incorrect = ?, score = ?, last_active = ? WHERE user_id = ?", (uinfo[0]+1, uinfo[1]-1, message.created_at, authorid))
     
     if cityfound:
-        cur.execute("INSERT INTO chain_info(server_id, user_id, round_number, count, city_id, name, admin2, admin1, country, country_code, alt_country, time_placed, valid, message_id, leaderboard_eligible) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (guildid, authorid, cache[guildid]["round_number"], len(citieslist)+1, res[0], n[0], n[3], n[2], n[1][0], n[1][1], n[4], message.created_at, False, message.id, False))
+        cur.execute("INSERT INTO chain_info(server_id, user_id, round_number, count, city_id, name, admin2, admin1, country, country_code, alt_country, time_placed, valid, message_id, leaderboard_eligible) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (guildid, authorid, cache[guildid]["round_number"], current_round_length + 1, res[0], n[0], n[3], n[2], n[1][0], n[1][1], n[4], message.created_at, False, message.id, False))
     else:
-        cur.execute("INSERT INTO chain_info(server_id, user_id, round_number, count, name, time_placed, valid, message_id, leaderboard_eligible) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (guildid, authorid, cache[guildid]["round_number"], len(citieslist)+1, message.content[len(cache[guildid]["prefix"]):], message.created_at, False, message.id, False))
+        cur.execute("INSERT INTO chain_info(server_id, user_id, round_number, count, name, time_placed, valid, message_id, leaderboard_eligible) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (guildid, authorid, cache[guildid]["round_number"], current_round_length, message.content[len(cache[guildid]["prefix"]):], message.created_at, False, message.id, False))
     cur.execute("UPDATE server_info SET chain_end = ?, current_letter = ?, last_user = ?, leaderboard_eligible = ?, last_message = ? WHERE server_id = ?",(True, '-', None, True, 0, guildid))
     cache[guildid]["chain_end"] = True
     cache[guildid]["current_letter"] = "-"
@@ -1375,7 +1386,7 @@ async def fail(message:discord.Message,reason,citieslist,res,n,cityfound,msgref)
             await message.add_reaction('\N{CROSS MARK}')
         except:
             pass
-        new_message = await message.channel.send('<@%s> RUINED IT AT **%s**!! Start again from `%s` (next letter `%s`). %s'%(authorid,f"{len(citieslist):,}",entr['name'],entr['last-letter'],reason), reference = msgref)
+        new_message = await message.channel.send('<@%s> RUINED IT AT **%s**!! Start again from `%s` (next letter `%s`). %s'%(authorid,f"{current_round_length:,}",entr['name'],entr['last-letter'],reason), reference = msgref)
         cur.execute("UPDATE server_info SET current_letter = ?, last_message = ? WHERE server_id = ?", (entr['last-letter'], new_message.id, guildid))
         cache[guildid]["current_letter"] = entr['last-letter']
         cache[guildid]["last_message"] = new_message.id
@@ -1388,7 +1399,7 @@ async def fail(message:discord.Message,reason,citieslist,res,n,cityfound,msgref)
             await message.add_reaction('\N{CROSS MARK}')
         except:
             pass
-        await message.channel.send('<@%s> RUINED IT AT **%s**!! %s'%(authorid,f"{len(citieslist):,}",reason), reference = msgref)
+        await message.channel.send('<@%s> RUINED IT AT **%s**!! %s'%(authorid,f"{current_round_length:,}",reason), reference = msgref)
     # remove this from the queue of messages to process
     processes[guildid].pop(0)
     # if queue of other cities to process empty, set to none again. otherwise, process next city
@@ -1411,7 +1422,7 @@ async def server(interaction: discord.Interaction,se:Optional[Literal['yes','no'
     else:
         embed.set_author(name=interaction.guild.name)
     cur.execute("SELECT * FROM chain_info WHERE server_id = ? AND round_number = ?", (guildid, cache[guildid]["round_number"]))
-    embed.description='Round: **%s**\nCurrent letter: **%s**\nCurrent length: **%s**\nLast user: **%s**\nLongest chain: **%s** %s\nMinimum population: **%s**\nChoose city: **%s**\nRepeats: **%s**\nPrefix: %s\nList mode: **%s**\nUpdates:  **%s**\nNice: **%s**'%(f'{cache[guildid]["round_number"]:,}',cache[guildid]["current_letter"],f'{cur.rowcount:,}','<@'+str(cache[guildid]["last_user"])+'>' if cache[guildid]["last_user"] else '-',f'{cache[guildid]["max_chain"]:,}','<t:'+str(int(cache[guildid]["last_best"].timestamp()))+':R>' if cache[guildid]["last_best"] else '',f'{cache[guildid]["min_pop"]:,}','enabled' if cache[guildid]["choose_city"] else 'disabled', 'only after %s cities'%f'{cache[guildid]["min_repeat"]:,}' if cache[guildid]["repeats"] else 'disallowed','**'+cache[guildid]["prefix"]+'**' if cache[guildid]["prefix"]!='' else None,['disabled','blacklist','whitelist'][cache[guildid]["list_mode"]],'enabled' if cache[guildid]["updates"] else 'disabled','enabled' if cache[guildid]["nice"] else 'disabled')
+    embed.description='Round: **%s**\nCurrent letter: **%s**\nCurrent length: **%s**\nLast user: **%s**\nLongest chain: **%s** %s\nMinimum population: **%s**\nChoose city: **%s**\nRepeats: **%s**\nPrefix: %s\nList mode: **%s**\nUpdates:  **%s**\nNice: **%s**\nEmojis: **%s**'%(f'{cache[guildid]["round_number"]:,}',cache[guildid]["current_letter"],f'{cur.rowcount:,}','<@'+str(cache[guildid]["last_user"])+'>' if cache[guildid]["last_user"] else '-',f'{cache[guildid]["max_chain"]:,}','<t:'+str(int(cache[guildid]["last_best"].timestamp()))+':R>' if cache[guildid]["last_best"] else '',f'{cache[guildid]["min_pop"]:,}','enabled' if cache[guildid]["choose_city"] else 'disabled', 'only after %s cities'%f'{cache[guildid]["min_repeat"]:,}' if cache[guildid]["repeats"] else 'disallowed','**'+cache[guildid]["prefix"]+'**' if cache[guildid]["prefix"]!='' else None,['disabled','blacklist','whitelist'][cache[guildid]["list_mode"]],'enabled' if cache[guildid]["updates"] else 'disabled','enabled' if cache[guildid]["nice"] else 'disabled','enabled' if cache[guildid]["emoji"] else 'disabled')
     await interaction.followup.send(embed=embed,ephemeral=(se=='no'))
 
 @stats.command(description="Displays user statistics.")
@@ -1497,10 +1508,15 @@ async def cities(interaction: discord.Interaction,order:Literal['sequential','al
     if not cache[guildid]["chain_end"]:
         cur.execute("SELECT city_id FROM repeat_info WHERE server_id = ?", (interaction.guild_id,))
         repeated={i[0] for i in cur.fetchall()}
+
+        # repeats, all - all
+        # repeats, nonrepeatable - limit
+        # no repeats, all - all
+        # no repeats, nonrepeatable - all
         if cache[guildid]["repeats"] and cit.startswith("N"):
-            cur.execute("SELECT name, admin1, admin2, country_code, alt_country, city_id, valid FROM chain_info WHERE server_id = ? AND round_number = ? ORDER BY count DESC",(guildid,cache[guildid]["round_number"]))
-        else:
             cur.execute("SELECT name, admin1, admin2, country_code, alt_country, city_id, valid FROM chain_info WHERE server_id = ? AND round_number = ? ORDER BY count DESC LIMIT ?",(guildid,cache[guildid]["round_number"], cache[guildid]["min_repeat"]))
+        else:
+            cur.execute("SELECT name, admin1, admin2, country_code, alt_country, city_id, valid FROM chain_info WHERE server_id = ? AND round_number = ? ORDER BY count DESC",(guildid,cache[guildid]["round_number"]))
         cutoff=[]
         
         cityids = []
@@ -1580,12 +1596,26 @@ async def roundinfo(interaction: discord.Interaction,round_num:int,showmap:Optio
             await interaction.followup.send("No rounds played yet.",ephemeral=(se=='no'))
 
 def max_age_to_timestamp(interaction:discord.Interaction, max_age, is_global):
+    # if since_time is earlier than all_time
+        # if global
+            # compute since
+        # else
+            # all_time
+    # else
+        # if all_time selected
+            # if global
+                # earliest
+            # else
+                # all_time
+        # else
+            # compute since
+    
+    
     # get all time
-    if interaction.guild_id not in max_ages:
+    if interaction.guild_id not in max_ages or not max_ages[interaction.guild_id]:
         cur.execute("SELECT MIN(time_placed) FROM chain_info WHERE server_id = ?", (interaction.guild_id,))
-        since_time = cur.fetchone()[0]
-        if since_time:
-            max_ages[interaction.guild_id]=since_time
+        if cur.rowcount:
+            max_ages[interaction.guild_id]=cur.fetchone()[0]
             alltime = max_ages[interaction.guild_id]
         else: 
             alltime = datetime.datetime.fromtimestamp(0)
