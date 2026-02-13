@@ -2129,6 +2129,7 @@ geonameid	country	iso3	name	default
 3277605	BA	BIH	Bosnie an Herzegovinae	0
 3277605	BA	BIH	Bosnie-Herzégovine	0
 3277605	BA	BIH	Bosnie-Hèrzègovena	0
+3277605	BA	BIH	Bosnie-et-Herzégovine	0
 3277605	BA	BIH	Bosnie-Érzégovine	0
 3277605	BA	BIH	Bosnien an Herzegowina	0
 3277605	BA	BIH	Bosnien och Hercegovina	0
@@ -4687,6 +4688,7 @@ geonameid	country	iso3	name	default
 1547376	CC	CCK	Insulele Cocos (Keeling)	0
 1547376	CC	CCK	Ishujt Kokos	0
 1547376	CC	CCK	Islas Cocos	0
+1547376	CC	CCK	Isole Cocos	0
 1547376	CC	CCK	Isole Cocos (Keeling)	0
 1547376	CC	CCK	Jasiiradda Kookoos	0
 1547376	CC	CCK	Kapuloan Cocos (Keeling)	0
@@ -4906,6 +4908,7 @@ geonameid	country	iso3	name	default
 203312	CD	COD	Repubilika ya Kôngo ya Dimokalasi	0
 203312	CD	COD	Republic of Zaire	0
 203312	CD	COD	Republica Democratic del Congo	0
+203312	CD	COD	Republica Democratica dal Congo	0
 203312	CD	COD	Republica Democratica de Còngo	0
 203312	CD	COD	Republica Democratica del Congo	0
 203312	CD	COD	Republica Democratica do Congo	0
@@ -5720,6 +5723,7 @@ geonameid	country	iso3	name	default
 1899402	CK	COK	Cook Kûn-tó	0
 1899402	CK	COK	Cook qeqertaq	0
 1899402	CK	COK	Cook uharteak	0
+1899402	CK	COK	Cook-Inseln	0
 1899402	CK	COK	Cook-sullot	0
 1899402	CK	COK	Cook-szigetek	0
 1899402	CK	COK	Cook-øerne	0
@@ -8960,6 +8964,7 @@ geonameid	country	iso3	name	default
 3474414	FK	FLK	Falkland Islands (Islas Malvinas)	0
 3474414	FK	FLK	Falkland Islands (Malvinas)	0
 3474414	FK	FLK	Falkland ƒudomekpowo nutome	0
+3474414	FK	FLK	Falkland-Inseln	0
 3474414	FK	FLK	Falkland-szigetek	0
 3474414	FK	FLK	Falklandak	0
 3474414	FK	FLK	Falklandeilande	0
@@ -8968,7 +8973,6 @@ geonameid	country	iso3	name	default
 3474414	FK	FLK	Falklandi saared	0
 3474414	FK	FLK	Falklandinsaaret	0
 3474414	FK	FLK	Falklandinselen	0
-3474414	FK	FLK	Falklandinseln	0
 3474414	FK	FLK	Falklandseyjar	0
 3474414	FK	FLK	Falklandski otoci	0
 3474414	FK	FLK	Falklandski otoki	0
@@ -9018,6 +9022,7 @@ geonameid	country	iso3	name	default
 3474414	FK	FLK	Âzûâ tî Mälüîni	0
 3474414	FK	FLK	Îles Falkland	0
 3474414	FK	FLK	Îles Malouines	0
+3474414	FK	FLK	îles Falkland (Malouines)	0
 3474414	FK	FLK	ʻOtumotu Malivina	0
 3474414	FK	FLK	Νήσοι Φόκλαντ	0
 3474414	FK	FLK	Фалклендскія астравы	0
@@ -10851,6 +10856,8 @@ geonameid	country	iso3	name	default
 2309096	GQ	GNQ	Ekvatorska Gvineja	0
 2309096	GQ	GNQ	Ekwatoriaal-Guinee	0
 2309096	GQ	GNQ	Ekwatorial Gwineýa	0
+2309096	GQ	GNQ	Ekwatorialna Gineja	0
+2309096	GQ	GNQ	Ekwatorialna Guineja	0
 2309096	GQ	GNQ	Equatorala Guinea	0
 2309096	GQ	GNQ	Equatoriaal Guinee	0
 2309096	GQ	GNQ	Equatoriaal-Guinea	0
@@ -14462,6 +14469,7 @@ geonameid	country	iso3	name	default
 3575174	KN	KNA	S:t Kitts och Nevis	0
 3575174	KN	KNA	Sain Kitts și Nevis	0
 3575174	KN	KNA	Saint Christopher and Nevis	0
+3575174	KN	KNA	Saint Christopher e Nevis	0
 3575174	KN	KNA	Saint Christopher i Nevis	0
 3575174	KN	KNA	Saint Christopher och Nevis	0
 3575174	KN	KNA	Saint Kitis kple Nevis nutome	0
@@ -14522,7 +14530,6 @@ geonameid	country	iso3	name	default
 3575174	KN	KNA	Shën Kits dhe Nevis	0
 3575174	KN	KNA	Shën-Kits dhe Nevis	0
 3575174	KN	KNA	Sint Kitts en Nevis	0
-3575174	KN	KNA	St Kitts and Nevis	0
 3575174	KN	KNA	St Kitts och Nevis	0
 3575174	KN	KNA	St. Christopher og Nevis	0
 3575174	KN	KNA	St. Kitts & Nefis	0
@@ -16697,6 +16704,7 @@ geonameid	country	iso3	name	default
 617790	MD	MDA	Modofia	0
 617790	MD	MDA	Moldaavje	0
 617790	MD	MDA	Moldabya	0
+617790	MD	MDA	Moldau	0
 617790	MD	MDA	Moldau (Republik Moldau)	0
 617790	MD	MDA	Moldava Respubliko	0
 617790	MD	MDA	Moldavi	0
@@ -16975,6 +16983,7 @@ geonameid	country	iso3	name	default
 3578421	MF	MAF	Sfântul Martin	0
 3578421	MF	MAF	Sint Maarten	0
 3578421	MF	MAF	Sint Martin	0
+3578421	MF	MAF	Sint-Maarten	0
 3578421	MF	MAF	St Martin	0
 3578421	MF	MAF	St-Martin	0
 3578421	MF	MAF	St. Maartin	0
@@ -23126,6 +23135,7 @@ geonameid	country	iso3	name	default
 3370751	SH	SHN	San Helena	0
 3370751	SH	SHN	San Héilin	0
 3370751	SH	SHN	Sankti Helena	0
+3370751	SH	SHN	Sant'Elena	0
 3370751	SH	SHN	Santa Elena	0
 3370751	SH	SHN	Santa Helena	0
 3370751	SH	SHN	Santahelena	0
@@ -26598,7 +26608,6 @@ geonameid	country	iso3	name	default
 5854968	UM	UMI	ABŞ-nyň daşarky adalary	0
 5854968	UM	UMI	AQSH yondosh orollari	0
 5854968	UM	UMI	ASV Mazās Aizjūras salas	0
-5854968	UM	UMI	Altre isole americane del Pacifico	0
 5854968	UM	UMI	Amerikanesch-Ozeanien	0
 5854968	UM	UMI	Amerikanische Überseeinseln	0
 5854968	UM	UMI	Amerikanske oversøiske øer	0
@@ -26620,6 +26629,7 @@ geonameid	country	iso3	name	default
 5854968	UM	UMI	Ishujt Periferikë të SHBA-së	0
 5854968	UM	UMI	Islas menores alejadas de EE. UU.	0
 5854968	UM	UMI	Islas menores alejadas de los EE.UU.	0
+5854968	UM	UMI	Isole minori lontane dagli Stati Uniti	0
 5854968	UM	UMI	Jasiiradaha ka baxsan Maraykanka	0
 5854968	UM	UMI	Jungtinių Valstijų Mažosios Tolimosios Salos	0
 5854968	UM	UMI	Kapuloan AS Paling Njaba	0
@@ -26627,6 +26637,7 @@ geonameid	country	iso3	name	default
 5854968	UM	UMI	Kepulauan Terpencil A.S.	0
 5854968	UM	UMI	Klein afgeleë eilande van die VSA	0
 5854968	UM	UMI	Kleine afgelegen eilanden van de Verenigde Staten	0
+5854968	UM	UMI	Kleinere amerikanische Überseeinseln	0
 5854968	UM	UMI	Lyts ôflizzen eilannen fan de Ferienigde Staten	0
 5854968	UM	UMI	Mali udaljeni otoci SAD-a	0
 5854968	UM	UMI	Meanbh-Eileanan Iomallach nan SA	0
@@ -26784,7 +26795,7 @@ geonameid	country	iso3	name	default
 6252001	US	USA	i-U.S	0
 6252001	US	USA	l-Istati Uniti	0
 6252001	US	USA	ÂLeaa-Ôko tî Amerika	0
-6252001	US	USA	États Unis	0
+6252001	US	USA	États-Unis	0
 6252001	US	USA	ʻAmelika	0
 6252001	US	USA	ΗΠΑ	0
 6252001	US	USA	АИШ	0
@@ -27310,7 +27321,6 @@ geonameid	country	iso3	name	default
 3577815	VC	VCT	St. Vincent & Grenadines	0
 3577815	VC	VCT	St. Vincent an Grenadiinen	0
 3577815	VC	VCT	St. Vincent an d’Grenadinnen	0
-3577815	VC	VCT	St. Vincent and the Grenadines	0
 3577815	VC	VCT	St. Vincent en de Grenadines	0
 3577815	VC	VCT	St. Vincent en die Grenadines	0
 3577815	VC	VCT	St. Vincent na Grenadines	0
@@ -27794,6 +27804,7 @@ geonameid	country	iso3	name	default
 4796775	VI	VIR	il-Gżejjer Verġni tal-Istati Uniti	0
 4796775	VI	VIR	Âzûâ Virîgo tî Amerîka	0
 4796775	VI	VIR	Îles Vierges des États-Unis	0
+4796775	VI	VIR	îles Vierges américaines	0
 4796775	VI	VIR	ʻOtumotu Vilikini fakaʻamelika	0
 4796775	VI	VIR	Αμερικανικές Παρθένες Νήσοι	0
 4796775	VI	VIR	АКШ Виргин утраулары	0
