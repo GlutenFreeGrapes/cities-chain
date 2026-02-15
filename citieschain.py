@@ -1244,7 +1244,7 @@ async def process_chain(message:discord.Message,guildid,authorid,original_conten
                 await fail(message,"[**No repeats.**](%s)"%repeated_message.jump_url,current_round_length,res,n,True,ref)
         except: 
             if cache[guildid]["repeats"]:
-                await fail(message,"**No repeats within `%s` cities.**"%(f"{cache[guildid]['min_repeat']:,}",),illegal_repeats,res,n,True,ref)
+                await fail(message,"**No repeats within `%s` cities.**"%(f"{cache[guildid]['min_repeat']:,}",),current_round_length,res,n,True,ref)
             else:
                 await fail(message,"**No repeats.**",current_round_length,res,n,True,ref)
         return
