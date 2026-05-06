@@ -825,6 +825,7 @@ geonameid	country	iso3	name	default
 783754	AL	ALB	Албанія	0
 783754	AL	ALB	Альбанія	0
 783754	AL	ALB	Ալբանիա	0
+783754	AL	ALB	Ալպանիա	0
 783754	AL	ALB	אַלבאַניע	0
 783754	AL	ALB	אלבניה	0
 783754	AL	ALB	آلبانی	0
@@ -1264,6 +1265,7 @@ geonameid	country	iso3	name	default
 3865483	AR	ARG	Аргенціна	0
 3865483	AR	ARG	Аржентина	0
 3865483	AR	ARG	Արգենտինա	0
+3865483	AR	ARG	Արժանթին	0
 3865483	AR	ARG	אַרגענטינע	0
 3865483	AR	ARG	ארגנטינה	0
 3865483	AR	ARG	ארגענטינע	0
@@ -1990,6 +1992,7 @@ geonameid	country	iso3	name	default
 587116	AZ	AZE	Әзірбайжан	0
 587116	AZ	AZE	Әзәрбайҗан	0
 587116	AZ	AZE	Ադրբեջան	0
+587116	AZ	AZE	Ազրպէյճան	0
 587116	AZ	AZE	אזערבאדזשאן	0
 587116	AZ	AZE	אזערביידזשאן	0
 587116	AZ	AZE	אזרביג'ן	0
@@ -4441,6 +4444,7 @@ geonameid	country	iso3	name	default
 630336	BY	BLR	Рэспубліка Беларусь	0
 630336	BY	BLR	Բելառուս	0
 630336	BY	BLR	Բելոռուս	0
+630336	BY	BLR	Պելառուսիա	0
 630336	BY	BLR	בלארוס	0
 630336	BY	BLR	בלרוס	0
 630336	BY	BLR	בעלאַרוס	0
@@ -4630,7 +4634,9 @@ geonameid	country	iso3	name	default
 6251999	CA	CAN	Καναδάς	0
 6251999	CA	CAN	Канад	0
 6251999	CA	CAN	Канада	0
+6251999	CA	CAN	Գանատա	0
 6251999	CA	CAN	Կանադա	0
+6251999	CA	CAN	Քանատա	0
 6251999	CA	CAN	קאַנאַדע	0
 6251999	CA	CAN	קנדה	0
 6251999	CA	CAN	كانادا	0
@@ -4979,8 +4985,10 @@ geonameid	country	iso3	name	default
 203312	CD	COD	Конго-Киншаса	0
 203312	CD	COD	Конгойы Демократон Республикæ	0
 203312	CD	COD	Конһлмудин Улс Орн	0
-203312	CD	COD	Կոնգո (ԿԺՀ)	0
+203312	CD	COD	Կոնգո (ԿԴՀ)	0
 203312	CD	COD	Կոնգոյի Դեմոկրատական Հանրապետություն	0
+203312	CD	COD	Քոնկո (ՔԴՀ)	0
+203312	CD	COD	Քոնկոյի Դեմոկրատական Հանրապետութիւն	0
 203312	CD	COD	דעמאקראטישע רעפובליק פון קאנגא	0
 203312	CD	COD	הרפובליקה הדמוקרטית של קונגו	0
 203312	CD	COD	קאנגא־קינשאַזע	0
@@ -5535,6 +5543,7 @@ geonameid	country	iso3	name	default
 2658434	CH	CHE	Швейцарыя	0
 2658434	CH	CHE	Швейцарь	0
 2658434	CH	CHE	Швейцарія	0
+2658434	CH	CHE	Զուիցերիա	0
 2658434	CH	CHE	Շվեյցարիա	0
 2658434	CH	CHE	שווייץ	0
 2658434	CH	CHE	שוויץ	0
@@ -7318,6 +7327,7 @@ geonameid	country	iso3	name	default
 223816	DJ	DJI	Джыбуці	0
 223816	DJ	DJI	Җибүти	0
 223816	DJ	DJI	Ҷибути	0
+223816	DJ	DJI	Ճիպութի	0
 223816	DJ	DJI	Ջիբութի	0
 223816	DJ	DJI	גיבוטי	0
 223816	DJ	DJI	ג׳יבוטי	0
@@ -7886,6 +7896,7 @@ geonameid	country	iso3	name	default
 2589581	DZ	DZA	Алжыр	0
 2589581	DZ	DZA	Алҷазоир	0
 2589581	DZ	DZA	Ալժիր	0
+2589581	DZ	DZA	Ալճերիա	0
 2589581	DZ	DZA	אלגיריה	0
 2589581	DZ	DZA	אלגריה	0
 2589581	DZ	DZA	אלג׳יריה	0
@@ -8075,6 +8086,7 @@ geonameid	country	iso3	name	default
 453733	EE	EST	Эстони	0
 453733	EE	EST	Эстония	0
 453733	EE	EST	Эстонія	0
+453733	EE	EST	Էսթոնիա	0
 453733	EE	EST	Էստոնիա	0
 453733	EE	EST	אסטוניה	0
 453733	EE	EST	עסטלאַנד	0
@@ -12463,6 +12475,7 @@ geonameid	country	iso3	name	default
 2963597	IE	IRL	Рэспубліка Ірляндыя	0
 2963597	IE	IRL	Ҷумҳӯрии Ирландия	0
 2963597	IE	IRL	Իռլանդիա	0
+2963597	IE	IRL	Իռլանտա	0
 2963597	IE	IRL	אירלאַנד	0
 2963597	IE	IRL	אירלנד	0
 2963597	IE	IRL	آئرلينڊ	0
@@ -13165,8 +13178,8 @@ geonameid	country	iso3	name	default
 130758	IR	IRN	ايران	0
 130758	IR	IRN	ایران	0
 130758	IR	IRN	ایٖران	0
-130758	IR	IRN	جُمهورئ اِسلامئ ايران	0
-130758	IR	IRN	كِشوَرِ شاهَنشاهئ ايران	0
+130758	IR	IRN	جمهوری اسلامی ايران	0
+130758	IR	IRN	كشور شاهنشاهی ايران	0
 130758	IR	IRN	ܐܝܪܐܢ	0
 130758	IR	IRN	ܐܝܪܢ	0
 130758	IR	IRN	इराण	0
@@ -13839,6 +13852,7 @@ geonameid	country	iso3	name	default
 1861060	JP	JPN	Японмастор	0
 1861060	JP	JPN	Японія	0
 1861060	JP	JPN	Ճապոնիա	0
+1861060	JP	JPN	Ճափոն	0
 1861060	JP	JPN	יאַפּאַן	0
 1861060	JP	JPN	יאפאן	0
 1861060	JP	JPN	יפן	0
@@ -14061,7 +14075,9 @@ geonameid	country	iso3	name	default
 1527747	KG	KGZ	Кыргызстан	0
 1527747	KG	KGZ	Қирғизистон	0
 1527747	KG	KGZ	Қырғызстан	0
-1527747	KG	KGZ	Կիրգիզստան	0
+1527747	KG	KGZ	Խրխզական Հանրապետութիւն	0
+1527747	KG	KGZ	Խրխզիստան	0
+1527747	KG	KGZ	Ղրղզական Հանրապետություն	0
 1527747	KG	KGZ	Ղրղզստան	0
 1527747	KG	KGZ	קירגיזסטאן	0
 1527747	KG	KGZ	קירגיזסטן	0
@@ -16138,6 +16154,7 @@ geonameid	country	iso3	name	default
 597427	LT	LTU	Литванија	0
 597427	LT	LTU	Литуания	0
 597427	LT	LTU	Літва	0
+597427	LT	LTU	Լիթուանիա	0
 597427	LT	LTU	Լիտվա	0
 597427	LT	LTU	ליטא	0
 597427	LT	LTU	ליטע	0
@@ -16252,6 +16269,7 @@ geonameid	country	iso3	name	default
 2960313	LU	LUX	Люксембург	0
 2960313	LU	LUX	Люксембурґ	0
 2960313	LU	LUX	Люксэмбург	0
+2960313	LU	LUX	Լիւքսամպուրկ	0
 2960313	LU	LUX	Լյուքսեմբուրգ	0
 2960313	LU	LUX	לוקסמבורג	0
 2960313	LU	LUX	לוקסעמבורג	0
@@ -16477,6 +16495,7 @@ geonameid	country	iso3	name	default
 2215636	LY	LBY	Лівійська Арабська Джамахірія	0
 2215636	LY	LBY	Лівія	0
 2215636	LY	LBY	Լիբիա	0
+2215636	LY	LBY	Լիպիա	0
 2215636	LY	LBY	לוב	0
 2215636	LY	LBY	ליביע	0
 2215636	LY	LBY	اَلْجَمَاهِيرِيَّة اَلْعَرَبِيَّة اَللِّيبِيَّة اَلشَّعْبِيَّة اَلإِشْتِرَاكِيَّة	0
@@ -16583,6 +16602,7 @@ geonameid	country	iso3	name	default
 2542007	MA	MAR	Морокко	0
 2542007	MA	MAR	Мороко	0
 2542007	MA	MAR	Մարոկկո	0
+2542007	MA	MAR	Մարոք	0
 2542007	MA	MAR	מאַראקא	0
 2542007	MA	MAR	מרוקו	0
 2542007	MA	MAR	المغرب	0
@@ -16768,6 +16788,7 @@ geonameid	country	iso3	name	default
 617790	MD	MDA	Молдова	0
 617790	MD	MDA	Республіка Молдова	0
 617790	MD	MDA	Մոլդովա	0
+617790	MD	MDA	Մոլտովա	0
 617790	MD	MDA	מאלדאוויע	0
 617790	MD	MDA	מאלדאווע	0
 617790	MD	MDA	מולדובה	0
@@ -17748,6 +17769,7 @@ geonameid	country	iso3	name	default
 2029969	MN	MNG	Моңһлмудин Орн	0
 2029969	MN	MNG	Муғулистон	0
 2029969	MN	MNG	Мѫголи	0
+2029969	MN	MNG	Մոնկոլիա	0
 2029969	MN	MNG	Մոնղոլիա	0
 2029969	MN	MNG	מאנגאליי	0
 2029969	MN	MNG	מונגוליה	0
@@ -19638,6 +19660,7 @@ geonameid	country	iso3	name	default
 2750405	NL	NLD	Нідэрлянды	0
 2750405	NL	NLD	Холандија	0
 2750405	NL	NLD	Նիդեռլանդներ	0
+2750405	NL	NLD	Նիտերլենտներ	0
 2750405	NL	NLD	האלאַנד	0
 2750405	NL	NLD	הולנד	0
 2750405	NL	NLD	نيدرلينڊ	0
@@ -21049,6 +21072,7 @@ geonameid	country	iso3	name	default
 798544	PL	POL	Пол҄ьска	0
 798544	PL	POL	Пољска	0
 798544	PL	POL	Լեհաստան	0
+798544	PL	POL	Փոլոնիա	0
 798544	PL	POL	פּוילן	0
 798544	PL	POL	פוילן	0
 798544	PL	POL	פולין	0
@@ -22991,6 +23015,7 @@ geonameid	country	iso3	name	default
 2661886	SE	SWE	Швецыя	0
 2661886	SE	SWE	Швеція	0
 2661886	SE	SWE	Швэцыя	0
+2661886	SE	SWE	Շուէտ	0
 2661886	SE	SWE	Շվեդիա	0
 2661886	SE	SWE	שבדיה	0
 2661886	SE	SWE	שוודיה	0
@@ -26814,7 +26839,10 @@ geonameid	country	iso3	name	default
 6252001	US	USA	Съединени щати	0
 6252001	US	USA	Сједињене Америчке Државе	0
 6252001	US	USA	Сједињене Државе	0
-6252001	US	USA	Ամէրիկայի Միացյալ Նահանգնէր	0
+6252001	US	USA	ԱՄՆ	0
+6252001	US	USA	Ամերիկայի Միացեալ Նահանգներ	0
+6252001	US	USA	Ամերիկայի Միացյալ Նահանգներ	0
+6252001	US	USA	Միացեալ Նահանգներ	0
 6252001	US	USA	Միացյալ Նահանգներ	0
 6252001	US	USA	ארה״ב	0
 6252001	US	USA	פֿש	0
