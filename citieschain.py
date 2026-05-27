@@ -1190,7 +1190,10 @@ async def process_chain(message:discord.Message,guildid,authorid,original_conten
         # illegal_repeats = full list of cities
     current_round_length = cur.rowcount
     if cache[guildid]["repeats"]:
-        illegal_repeats = {city:(message_id, author_id) for (city, message_id, author_id) in cur.fetchmany(cache[guildid]["min_repeat"])}
+        if cache[guildid]["min_repeat"]:
+            illegal_repeats = {city:(message_id, author_id) for (city, message_id, author_id) in cur.fetchmany(cache[guildid]["min_repeat"])}
+        else:
+            illegal_repeats = set()
     else:
         illegal_repeats = {city:(message_id, author_id) for (city, message_id, author_id) in cur.fetchall()}
 
