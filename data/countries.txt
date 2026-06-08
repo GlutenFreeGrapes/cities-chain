@@ -1514,6 +1514,7 @@ geonameid	country	iso3	name	default
 2782113	AT	AUT	Аустрија	0
 2782113	AT	AUT	Аўстрыя	0
 2782113	AT	AUT	Ավստրիա	0
+2782113	AT	AUT	Աւստրիա	0
 2782113	AT	AUT	אוסטריה	0
 2782113	AT	AUT	עסטרייך	0
 2782113	AT	AUT	آسٹریا	0
