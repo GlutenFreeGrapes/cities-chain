@@ -26849,6 +26849,7 @@ geonameid	country	iso3	name	default
 6252001	US	USA	פֿש	0
 6252001	US	USA	ئا ق ش	0
 6252001	US	USA	الاولايات المتحدة الامريكية	0
+6252001	US	USA	الولايات المتحدة	0
 6252001	US	USA	الولايات المتحدة الأمريكية	0
 6252001	US	USA	امریکا	0
 6252001	US	USA	ایالات متحده	0
@@ -28549,6 +28550,7 @@ geonameid	country	iso3	name	default
 953987	ZA	ZAF	Pietų Afrika	0
 953987	ZA	ZAF	Pietų Afrikos Respublika	0
 953987	ZA	ZAF	Południowa Afryka	0
+953987	ZA	ZAF	RSA	0
 953987	ZA	ZAF	Repabliki ya Afrika-Borwa	0
 953987	ZA	ZAF	Rephaboliki ya Aforika Borwa	0
 953987	ZA	ZAF	Rephaboliki ya Afrika Borwa	0
@@ -28582,6 +28584,7 @@ geonameid	country	iso3	name	default
 953987	ZA	ZAF	Süüdafrika	0
 953987	ZA	ZAF	Sūðaffrica	0
 953987	ZA	ZAF	Timog Aprika	0
+953987	ZA	ZAF	USA	0
 953987	ZA	ZAF	Unie van Suid-Afrika	0
 953987	ZA	ZAF	Union of South Africa	0
 953987	ZA	ZAF	Worodugu Afriki	0

@@ -2170,7 +2170,12 @@ async def countryinfo(interaction: discord.Interaction, country:str,se:Optional[
         await interaction.followup.send(":no_pedestrians: You are blocked from using this bot. ",ephemeral=(se=='no'))
         return
     countrysearch=country.lower().strip()
-    res=countriesdata.filter((pl.col('name').str.to_lowercase()==countrysearch)|(pl.col('country').str.to_lowercase()==countrysearch))
+    
+    res=pl.concat([
+        # prioritize search by iso2 code first
+        countriesdata.filter(pl.col('country').str.to_lowercase()==countrysearch), 
+        countriesdata.filter(pl.col('name').str.to_lowercase()==countrysearch)
+    ]).unique(keep="first")
     if res.shape[0]!=0:
         res = res.row(0, named=True)
 

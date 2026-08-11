@@ -30611,6 +30611,7 @@ geonameid	country	admin1	admin2	name	default
 5943557	CA	11	4706059	Dufferin No. 190	1
 5944015	CA	11	4711061	Dundurn No. 314	1
 5944369	CA	08	3518	Durham	1
+5944369	CA	08	3518	Regional Municipality of Durham	0
 5944716	CA	11	4712064	Eagle Creek No. 376	1
 5946153	CA	03	5946153	East St. Paul	1
 5946615	CA	11	4706029	Edenwold No. 158	1
@@ -62035,11 +62036,13 @@ geonameid	country	admin1	admin2	name	default
 1255671	IN	26	290	South Tripura District	0
 1255671	IN	26	290	দক্ষিন ত্রিপুরা	0
 1255681	IN	29	243	Namchi	1
+1255681	IN	29	243	Namchi District	0
 1255681	IN	29	243	SDT	0
 1255681	IN	29	243	South District	0
 1255681	IN	29	243	South Sikkim	0
 1255681	IN	29	243	South Sikkim district	0
 1255681	IN	29	243	Southern	0
+1255681	IN	29	243	नामची	0
 1255745	IN	10	076	Sonipat	1
 1255745	IN	10	076	SNP	0
 1255745	IN	10	076	Sonepat	0
@@ -69581,12 +69584,18 @@ geonameid	country	admin1	admin2	name	default
 2522875	IT	15	TP	特拉帕尼省	0
 2522875	IT	15	TP	트라파니 현	0
 2523082	IT	15	SR	Provincia di Siracusa	1
+2523082	IT	15	SR	Province de Syracuse	0
+2523082	IT	15	SR	Province of Syracuse	0
+2523082	IT	15	SR	Provincia de Siracusa	0
+2523082	IT	15	SR	Provincie Syracuse	0
+2523082	IT	15	SR	Provinz Syrakus	0
 2523082	IT	15	SR	SR	0
-2523082	IT	15	SR	Siracusa	0
-2523082	IT	15	SR	Syracuse	0
-2523082	IT	15	SR	Syrakus	0
 2523629	IT	03	RC	Provincia di Reggio Calabria	1
+2523629	IT	03	RC	Province de Reggio de Calabre	0
 2523629	IT	03	RC	Province of Reggio Calabria	0
+2523629	IT	03	RC	Provincia de Reggio Calabria	0
+2523629	IT	03	RC	Provincie Reggio Calabria	0
+2523629	IT	03	RC	Provinz Reggio Calabria	0
 2523629	IT	03	RC	RC	0
 2523649	IT	15	RG	Ragusa	1
 2523649	IT	15	RG	Consortium Liberum Municipale Ragusiense	0
@@ -69888,14 +69897,20 @@ geonameid	country	admin1	admin2	name	default
 2525763	IT	15	AG	Provinz Agrigent	0
 2525763	IT	15	AG	Pruvincia di Girgenti	0
 3164038	IT	07	VT	Provincia di Viterbo	1
+3164038	IT	07	VT	Province de Viterbo	0
 3164038	IT	07	VT	Province of Viterbo	0
+3164038	IT	07	VT	Provincia de Viterbo	0
+3164038	IT	07	VT	Provincie Viterbo	0
+3164038	IT	07	VT	Provinz Viterbo	0
 3164038	IT	07	VT	VT	0
-3164038	IT	07	VT	Viterbe	0
 3164038	IT	07	VT	Viterbo	0
 3164418	IT	20	VI	Provincia di Vicenza	1
+3164418	IT	20	VI	Province de Vicence	0
 3164418	IT	20	VI	Province of Vicenza	0
+3164418	IT	20	VI	Provincia de Vicenza	0
+3164418	IT	20	VI	Provincie Vicenza	0
+3164418	IT	20	VI	Provinz Vicenza	0
 3164418	IT	20	VI	VI	0
-3164418	IT	20	VI	Vicence	0
 3164418	IT	20	VI	Vicenza	0
 3164526	IT	20	VR	Provincia di Verona	1
 3164526	IT	20	VR	Province de Vérone	0
@@ -69907,9 +69922,12 @@ geonameid	country	admin1	admin2	name	default
 3164526	IT	20	VR	Verona	0
 3164526	IT	20	VR	베로나	0
 3164564	IT	12	VC	Provincia di Vercelli	1
+3164564	IT	12	VC	Province de Verceil	0
 3164564	IT	12	VC	Province of Vercelli	0
+3164564	IT	12	VC	Provincia de Vercelli	0
+3164564	IT	12	VC	Provincie Vercelli	0
+3164564	IT	12	VC	Provinz Vercelli	0
 3164564	IT	12	VC	VC	0
-3164564	IT	12	VC	Verceil	0
 3164564	IT	12	VC	Vercelli	0
 3164567	IT	12	VB	Provincia Verbano-Cusio-Ossola	1
 3164567	IT	12	VB	Provincia del Verbano-Cusio-Ossola	0
@@ -69932,27 +69950,42 @@ geonameid	country	admin1	admin2	name	default
 3164600	IT	20	VE	Venezia	0
 3164600	IT	20	VE	Venice	0
 3164697	IT	09	VA	Provincia di Varese	1
+3164697	IT	09	VA	Province de Varese	0
 3164697	IT	09	VA	Province of Varese	0
+3164697	IT	09	VA	Provincia de Varese	0
+3164697	IT	09	VA	Provincie Varese	0
+3164697	IT	09	VA	Provinz Varese	0
 3164697	IT	09	VA	VA	0
 3164697	IT	09	VA	Varese	0
-3164697	IT	09	VA	Varèse	0
 3165071	IT	06	UD	Udine	1
 3165071	IT	06	UD	Ente di Decentramento Regionale di Udine	0
 3165071	IT	06	UD	Friaul	0
 3165071	IT	06	UD	Friuli	0
+3165071	IT	06	UD	Province d'Udine	0
+3165071	IT	06	UD	Province of Udine	0
+3165071	IT	06	UD	Provincia de Udine	0
 3165071	IT	06	UD	Provincia del Friuli	0
 3165071	IT	06	UD	Provincia di Udine	0
+3165071	IT	06	UD	Provincie Udine	0
+3165071	IT	06	UD	Provinz Udine	0
 3165071	IT	06	UD	UD	0
 3165184	IT	06	TS	Trieste	1
 3165184	IT	06	TS	Ente di Decentramento Regionale di Trieste	0
+3165184	IT	06	TS	Province de Trieste	0
+3165184	IT	06	TS	Province of Trieste	0
+3165184	IT	06	TS	Provincia de Trieste	0
 3165184	IT	06	TS	Provincia di Trieste	0
+3165184	IT	06	TS	Provincie Triëst	0
+3165184	IT	06	TS	Provinz Triest	0
 3165184	IT	06	TS	TS	0
-3165184	IT	06	TS	Triest	0
 3165200	IT	20	TV	Provincia di Treviso	1
+3165200	IT	20	TV	Province de Trévise	0
 3165200	IT	20	TV	Province of Treviso	0
+3165200	IT	20	TV	Provincia de Treviso	0
+3165200	IT	20	TV	Provincie Treviso	0
+3165200	IT	20	TV	Provinz Treviso	0
 3165200	IT	20	TV	TV	0
 3165200	IT	20	TV	Treviso	0
-3165200	IT	20	TV	Trévise	0
 3165241	IT	17	TN	Provincia autonoma di Trento	1
 3165241	IT	17	TN	Province of Trente	0
 3165241	IT	17	TN	Provincia di Trento	0
@@ -69971,42 +70004,64 @@ geonameid	country	admin1	admin2	name	default
 3165523	IT	12	TO	Turim	0
 3165523	IT	12	TO	Turin	0
 3165770	IT	18	TR	Provincia di Terni	1
+3165770	IT	18	TR	Province de Terni	0
 3165770	IT	18	TR	Province of Terni	0
+3165770	IT	18	TR	Provincia de Terni	0
+3165770	IT	18	TR	Provincie Terni	0
+3165770	IT	18	TR	Provinz Terni	0
 3165770	IT	18	TR	TR	0
 3165770	IT	18	TR	Terni	0
 3165802	IT	01	TE	Provincia di Teramo	1
+3165802	IT	01	TE	Province de Teramo	0
 3165802	IT	01	TE	Province of Teramo	0
+3165802	IT	01	TE	Provincia de Teramo	0
+3165802	IT	01	TE	Provincie Teramo	0
+3165802	IT	01	TE	Provinz Teramo	0
 3165802	IT	01	TE	TE	0
 3165802	IT	01	TE	Teramo	0
 3165924	IT	13	TA	Provincia di Taranto	1
+3165924	IT	13	TA	Province de Tarente	0
 3165924	IT	13	TA	Province of Taranto	0
+3165924	IT	13	TA	Provincia de Tarento	0
 3165924	IT	13	TA	Provincia dello Iònio	0
+3165924	IT	13	TA	Provincie Taranto	0
+3165924	IT	13	TA	Provinz Tarent	0
 3165924	IT	13	TA	Província de Taranto	0
 3165924	IT	13	TA	TA	0
 3165924	IT	13	TA	Taranto	0
-3165924	IT	13	TA	Tarent	0
-3165924	IT	13	TA	Tarente	0
-3165924	IT	13	TA	Tarento	0
 3166396	IT	09	SO	Provincia di Sondrio	1
+3166396	IT	09	SO	Province de Sondrio	0
 3166396	IT	09	SO	Province of Sondrio	0
+3166396	IT	09	SO	Provincia de Sondrio	0
+3166396	IT	09	SO	Provincie Sondrio	0
 3166396	IT	09	SO	SO	0
 3166396	IT	09	SO	Sondrio	0
 3166546	IT	16	SI	Provincia di Siena	1
 3166546	IT	16	SI	Province of Siena	0
+3166546	IT	16	SI	Provincia de Siena	0
+3166546	IT	16	SI	Provincie Siena	0
+3166546	IT	16	SI	Provinz Siena	0
 3166546	IT	16	SI	SI	0
 3166546	IT	16	SI	Siena	0
 3166546	IT	16	SI	Sienne	0
 3167021	IT	08	SV	Provincia di Savona	1
+3167021	IT	08	SV	Province de Savone	0
 3167021	IT	08	SV	Province of Savona	0
+3167021	IT	08	SV	Provincia de Savona	0
+3167021	IT	08	SV	Provincie Savona	0
+3167021	IT	08	SV	Provinz Savona	0
 3167021	IT	08	SV	SV	0
 3167021	IT	08	SV	Savona	0
-3167021	IT	08	SV	Savone	0
 3167094	IT	14	SS	Provincia di Sassari	1
+3167094	IT	14	SS	Province de Sassari	0
 3167094	IT	14	SS	Province of Sassari	0
+3167094	IT	14	SS	Provincia de Sácer	0
+3167094	IT	14	SS	Provincie Sassari	0
 3167094	IT	14	SS	Provìntzia de Tàtari	0
 3167094	IT	14	SS	Prubìnzia di Sàssari	0
 3167094	IT	14	SS	SS	0
 3167094	IT	14	SS	Sassari	0
+3167094	IT	14	SS	provinz Sassari	0
 3168670	IT	04	SA	Provincia di Salerno	1
 3168670	IT	04	SA	Province de Salerne	0
 3168670	IT	04	SA	Province of Salerno	0
@@ -70016,7 +70071,11 @@ geonameid	country	admin1	admin2	name	default
 3168670	IT	04	SA	SA	0
 3168670	IT	04	SA	Salerno	0
 3168842	IT	20	RO	Provincia di Rovigo	1
+3168842	IT	20	RO	Province de Rovigo	0
 3168842	IT	20	RO	Province of Rovigo	0
+3168842	IT	20	RO	Provincia de Rovigo	0
+3168842	IT	20	RO	Provincie Rovigo	0
+3168842	IT	20	RO	Provinz Rovigo	0
 3168842	IT	20	RO	RO	0
 3168842	IT	20	RO	Rovigo	0
 3169069	IT	07	RM	Citta metropolitana di Roma Capitale	1
@@ -70032,49 +70091,79 @@ geonameid	country	admin1	admin2	name	default
 3169069	IT	07	RM	Rome	0
 3169069	IT	07	RM	রোম	0
 3169411	IT	07	RI	Provincia di Rieti	1
+3169411	IT	07	RI	Province de Rieti	0
 3169411	IT	07	RI	Province of Rieti	0
+3169411	IT	07	RI	Provincia de Rieti	0
+3169411	IT	07	RI	Provincie Rieti	0
+3169411	IT	07	RI	Provinz Rieti	0
 3169411	IT	07	RI	RI	0
 3169411	IT	07	RI	Rieti	0
 3169524	IT	05	RE	Provincia di Reggio Emilia	1
+3169524	IT	05	RE	Province de Reggio d'Émilie	0
 3169524	IT	05	RE	Province of Reggio Emilia	0
+3169524	IT	05	RE	Provincia de Reggio Emilia	0
+3169524	IT	05	RE	Provincie Reggio Emilia	0
+3169524	IT	05	RE	Provinz Reggio Emilia	0
 3169524	IT	05	RE	RE	0
 3169524	IT	05	RE	Reggio Emilia	0
-3169524	IT	05	RE	Reggio d'Émilie	0
 3169560	IT	05	RA	Provincia di Ravenna	1
+3169560	IT	05	RA	Province de Ravenne	0
 3169560	IT	05	RA	Province of Ravenna	0
+3169560	IT	05	RA	Provincia de Rávena	0
+3169560	IT	05	RA	Provincie Ravenna	0
+3169560	IT	05	RA	Provinz Ravenna	0
 3169560	IT	05	RA	RA	0
 3169560	IT	05	RA	Ravenna	0
-3169560	IT	05	RA	Ravenne	0
-3169560	IT	05	RA	Rávena	0
 3170025	IT	02	PZ	Provincia di Potenza	1
 3170025	IT	02	PZ	PZ	0
 3170025	IT	02	PZ	Potenza	0
+3170025	IT	02	PZ	Province de Potenza	0
 3170025	IT	02	PZ	Province of Potenza	0
+3170025	IT	02	PZ	Provincia de Potenza	0
+3170025	IT	02	PZ	Provincie Potenza	0
+3170025	IT	02	PZ	Provinz Potenza	0
 3170146	IT	06	PN	Pordenone	1
 3170146	IT	06	PN	Ente di Decentramento Regionale di Pordenone	0
 3170146	IT	06	PN	PN	0
 3170146	IT	06	PN	Pordenon	0
+3170146	IT	06	PN	Province de Pordenone	0
 3170146	IT	06	PN	Province of Pordenone	0
+3170146	IT	06	PN	Provincia de Pordenone	0
 3170146	IT	06	PN	Provincia di Pordenone	0
+3170146	IT	06	PN	Provincie Pordenone	0
+3170146	IT	06	PN	Provinz Pordenone	0
 3170620	IT	16	PT	Provincia di Pistoia	1
 3170620	IT	16	PT	PT	0
 3170620	IT	16	PT	Pistoia	0
+3170620	IT	16	PT	Province de Pistoia	0
 3170620	IT	16	PT	Province of Pistoia	0
+3170620	IT	16	PT	Provincia de Pistoia	0
+3170620	IT	16	PT	Provincie Pistoia	0
+3170620	IT	16	PT	Provinz Pistoia	0
 3170646	IT	16	PI	Province of Pisa	1
 3170646	IT	16	PI	PI	0
 3170646	IT	16	PI	Pisa	0
-3170646	IT	16	PI	Pise	0
+3170646	IT	16	PI	Province de Pise	0
 3170646	IT	16	PI	Provincia de Pisa	0
 3170646	IT	16	PI	Provincia di Pisa	0
+3170646	IT	16	PI	Provincie Pisa	0
+3170646	IT	16	PI	Provinz Pisa	0
 3171057	IT	05	PC	Provincia di Piacenza	1
 3171057	IT	05	PC	PC	0
 3171057	IT	05	PC	Piacenza	0
-3171057	IT	05	PC	Plaisance	0
+3171057	IT	05	PC	Province de Plaisance	0
 3171057	IT	05	PC	Province of Piacenza	0
+3171057	IT	05	PC	Provincia de Plasencia	0
+3171057	IT	05	PC	Provincie Piacenza	0
+3171057	IT	05	PC	Provinz Piacenza	0
 3171163	IT	01	PE	Provincia di Pescara	1
 3171163	IT	01	PE	PE	0
 3171163	IT	01	PE	Pescara	0
+3171163	IT	01	PE	Province de Pescara	0
 3171163	IT	01	PE	Province of Pescara	0
+3171163	IT	01	PE	Provincia de Pescara	0
+3171163	IT	01	PE	Provincie Pescara	0
+3171163	IT	01	PE	Provinz Pescara	0
 3171172	IT	10	PU	Provincia di Pesaro e Urbino	1
 3171172	IT	10	PU	PU	0
 3171172	IT	10	PU	Pesaro	0
@@ -70088,8 +70177,11 @@ geonameid	country	admin1	admin2	name	default
 3171179	IT	18	PG	Provincia di Perugia	1
 3171179	IT	18	PG	PG	0
 3171179	IT	18	PG	Perugia	0
+3171179	IT	18	PG	Province de Pérouse	0
 3171179	IT	18	PG	Province of Perugia	0
-3171179	IT	18	PG	Pérouse	0
+3171179	IT	18	PG	Provincia de Perugia	0
+3171179	IT	18	PG	Provincie Perugia	0
+3171179	IT	18	PG	Provinz Perugia	0
 3171364	IT	09	PV	Provincia di Pavia	1
 3171364	IT	09	PV	PV	0
 3171364	IT	09	PV	Pavia	0
@@ -70134,6 +70226,7 @@ geonameid	country	admin1	admin2	name	default
 3172188	IT	12	NO	Provincie Novara	0
 3172188	IT	12	NO	Provinz Novara	0
 3172391	IT	04	NA	Napoli	1
+3172391	IT	04	NA	Città Metropolitana di Napoli	0
 3172391	IT	04	NA	NA	0
 3172391	IT	04	NA	Naples	0
 3172391	IT	04	NA	Neapel	0
@@ -70185,6 +70278,7 @@ geonameid	country	admin1	admin2	name	default
 3174050	IT	09	MN	Provincia di Mantova	1
 3174050	IT	09	MN	MN	0
 3174050	IT	09	MN	Mantoue	0
+3174050	IT	09	MN	Mantova	0
 3174050	IT	09	MN	Mantova Séng	0
 3174050	IT	09	MN	Mantova ili	0
 3174050	IT	09	MN	Mantova provints	0
@@ -70565,6 +70659,7 @@ geonameid	country	admin1	admin2	name	default
 3182882	IT	16	AR	Provinz Arezzo	0
 3182996	IT	19	AO	Valle d'Aosta	1
 3182996	IT	19	AO	AO	0
+3182996	IT	19	AO	Province of Aosta	0
 3182996	IT	19	AO	Provincia de Aosta	0
 3182996	IT	19	AO	Provincia di Aosta	0
 3182996	IT	19	AO	Provincie Aosta	0
@@ -70604,8 +70699,12 @@ geonameid	country	admin1	admin2	name	default
 6457404	IT	05	RN	RN	0
 6457404	IT	05	RN	Rimini	0
 6457405	IT	03	VV	Provincia di Vibo-Valentia	1
+6457405	IT	03	VV	Province de Vibo Valentia	0
 6457405	IT	03	VV	Province of Vibo Valentia	0
+6457405	IT	03	VV	Provincia de Vibo Valentia	0
 6457405	IT	03	VV	Provincia di Vibo Valentia	0
+6457405	IT	03	VV	Provincie Vibo Valentia	0
+6457405	IT	03	VV	Provinz Vibo Valentia	0
 6457405	IT	03	VV	VV	0
 6457405	IT	03	VV	Vibo Valentia	0
 6458615	IT	03	KR	Provincia di Crotone	1
@@ -70629,6 +70728,10 @@ geonameid	country	admin1	admin2	name	default
 6458618	IT	16	PO	Provincia di Prato	1
 6458618	IT	16	PO	PO	0
 6458618	IT	16	PO	Prato	0
+6458618	IT	16	PO	Province de Prato	0
+6458618	IT	16	PO	Provincia de Prato	0
+6458618	IT	16	PO	Provincie Prat	0
+6458618	IT	16	PO	Provinz Prato	0
 6955471	IT	10	FM	Province of Fermo	1
 6955471	IT	10	FM	FM	0
 6955471	IT	10	FM	Fermo	0
@@ -103306,6 +103409,7 @@ geonameid	country	admin1	admin2	name	default
 2750064	NL	03	0267	Hoogland	0
 2750064	NL	03	0267	Hoogland Municipality	0
 2750064	NL	03	0267	Nijkerk	0
+2750064	NL	03	0267	Nijkerk Municipality	0
 2750186	NL	11	0569	Gemeente Nieuwkoop	1
 2750186	NL	11	0569	Nieuwkoop	0
 2750186	NL	11	0569	Nieuwkoop Municipality	0
@@ -114362,6 +114466,7 @@ geonameid	country	admin1	admin2	name	default
 666923	RO	05	31379	Comuna Şinteu	0
 666932	RO	27	114453	Comuna Santana de Mures	1
 666932	RO	27	114453	Comuna Sântana de Mureş	0
+666932	RO	27	114453	Marosszentanna	0
 666935	RO	02	12091	Oras Santana	1
 666935	RO	02	12091	Oraş Sântana	0
 666938	RO	21	91232	Comuna Santamaria-Orlea	1
@@ -114417,6 +114522,7 @@ geonameid	country	admin1	admin2	name	default
 667054	RO	20	85760	Csíkszentdomokos	0
 667058	RO	27	114382	Comuna Sancraiu de Mures	1
 667058	RO	27	114382	Comuna Sâncraiu de Mureş	0
+667058	RO	27	114382	Marosszentkirály	0
 667062	RO	13	59434	Comuna Sancraiu	1
 667062	RO	13	59434	Comuna Sâncraiu	0
 667062	RO	13	59434	Kalotaszentkirály	0
@@ -118487,6 +118593,9 @@ geonameid	country	admin1	admin2	name	default
 8334747	RO	27	114319	Municipiul Targu Mures	1
 8334747	RO	27	114319	Marosvásárhely	0
 8334747	RO	27	114319	Municipiul Târgu Mureş	0
+8334747	RO	27	114319	Neumarkt am Mieresch	0
+8334747	RO	27	114319	Novum Forum Siculorum	0
+8334747	RO	27	114319	Vásárhely	0
 8334748	RO	25	106684	Oras Baia Sprie	1
 8334748	RO	25	106684	Oraş Baia Sprie	0
 8334749	RO	13	56568	Comuna Capusu Mare	1
@@ -132609,10 +132718,12 @@ geonameid	country	admin1	admin2	name	default
 1151600	TH	01	5803	ปาย	0
 1151600	TH	01	5803	อำเภอปาย	0
 1151633	TH	02	5018	Amphoe Om Koi	1
+1151633	TH	02	5018	Amphoe Omkoi	0
 1151633	TH	02	5018	Omkoi	0
 1151633	TH	02	5018	อมก๋อย	0
 1151633	TH	02	5018	อำเภออมก๋อย	0
 1151709	TH	15	6105	Amphoe Nong Khayang	1
+1151709	TH	15	6105	Amphoe Nong Kha Yang	0
 1151709	TH	15	6105	Amphoe Nong Luang	0
 1151709	TH	15	6105	Khwaeng Nong Luang	0
 1151709	TH	15	6105	Nong Khayang	0
@@ -132738,6 +132849,7 @@ geonameid	country	admin1	admin2	name	default
 1152178	TH	05	5102	อำเภอแม่ทา	0
 1152178	TH	05	5102	แม่ทา	0
 1152179	TH	06	5210	Amphoe Mae Tha	1
+1152179	TH	06	5210	Amphoe Mae Thaa	0
 1152179	TH	06	5210	Mae Tha	0
 1152179	TH	06	5210	อำเภอแม่ทะ	0
 1152179	TH	06	5210	แม่ทะ	0
@@ -132865,6 +132977,7 @@ geonameid	country	admin1	admin2	name	default
 1152678	TH	06	5203	อำเภอเกาะคา	0
 1152678	TH	06	5203	เกาะคา	0
 1152764	TH	01	5802	Amphoe Khun Yuam	1
+1152764	TH	01	5802	Amphoe Khun Yuan	0
 1152764	TH	01	5802	Khun Yuam	0
 1152764	TH	01	5802	ขุนยวม	0
 1152764	TH	01	5802	อำเภอขุนยวม	0
@@ -133196,10 +133309,10 @@ geonameid	country	admin1	admin2	name	default
 1605267	TH	10	5302	Tron district	0
 1605267	TH	10	5302	ตรอน	0
 1605267	TH	10	5302	อำเภอตรอน	0
-1605280	TH	75	3411	Amphoe Trakan Phuet Phon	1
+1605280	TH	75	3411	Amphoe Trakan Phuetphon	1
 1605280	TH	75	3411	Amphoe Khulu	0
 1605280	TH	75	3411	Amphoe Phana Nikhon	0
-1605280	TH	75	3411	Amphoe Trakan Phuetphon	0
+1605280	TH	75	3411	Amphoe Trakan Phuet Phon	0
 1605280	TH	75	3411	Amphoe Trakan Phut Phon	0
 1605280	TH	75	3411	Mueang Phana Nikhon	0
 1605280	TH	75	3411	Trakan Phuet Phon	0
@@ -133406,7 +133519,8 @@ geonameid	country	admin1	admin2	name	default
 1606290	TH	74	2508	Si Maha Phot	0
 1606290	TH	74	2508	ศรีมหาโพธิ	0
 1606290	TH	74	2508	อำเภอศรีมหาโพธิ	0
-1606301	TH	29	3209	Amphoe Si Khoraphum	1
+1606301	TH	29	3209	Amphoe Sikhoraphum	1
+1606301	TH	29	3209	Amphoe Si Khoraphum	0
 1606301	TH	29	3209	Sikhoraphum	0
 1606301	TH	29	3209	Sikhoraphum District	0
 1606301	TH	29	3209	ศีขรภูมิ	0
@@ -133756,7 +133870,8 @@ geonameid	country	admin1	admin2	name	default
 1607599	TH	25	4507	Phon Thong District	0
 1607599	TH	25	4507	อำเภอโพนทอง	0
 1607599	TH	25	4507	โพนทอง	0
-1607605	TH	17	4305	Amphoe Phonphisai	1
+1607605	TH	17	4305	Amphoe Phon Phisai	1
+1607605	TH	17	4305	Amphoe Phonphisai	0
 1607605	TH	17	4305	Phon Phisai	0
 1607605	TH	17	4305	อำเภอโพนพิสัย	0
 1607605	TH	17	4305	โพนพิสัย	0
@@ -133998,7 +134113,8 @@ geonameid	country	admin1	admin2	name	default
 1608262	TH	69	9403	Nong Chik	0
 1608262	TH	69	9403	หนองจิก	0
 1608262	TH	69	9403	อำเภอหนองจิก	0
-1608268	TH	79	3901	Amphoe Mueang Nong Bua Lamphu	1
+1608268	TH	79	3901	Amphoe Mueang Nong Bua Lam Phu	1
+1608268	TH	79	3901	Amphoe Mueang Nong Bua Lamphu	0
 1608268	TH	79	3901	Amphoe Nong Bua Lamphu	0
 1608268	TH	79	3901	Mueang Nong Bua Lam Phu	0
 1608268	TH	79	3901	อำเภอเมืองหนองบัวลำภู	0
@@ -134101,8 +134217,9 @@ geonameid	country	admin1	admin2	name	default
 1608608	TH	76	4101	Mueang Udon Thani	0
 1608608	TH	76	4101	อำเภอเมืองอุดรธานี	0
 1608608	TH	76	4101	เมืองอุดรธานี	0
-1608609	TH	75	3401	Amphoe Mueang Ubon Ratchathani	1
+1608609	TH	75	3401	Amphoe Mueang Ubonratchathani	1
 1608609	TH	75	3401	Amphoe Muang Ubon Ratchathani	0
+1608609	TH	75	3401	Amphoe Mueang Ubon Ratchathani	0
 1608609	TH	75	3401	Mueang Ubon Ratchathani	0
 1608609	TH	75	3401	อำเภอเมืองอุบลราชธานี	0
 1608609	TH	75	3401	เมืองอุบลราชธานี	0
@@ -134129,8 +134246,9 @@ geonameid	country	admin1	admin2	name	default
 1608615	TH	68	9001	Singgora	0
 1608615	TH	68	9001	อำเภอเมืองสงขลา	0
 1608615	TH	68	9001	เมืองสงขลา	0
-1608616	TH	30	3301	Amphoe Mueang Sisaket	1
+1608616	TH	30	3301	Amphoe Mueang Si Sa Ket	1
 1608616	TH	30	3301	Amphoe Muang Sisaket	0
+1608616	TH	30	3301	Amphoe Mueang Sisaket	0
 1608616	TH	30	3301	Mueang Si Sa Ket	0
 1608616	TH	30	3301	อำเภอเมืองศรีสะเกษ	0
 1608616	TH	30	3301	เมืองศรีสะเกษ	0
@@ -134168,8 +134286,9 @@ geonameid	country	admin1	admin2	name	default
 1608623	TH	42	1101	อ. เมือง จ. สมุทรปราการ	0
 1608623	TH	42	1101	อำเภอเมืองสมุทรปราการ	0
 1608623	TH	42	1101	เมืองสมุทรปราการ	0
-1608624	TH	75	3414	Amphoe Muang Sam Sip	1
+1608624	TH	75	3414	Amphoe Muang Samsip	1
 1608624	TH	75	3414	Amphoe Kasem Sima	0
+1608624	TH	75	3414	Amphoe Muang Sam Sip	0
 1608624	TH	75	3414	Amphoe Utara Ubon	0
 1608624	TH	75	3414	Muang Sam Sip	0
 1608624	TH	75	3414	ม่วงสามสิบ	0
@@ -134203,6 +134322,7 @@ geonameid	country	admin1	admin2	name	default
 1608631	TH	07	5401	เมืองแพร่	0
 1608633	TH	12	6501	Amphoe Mueang Phitsanulok	1
 1608633	TH	12	6501	Amphoe Muang Phitsanulok	0
+1608633	TH	12	6501	Changwat Phitsanulok	0
 1608633	TH	12	6501	Mueang Phitsanulok	0
 1608633	TH	12	6501	Mueang Phitsanulok District	0
 1608633	TH	12	6501	อำเภอเมืองพิษณุโลก	0
@@ -134357,8 +134477,9 @@ geonameid	country	admin1	admin2	name	default
 1608663	TH	44	2401	Mueang Chachoengsao	0
 1608663	TH	44	2401	อำเภอเมืองฉะเชิงเทรา	0
 1608663	TH	44	2401	เมืองฉะเชิงเทรา	0
-1608664	TH	28	3101	Amphoe Mueang Buriram	1
+1608664	TH	28	3101	Amphoe Mueang Buri Ram	1
 1608664	TH	28	3101	Amphoe Muang Buriram	0
+1608664	TH	28	3101	Amphoe Mueang Buriram	0
 1608664	TH	28	3101	Mueang Buri Ram	0
 1608664	TH	28	3101	อำเภอเมืองบุรีรัมย์	0
 1608664	TH	28	3101	เมืองบุรีรัมย์	0
@@ -134990,6 +135111,7 @@ geonameid	country	admin1	admin2	name	default
 1614468	TH	73	4804	อำเภอบ้านแพง	0
 1616197	TH	70	9503	Amphoe Bannang Sata	1
 1616197	TH	70	9503	Amphoe Ba Cho	0
+1616197	TH	70	9503	Amphoe Ban Nang Sata	0
 1616197	TH	70	9503	Bachok	0
 1616197	TH	70	9503	Bannang Sata	0
 1616197	TH	70	9503	Bannang Star	0
@@ -135200,7 +135322,8 @@ geonameid	country	admin1	admin2	name	default
 1620988	TH	26	3607	Tambon Ban Chuan	0
 1620988	TH	26	3607	บำเหน็จณรงค์	0
 1620988	TH	26	3607	อำเภอบำเหน็จณรงค์	0
-1621004	TH	31	9603	Amphoe Ba Cho	1
+1621004	TH	31	9603	Amphoe Bacho	1
+1621004	TH	31	9603	Amphoe Ba Cho	0
 1621004	TH	31	9603	Amphoe Bachock	0
 1621004	TH	31	9603	Amphoe Bachoh	0
 1621004	TH	31	9603	Ba Re Nua	0
@@ -135325,6 +135448,7 @@ geonameid	country	admin1	admin2	name	default
 6865728	TH	40	1048	ทวีวัฒนา	0
 6865728	TH	40	1048	เขตทวีวัฒนา	0
 6865782	TH	53	7307	Amphoe Phutthamonthon	1
+6865782	TH	53	7307	Amphoe Phuttha Monthon	0
 6865782	TH	53	7307	King Amphoe Phutthamonthon	0
 6865782	TH	53	7307	Phutthamonthon	0
 6865782	TH	53	7307	Phutthamonthon District	0
@@ -135390,6 +135514,7 @@ geonameid	country	admin1	admin2	name	default
 6975772	TH	70	9504	ธารโต	0
 6975772	TH	70	9504	อำเภอธารโต	0
 6976014	TH	70	9507	Amphoe Kabang	1
+6976014	TH	70	9507	Amphoe Ka Bang	0
 6976014	TH	70	9507	Kabae	0
 6976014	TH	70	9507	Kabang	0
 6976014	TH	70	9507	Kabe	0
@@ -135466,6 +135591,7 @@ geonameid	country	admin1	admin2	name	default
 7325780	TH	03	5713	อำเภอเวียงแก่น	0
 7325780	TH	03	5713	เวียงแก่น	0
 7382204	TH	03	5714	Amphoe Khun Tan	1
+7382204	TH	03	5714	Amphoe Khuntan	0
 7382204	TH	03	5714	Khun Tan	0
 7382204	TH	03	5714	King Amphoe Khun Tan	0
 7382204	TH	03	5714	ขุนตาล	0
@@ -135544,7 +135670,8 @@ geonameid	country	admin1	admin2	name	default
 7510608	TH	59	8505	Suk Samran	0
 7510608	TH	59	8505	สุขสำราญ	0
 7510608	TH	59	8505	อำเภอสุขสำราญ	0
-7510611	TH	60	8409	Amphoe Ban Takhun	1
+7510611	TH	60	8409	Amphoe Ban Ta Khun	1
+7510611	TH	60	8409	Amphoe Ban Takhun	0
 7510611	TH	60	8409	Ban Ta Khun	0
 7510611	TH	60	8409	King Amphoe Ban Takhun	0
 7510611	TH	60	8409	บ้านตาขุน	0
@@ -135554,7 +135681,8 @@ geonameid	country	admin1	admin2	name	default
 7510612	TH	63	8106	Plai Phraya	0
 7510612	TH	63	8106	ปลายพระยา	0
 7510612	TH	63	8106	อำเภอปลายพระยา	0
-7510613	TH	60	8419	Amphoe Wiphawadi	1
+7510613	TH	60	8419	Amphoe Vibhavadi	1
+7510613	TH	60	8419	Amphoe Wiphawadi	0
 7510613	TH	60	8419	King Amphoe Wiphawadi	0
 7510613	TH	60	8419	Vibhavadi	0
 7510613	TH	60	8419	วิภาวดี	0
@@ -135887,7 +136015,8 @@ geonameid	country	admin1	admin2	name	default
 7510680	TH	13	6609	Sak Lek	0
 7510680	TH	13	6609	สากเหล็ก	0
 7510680	TH	13	6609	อำเภอสากเหล็ก	0
-7510681	TH	13	6612	Amphoe Wachira Barami	1
+7510681	TH	13	6612	Amphoe Wachirabarami	1
+7510681	TH	13	6612	Amphoe Wachira Barami	0
 7510681	TH	13	6612	Wachirabarami	0
 7510681	TH	13	6612	วชิรบารมี	0
 7510681	TH	13	6612	อำเภอวชิรบารมี	0
@@ -136182,7 +136311,8 @@ geonameid	country	admin1	admin2	name	default
 7510739	TH	27	3003	Soeng Sang	0
 7510739	TH	27	3003	อำเภอเสิงสาง	0
 7510739	TH	27	3003	เสิงสาง	0
-7510740	TH	27	3022	Amphoe Nong Bun Mak	1
+7510740	TH	27	3022	Amphoe Nong Bunmak	1
+7510740	TH	27	3022	Amphoe Nong Bun Mak	0
 7510740	TH	27	3022	Amphoe Nong Bunnak	0
 7510740	TH	27	3022	King Amphoe Nong Bunnak	0
 7510740	TH	27	3022	Nong Bun Mak	0
@@ -136503,7 +136633,8 @@ geonameid	country	admin1	admin2	name	default
 7510802	TH	17	4315	กิ่งอำเภอเฝ้าไร่	0
 7510802	TH	17	4315	อำเภอเฝ้าไร่	0
 7510802	TH	17	4315	เฝ้าไร่	0
-7510803	TH	17	4316	Amphoe Rattanawapi	1
+7510803	TH	17	4316	Amphoe Rattana Wapi	1
+7510803	TH	17	4316	Amphoe Rattanawapi	0
 7510803	TH	17	4316	King Amphoe Rattanawapi	0
 7510803	TH	17	4316	Rattanawapi	0
 7510803	TH	17	4316	รัตนวาปี	0
@@ -136528,7 +136659,8 @@ geonameid	country	admin1	admin2	name	default
 7510807	TH	29	3217	Non Narai	0
 7510807	TH	29	3217	อำเภอโนนนารายณ์	0
 7510807	TH	29	3217	โนนนารายณ์	0
-7510808	TH	29	3216	Amphoe Khwao Sinarin	1
+7510808	TH	29	3216	Amphoe Khwao Sin Rin	1
+7510808	TH	29	3216	Amphoe Khwao Sinarin	0
 7510808	TH	29	3216	Khwao Sinarin	0
 7510808	TH	29	3216	King Amphoe Khwao Sinarin	0
 7510808	TH	29	3216	อำเภอเขวาสินรินทร์	0
@@ -136701,7 +136833,8 @@ geonameid	country	admin1	admin2	name	default
 7510843	TH	20	4715	King Amphoe Khok Si Suphan	0
 7510843	TH	20	4715	อำเภอโคกศรีสุพรรณ	0
 7510843	TH	20	4715	โคกศรีสุพรรณ	0
-7510844	TH	73	4812	Amphoe Wangyang	1
+7510844	TH	73	4812	Amphoe Wang Yang	1
+7510844	TH	73	4812	Amphoe Wangyang	0
 7510844	TH	73	4812	King Amphoe Wangyang	0
 7510844	TH	73	4812	Wang Yang	0
 7510844	TH	73	4812	วังยาง	0
@@ -136858,6 +136991,7 @@ geonameid	country	admin1	admin2	name	default
 7511037	TH	66	9311	ศรีนครินทร์	0
 7511037	TH	66	9311	อำเภอศรีนครินทร์	0
 7511038	TH	66	9302	Amphoe Kong Ra	1
+7511038	TH	66	9302	Amphoe Kongra	0
 7511038	TH	66	9302	King Amphoe Kong Ra	0
 7511038	TH	66	9302	Kong Ra	0
 7511038	TH	66	9302	กงหรา	0
@@ -141712,6 +141846,8 @@ geonameid	country	admin1	admin2	name	default
 8632588	TR	11	8632588	Bozüyük İlçesi	0
 8632589	TR	11	8632589	Pazaryeri Ilcesi	1
 8632589	TR	11	8632589	Pazaryeri İlçesi	0
+8694443	TR	70	8694443	Doski Asireti Boelgesi	1
+8694443	TR	70	8694443	Doski Aşireti Bölgesi	0
 9535332	TR	07	9535332	Doesemealti Ilcesi	1
 9535332	TR	07	9535332	Döşemealtı İlçesi	0
 9535333	TR	07	9535333	Aksu	1
@@ -143317,7 +143453,7 @@ geonameid	country	admin1	admin2	name	default
 709333	UA	11	0106	Dzhankoi Raion	0
 709333	UA	11	0106	Джанкойский район	0
 709333	UA	11	0106	Джанкойський район	0
-709961	UA	04	1202	Dnipro rural raion	1
+709961	UA	04	1202	Dnipro raion	1
 709961	UA	04	1202	Distretto di Dnipro	0
 709961	UA	04	1202	Dnipro Raion	0
 709961	UA	04	1202	Dnipropetrovsk Raion	0
@@ -143496,10 +143632,10 @@ geonameid	country	admin1	admin2	name	default
 713748	UA	21	5904	Okhtyrskiy Rayon	1
 713748	UA	21	5904	Охтирський район	0
 8449687	UA	11	0120	Miskyi okruh Yalta	1
-8449687	UA	11	0120	Gorodskoy okrug Yalta	0
-8449687	UA	11	0120	Yalta şeer bölgesi	0
-8449687	UA	11	0120	Городской округ Ялта	0
-8449687	UA	11	0120	Міський округ Ялта	0
+8449687	UA	11	0120	Yalta Raion	0
+8449687	UA	11	0120	Yalta rayonı	0
+8449687	UA	11	0120	Ялтинский район	0
+8449687	UA	11	0120	Ялтинський район	0
 8449692	UA	11	0110	Kerchens'ka Mis'ka Rada	1
 8449692	UA	11	0110	Comune di Kerč'	0
 8449692	UA	11	0110	Gorodskoy okrug Kerch	0
@@ -143618,12 +143754,12 @@ geonameid	country	admin1	admin2	name	default
 9807848	UA	21	5910	Шосткинська Міськрада	0
 9808694	UA	21	5902	Konotops'ka Mis'krada	1
 9808694	UA	21	5902	Cyngor Dinas Konotop	0
-9808694	UA	21	5902	Konotop City Council	0
 9808694	UA	21	5902	Konotop Raion	0
 9808694	UA	21	5902	Konotops’ka Mis’krada	0
+9808694	UA	21	5902	Konotops’kyi Rayon	0
 9808694	UA	21	5902	Канатопскі гарадскі савет	0
 9808694	UA	21	5902	Конотопский городской совет	0
-9808694	UA	21	5902	Конотопська Міськрада	0
+9808694	UA	21	5902	Конотопський район	0
 9821293	UA	16	4806	Mykolayiv urban raion	1
 9821293	UA	16	4806	Mykolaiv Raion	0
 9821293	UA	16	4806	Raïon urbain de Mykolaïv	0
@@ -143637,7 +143773,7 @@ geonameid	country	admin1	admin2	name	default
 12156240	UA	03	7302	Вижницкий район	0
 12156240	UA	03	7302	Вижницький район	0
 12189505	UA	11	0118	Feodosiya Raion	1
-12189505	UA	11	0118	Feodosia	0
+12189505	UA	11	0118	Feodosia Raion	0
 12189505	UA	11	0118	Feodosiiskyi Raion	0
 12189505	UA	11	0118	Феодосійський Район	0
 12189506	UA	11	0108	Yevpatoriya Raion	1
@@ -143675,9 +143811,11 @@ geonameid	country	admin1	admin2	name	default
 12189521	UA	14	4408	Rovenkivskyi Raion	1
 12189521	UA	14	4408	Rovenky Raion	0
 12189521	UA	14	4408	Ровеньківський Район	0
-12189522	UA	14	4412	Sievierodonetskyi Raion	1
-12189522	UA	14	4412	Sievierodonetsk Raion	0
+12189522	UA	14	4412	Siverskodonetskyi Raion	1
+12189522	UA	14	4412	Sievierodonetskyi Raion	0
+12189522	UA	14	4412	Siverskodonetsk Raion	0
 12189522	UA	14	4412	Сєвєродонецький Район	0
+12189522	UA	14	4412	Сіверськодонецький Район	0
 12189523	UA	14	4416	Shchastynskyi Raion	1
 12189523	UA	14	4416	Shchastia Raion	0
 12189523	UA	14	4416	Щастинський Район	0

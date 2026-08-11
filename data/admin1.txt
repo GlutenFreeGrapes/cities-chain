@@ -21395,6 +21395,7 @@ geonameid	country	admin1	name	default
 1529047	CN	13	سینجیانگ	0
 1529047	CN	13	شىنجاڭ	0
 1529047	CN	13	شىنجاڭ ئۇيغۇر ئاپتونوم رايونى	0
+1529047	CN	13	شينجيانغ	0
 1529047	CN	13	শিনজিয়াং	0
 1529047	CN	13	ਸਿਨਜਿਆਂਗ	0
 1529047	CN	13	ሲንጂያንግ	0
@@ -22878,6 +22879,7 @@ geonameid	country	admin1	name	default
 3678847	CO	17	La Guajira Department	1
 3678847	CO	17	Comisaria de la Goajira	0
 3678847	CO	17	Comisaría Especial de la Guajira	0
+3678847	CO	17	Comisaría de La Guajira	0
 3678847	CO	17	Comisaría de la Guajira	0
 3678847	CO	17	Departamentan'i La Guajira	0
 3678847	CO	17	Departamento La Guajira	0
@@ -28497,6 +28499,7 @@ geonameid	country	admin1	name	default
 3507269	DO	11	Provincia San Rafael	0
 3507269	DO	11	Provincia de Elías Piña	0
 3507269	DO	11	Provincia de La Estrelleta	0
+3507269	DO	11	Provincia de la Estrelleta	0
 3508718	DO	06	Duarte Province	1
 3508718	DO	06	Duarte	0
 3508718	DO	06	Duarte Provinsi	0
@@ -29677,6 +29680,7 @@ geonameid	country	admin1	name	default
 2486682	DZ	27	Msīlas vilāja	0
 2486682	DZ	27	Mʼsila	0
 2486682	DZ	27	M’Sila	0
+2486682	DZ	27	M’sila	0
 2486682	DZ	27	Provincia M'Sila	0
 2486682	DZ	27	Provincia de M'Sila	0
 2486682	DZ	27	Provinco M'Sila	0
@@ -29688,6 +29692,7 @@ geonameid	country	admin1	name	default
 2486682	DZ	27	Wilaya de M'Sila	0
 2486682	DZ	27	Wilaya de M'sila	0
 2486682	DZ	27	Wilaya de M’Sila	0
+2486682	DZ	27	Wilaya de M’sila	0
 2486682	DZ	27	Wilayah M'Sila	0
 2486682	DZ	27	provincia de M'Sila	0
 2486682	DZ	27	provincia di M'Sila	0
@@ -50573,6 +50578,7 @@ geonameid	country	admin1	name	default
 134766	IR	07	Fársz tartomány	0
 134766	IR	07	Fārs	0
 134766	IR	07	Fārsa	0
+134766	IR	07	Pars	0
 134766	IR	07	Persida	0
 134766	IR	07	Persis	0
 134766	IR	07	Provinca Fars	0
@@ -52326,7 +52332,6 @@ geonameid	country	admin1	name	default
 3165244	IT	17	Syd-Tirol	0
 3165244	IT	17	Sydtyrolen	0
 3165244	IT	17	Sydtyrolen (Trentino - Alto Adige)	0
-3165244	IT	17	Südtirol	0
 3165244	IT	17	Tirol Meridional	0
 3165244	IT	17	Tirol del Sud	0
 3165244	IT	17	Tirolo	0
@@ -52339,6 +52344,7 @@ geonameid	country	admin1	name	default
 3165244	IT	17	Trentino-Alto Adigio	0
 3165244	IT	17	Trentino-Alto Adije	0
 3165244	IT	17	Trentino-South Tyrol	0
+3165244	IT	17	Trentino-Südtirol	0
 3165244	IT	17	Venetia Tridentina	0
 3165244	IT	17	Venezia Tridentina	0
 3165244	IT	17	Больцано	0
@@ -66571,6 +66577,7 @@ geonameid	country	admin1	name	default
 88932	LY	65	เขตคูฟรา	0
 88932	LY	65	ელ-კუფრა	0
 88932	LY	65	አል ኩፍራ	0
+88932	LY	65	ⵍⴽⴼⵔⴰ	0
 88932	LY	65	クフラ県	0
 88932	LY	65	库夫拉省	0
 88932	LY	65	庫夫拉省	0
@@ -66693,6 +66700,7 @@ geonameid	country	admin1	name	default
 2214432	LY	74	নালুত	0
 2214432	LY	74	ਨਾਲੂਤ	0
 2214432	LY	74	ናሉት	0
+2214432	LY	74	ⵏⴰⵍⵓⵜ	0
 2214432	LY	74	ナルート	0
 2214602	LY	73	Murzuq District	1
 2214602	LY	73	Baladīyat Murzuq	0
@@ -66746,6 +66754,7 @@ geonameid	country	admin1	name	default
 2214602	LY	73	เขตเมอซุก	0
 2214602	LY	73	მარზუკის რაიონი	0
 2214602	LY	73	ሙርዙቅ ወረዳ	0
+2214602	LY	73	ⵎⵔⵣⵇ	0
 2214602	LY	73	ムルズク県	0
 2214602	LY	73	穆尔祖格省	0
 2214602	LY	73	穆爾祖格省	0
@@ -66761,6 +66770,7 @@ geonameid	country	admin1	name	default
 2214845	LY	72	মিসরাতাহ	0
 2214845	LY	72	ਮਿਸਰਾਤਾ	0
 2214845	LY	72	ሚስራታ	0
+2214845	LY	72	ⵎⵚⵔⴰⵜⴰ	0
 2214845	LY	72	ミスラタ	0
 2217350	LY	71	Ghat	1
 2217350	LY	71	Baladīyat Ghāt	0
@@ -66775,6 +66785,7 @@ geonameid	country	admin1	name	default
 2217350	LY	71	ঘাট	0
 2217350	LY	71	ਘਾਟ	0
 2217350	LY	71	ጋት	0
+2217350	LY	71	ⵖⴰⵜ	0
 2217350	LY	71	ガット	0
 2218972	LY	68	Az Zawiyah	1
 2218972	LY	68	Az Zāwiyah	0
@@ -66802,12 +66813,14 @@ geonameid	country	admin1	name	default
 2219413	LY	78	Wādī ash Shāţi’	0
 2219413	LY	78	Вади аш-Шати	0
 2219413	LY	78	Уади аш-Шати	0
+2219413	LY	78	الشاطئ	0
 2219413	LY	78	شعبية وادي الشاطئ	0
 2219413	LY	78	محافظة وادي الشاطئ	0
 2219413	LY	78	وادي الشاطئ	0
 2219413	LY	78	ওয়াদি আশ শাতি	0
 2219413	LY	78	ਵਾਦੀ ਆਸ਼ ਸ਼ਾਤੀ	0
 2219413	LY	78	ወዲ አሽ ሻቲ	0
+2219413	LY	78	ⵍⵛⴰⵟⵉ	0
 2219413	LY	78	ワディ・アッシャティ	0
 2219944	LY	64	Al Jufrah	1
 2219944	LY	64	Al Djoufrah	0
@@ -66843,6 +66856,7 @@ geonameid	country	admin1	name	default
 2219944	LY	64	ਅਲ ਜੁਫ਼ਰਾ	0
 2219944	LY	64	ელ-ჯუფრა	0
 2219944	LY	64	አል ጁፍራ	0
+2219944	LY	64	ⵍⵊⴼⵔⴰ	0
 2219944	LY	64	ジュフラ県	0
 2219944	LY	64	朱夫拉省	0
 2219944	LY	64	주프라 주	0
@@ -66873,6 +66887,7 @@ geonameid	country	admin1	name	default
 7602688	LY	79	আল বুতনান	0
 7602688	LY	79	ਅਲ ਬੁਤਨਾਨ	0
 7602688	LY	79	አል ቡትናን	0
+7602688	LY	79	ⵍⴱⵟⵏⴰⵏ	0
 7602688	LY	79	アル・ブトナン	0
 7602689	LY	80	Jabal al Gharbi	1
 7602689	LY	80	Al Djabal al Gharbi	0
@@ -66925,6 +66940,7 @@ geonameid	country	admin1	name	default
 7602690	LY	81	আল জাফারা	0
 7602690	LY	81	ਅਲ ਜਫਾਰਾ	0
 7602690	LY	81	አል ጃፋራ	0
+7602690	LY	81	ⵍⵊⴼⴰⵔⴰ	0
 7602690	LY	81	アル・ジャファラ	0
 7602691	LY	82	Al Marqab	1
 7602691	LY	82	Al-Marqab	0
@@ -66952,6 +66968,7 @@ geonameid	country	admin1	name	default
 7602692	LY	83	আল ওয়াহাট	0
 7602692	LY	83	ਅਲ ਵਾਹਾਟ	0
 7602692	LY	83	አል ዋሃት	0
+7602692	LY	83	ⵍⵡⴰⵃⴰⵜ	0
 7602692	LY	83	アル・ワハット	0
 7602693	LY	84	Wadi al Hayat	1
 7602693	LY	84	Muḩāfaz̧at Wādī al Ḩayāt	0
@@ -66966,6 +66983,7 @@ geonameid	country	admin1	name	default
 7602693	LY	84	ওয়াদি আল হায়াত	0
 7602693	LY	84	ਵਾਦੀ ਅਲ ਹਯਾਤ	0
 7602693	LY	84	ወዲ አል ሃያት	0
+7602693	LY	84	ⵡⴰⴷⵉ ⵍⵃⵢⴰⵜ	0
 7602693	LY	84	ワディ・アル・ハヤット	0
 11281874	MA	01	Tanger-Tetouan-Al Hoceima	1
 11281874	MA	01	Tanger-Tetuán-Al Hoceima	0
@@ -135426,6 +135444,7 @@ geonameid	country	admin1	name	default
 70935	YE	05	Gouvernement Schabwa	0
 70935	YE	05	Governació de Xabwa	0
 70935	YE	05	Governorate Number Four	0
+70935	YE	05	Governorate Number four	0
 70935	YE	05	Guvernoratul Shabwah	0
 70935	YE	05	IV	0
 70935	YE	05	Kegubernuran Shabwah	0
