@@ -1359,7 +1359,7 @@ async def fail(message:discord.Message,reason,current_round_length,res,n,cityfou
     if cityfound:
         cur.execute("INSERT INTO chain_info(server_id, user_id, round_number, count, city_id, name, admin2, admin1, country, country_code, alt_country, time_placed, valid, message_id, leaderboard_eligible) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (guildid, authorid, cache[guildid]["round_number"], current_round_length + 1, res[0], n[0], n[3], n[2], n[1][0], n[1][1], n[4], message.created_at, False, message.id, False))
     else:
-        cur.execute("INSERT INTO chain_info(server_id, user_id, round_number, count, name, time_placed, valid, message_id, leaderboard_eligible) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (guildid, authorid, cache[guildid]["round_number"], current_round_length, message.content[len(cache[guildid]["prefix"]):], message.created_at, False, message.id, False))
+        cur.execute("INSERT INTO chain_info(server_id, user_id, round_number, count, name, time_placed, valid, message_id, leaderboard_eligible) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (guildid, authorid, cache[guildid]["round_number"], current_round_length + 1, message.content[len(cache[guildid]["prefix"]):], message.created_at, False, message.id, False))
     cur.execute("UPDATE server_info SET chain_end = ?, current_letter = ?, last_user = ?, leaderboard_eligible = ?, last_message = ? WHERE server_id = ?",(True, '-', None, True, 0, guildid))
     cache[guildid]["chain_end"] = True
     cache[guildid]["current_letter"] = "-"

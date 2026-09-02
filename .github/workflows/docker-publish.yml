@@ -14,6 +14,19 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+
+      - name: Write commit messages to file
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const commits = ${{ toJSON(github.event.commits) }};
+            let output = "";
+            for (const commit of commits) {
+              output += `${commit.timestamp}\n\n\n${commit.message}\n\n\n\n`;
+            }
+            const fs = require('fs');
+            fs.writeFileSync('./commit_messages.txt', output.trimEnd());
+      
       - name: Log in to the Container registry
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
         with:
