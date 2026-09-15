@@ -743,8 +743,8 @@ geonameid	country	iso3	name	default
 3573511	AI	AIA	ኣንጊላ	0
 3573511	AI	AIA	អង់ហ្គីឡា	0
 3573511	AI	AIA	アンギラ	0
+3573511	AI	AIA	安吉拉	0
 3573511	AI	AIA	安圭拉	0
-3573511	AI	AIA	安奎拉	0
 3573511	AI	AIA	안길라	0
 3573511	AI	AIA	앵귈라	0
 783754	AL	ALB	Albania	1
@@ -1018,6 +1018,8 @@ geonameid	country	iso3	name	default
 8505032	AN	ANT	Нідерландські Антильські острови	0
 8505032	AN	ANT	الأنتيل الهولندية	0
 8505032	AN	ANT	オランダ領アンティル	0
+8505032	AN	ANT	荷属安的列斯	0
+8505032	AN	ANT	荷屬安地列斯	0
 8505032	AN	ANT	네덜란드령 안틸레스	0
 3351879	AO	AGO	Angola	1
 3351879	AO	AGO	AGO	0
@@ -8227,6 +8229,8 @@ geonameid	country	iso3	name	default
 357994	EG	EGY	Мысыр	0
 357994	EG	EGY	Эгіпет	0
 357994	EG	EGY	Եգիպտոս	0
+357994	EG	EGY	Եգիպտոսի Արաբական Հանրապետութիւն	0
+357994	EG	EGY	Մսր	0
 357994	EG	EGY	מצרים	0
 357994	EG	EGY	עגיפּטן	0
 357994	EG	EGY	עגיפטן	0
@@ -8708,7 +8712,9 @@ geonameid	country	iso3	name	default
 337996	ET	ETH	Эфиопи	0
 337996	ET	ETH	Эфиопия	0
 337996	ET	ETH	Эфіопія	0
+337996	ET	ETH	Ապիսինիա	0
 337996	ET	ETH	Եթովպիա	0
+337996	ET	ETH	Հապէշաստան	0
 337996	ET	ETH	אתיופיה	0
 337996	ET	ETH	עטיאפּיע	0
 337996	ET	ETH	إثيوبيا	0
@@ -19582,8 +19588,6 @@ geonameid	country	iso3	name	default
 2750405	NL	NLD	Hôlanê	0
 2750405	NL	NLD	Hōlani	0
 2750405	NL	NLD	Izelvroioù	0
-2750405	NL	NLD	Kingdom of the Netherlands	0
-2750405	NL	NLD	Koninkrijk der Nederlanden	0
 2750405	NL	NLD	Madalmaad	0
 2750405	NL	NLD	NL	0
 2750405	NL	NLD	NLD	0
@@ -19943,6 +19947,7 @@ geonameid	country	iso3	name	default
 2110425	NR	NRU	Naûrû	0
 2110425	NR	NRU	Nàúrù	0
 2110425	NR	NRU	Nárú	0
+2110425	NR	NRU	Republic of Naoero	0
 2110425	NR	NRU	Republic of Nauru	0
 2110425	NR	NRU	Trust Territory of Nauru	0
 2110425	NR	NRU	i-Nauru	0
@@ -24704,8 +24709,8 @@ geonameid	country	iso3	name	default
 934841	SZ	SWZ	ស្វាស៊ីឡង់	0
 934841	SZ	SWZ	スワジランド	0
 934841	SZ	SWZ	スワジランド王国	0
+934841	SZ	SWZ	史瓦帝尼	0
 934841	SZ	SWZ	史瓦濟蘭	0
-934841	SZ	SWZ	斯威士兰	0
 934841	SZ	SWZ	스와질란드	0
 934841	SZ	SWZ	스와질랜드	0
 3576916	TC	TCA	Turks and Caicos Islands	1

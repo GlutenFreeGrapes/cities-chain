@@ -5765,22 +5765,24 @@ geonameid	country	admin1	name	default
 7309441	AS	030	ਰੋਜ਼ ਟਾਪੂ	0
 7309441	AS	030	ሮዝ ደሴት	0
 7309441	AS	030	ローズ島	0
-2761367	AT	09	State of Vienna	1
+2761367	AT	09	Vienna	1
 2761367	AT	09	Beč	0
 2761367	AT	09	Bundesland Wien	0
 2761367	AT	09	Deelstaat Wenen	0
 2761367	AT	09	Dunaj	0
 2761367	AT	09	Estado de Viena	0
 2761367	AT	09	Fiyenna	0
+2761367	AT	09	State of Vienna	0
 2761367	AT	09	Stato di Vienna	0
 2761367	AT	09	Vena	0
 2761367	AT	09	Viana	0
 2761367	AT	09	Viena	0
-2761367	AT	09	Vienna	0
+2761367	AT	09	Vienne	0
 2761367	AT	09	Vieno	0
 2761367	AT	09	Viyana	0
 2761367	AT	09	Vyana	0
 2761367	AT	09	Vídeň	0
+2761367	AT	09	Wenen	0
 2761367	AT	09	Wiedeń	0
 2761367	AT	09	Wien	0
 2761367	AT	09	Wina	0
@@ -5948,7 +5950,7 @@ geonameid	country	admin1	name	default
 2764581	AT	06	施泰爾馬克	0
 2764581	AT	06	施泰爾馬克州	0
 2764581	AT	06	슈타이어마르크주	0
-2766823	AT	05	State of Salzburg	1
+2766823	AT	05	Salzburg	1
 2766823	AT	05	Deelstaat Salzburg	0
 2766823	AT	05	Estado de Salzburgo	0
 2766823	AT	05	Forbundslandet Salzburg	0
@@ -5957,13 +5959,12 @@ geonameid	country	admin1	name	default
 2766823	AT	05	Salcburgio	0
 2766823	AT	05	Salcbursko	0
 2766823	AT	05	Salisburghes	0
-2766823	AT	05	Salisburghese	0
 2766823	AT	05	Salisburghisi	0
 2766823	AT	05	Salisburghês	0
+2766823	AT	05	Salisburgo	0
 2766823	AT	05	Salisburgum	0
 2766823	AT	05	Salzborg	0
 2766823	AT	05	Salzbourg	0
-2766823	AT	05	Salzburg	0
 2766823	AT	05	Salzburg suyu	0
 2766823	AT	05	SalzburgerLand	0
 2766823	AT	05	Salzburgi liidumaa	0
@@ -5974,6 +5975,7 @@ geonameid	country	admin1	name	default
 2766823	AT	05	Soizburg	0
 2766823	AT	05	Solnograško	0
 2766823	AT	05	Soltborg	0
+2766823	AT	05	State of Salzburg	0
 2766823	AT	05	Stato di Salisburgo	0
 2766823	AT	05	Zalcburga	0
 2766823	AT	05	Zalcburgas	0
@@ -8491,11 +8493,13 @@ geonameid	country	admin1	name	default
 587081	AZ	09	Baky Shähäri	0
 587081	AZ	09	Bakı Şähäri	0
 587081	AZ	09	Gorod Baku	0
+587081	AZ	09	Баку	0
 587245	AZ	01	Abseron	1
 587245	AZ	01	Absheron Rayonu	0
 587245	AZ	01	Abşeron	0
 587245	AZ	01	Abşeron Rayonu	0
 587245	AZ	01	Apsheronskiy Rayon	0
+587245	AZ	01	Апшеронский район	0
 587342	AZ	06	Agsu District	1
 587342	AZ	06	Aghsu	0
 587342	AZ	06	Aghsu Rayon	0
@@ -8618,6 +8622,7 @@ geonameid	country	admin1	name	default
 828298	AZ	20	Ganja City	1
 828298	AZ	20	Gǝncǝ	0
 828298	AZ	20	Gəncə Şəhəri	0
+828298	AZ	20	Гянджа	0
 828299	AZ	33	Mingacevir City	1
 828299	AZ	33	Bandar Mingacevir	0
 828299	AZ	33	Cidade de Mingacevir	0
@@ -8668,6 +8673,7 @@ geonameid	country	admin1	name	default
 828305	AZ	54	Sumqayit	1
 828305	AZ	54	Sumqayit Sahari	0
 828305	AZ	54	Sumqayıt Şəhəri	0
+828305	AZ	54	Сумгаит	0
 828306	AZ	63	Xizi	1
 828306	AZ	63	Xızı	0
 828306	AZ	63	Xızı Rayonu	0
@@ -8684,6 +8690,7 @@ geonameid	country	admin1	name	default
 828307	AZ	68	Yevlax	0
 828307	AZ	68	Yevlax Şəhəri	0
 828307	AZ	68	Yevlax şəhəri	0
+828307	AZ	68	Евлах	0
 828307	AZ	68	Шахри Yevlax	0
 828307	AZ	68	شهر یولاخ	0
 828307	AZ	68	یولاخ ښار	0
@@ -26481,6 +26488,7 @@ geonameid	country	admin1	name	default
 2944387	DE	03	Brèma	0
 2944387	DE	03	Bréma	0
 2944387	DE	03	Brémy	0
+2944387	DE	03	Brême	0
 2944387	DE	03	Brēmene	0
 2944387	DE	03	Brėmenas	0
 2944387	DE	03	Città libera anseatica di Brema	0
@@ -61642,7 +61650,7 @@ geonameid	country	admin1	name	default
 1517381	KZ	15	Şərqi Qazaxstan	0
 1517381	KZ	15	Восточно-Казахстанская Область	0
 1517381	KZ	15	Көнчыгыш Казахстан	0
-1517381	KZ	15	Чыгыш Казакстан	0
+1517381	KZ	15	Чыгыш Казакстан облусу	0
 1517381	KZ	15	Шығыс Қазақстан	0
 1517381	KZ	15	Шығыс Қазақстан Облысы	0
 1517381	KZ	15	Қазоқистони Шарқӣ	0
@@ -61927,6 +61935,7 @@ geonameid	country	admin1	name	default
 1524787	KZ	10	Туркестан	0
 1524787	KZ	10	Туркестанская область	0
 1524787	KZ	10	Туркистон	0
+1524787	KZ	10	Түркстан облусу	0
 1524787	KZ	10	Түркістан	0
 1524787	KZ	10	Түркістан облысы	0
 1524787	KZ	10	Южно-Казахстанская область	0
@@ -62037,8 +62046,8 @@ geonameid	country	admin1	name	default
 12510144	KZ	12510144	Wilayah Jetisu	0
 12510144	KZ	12510144	Yankin Jetisu	0
 12510144	KZ	12510144	Вилояти Жетісу	0
+12510144	KZ	12510144	Жети-Суу облусу	0
 12510144	KZ	12510144	Жетысуская область	0
-12510144	KZ	12510144	Жетісу Region	0
 12510144	KZ	12510144	Жетісу облысы	0
 12510144	KZ	12510144	استان جتیسو	0
 12510144	KZ	12510144	جتیسو ولايت	0
@@ -95504,6 +95513,7 @@ geonameid	country	admin1	name	default
 524894	RU	48	Moskow	0
 524894	RU	48	Moskva	0
 524894	RU	48	Moskwa	0
+524894	RU	48	Маскөө	0
 524894	RU	48	Москва	0
 524894	RU	48	Мәскеу	0
 524894	RU	48	Мәскәү	0
@@ -133031,7 +133041,7 @@ geonameid	country	admin1	name	default
 1114927	UZ	10	regione di Samarcanda	0
 1114927	UZ	10	Σαμαρκάντ	0
 1114927	UZ	10	Вилояти Самарқанд	0
-1114927	UZ	10	Самарканд облусу	0
+1114927	UZ	10	Самаркан облусу	0
 1114927	UZ	10	Самаркандан область	0
 1114927	UZ	10	Самаркандска област	0
 1114927	UZ	10	Самаркандская вобласць	0
@@ -133401,8 +133411,8 @@ geonameid	country	admin1	name	default
 1484841	UZ	07	regiono Navojo	0
 1484841	UZ	07	Ναβόιγ	0
 1484841	UZ	07	Вилояти Навоӣ	0
+1484841	UZ	07	Набайы облусу	0
 1484841	UZ	07	Навои өлкәһе	0
-1484841	UZ	07	Навоий облусу	0
 1484841	UZ	07	Навоийн область	0
 1484841	UZ	07	Навоийская область	0
 1484841	UZ	07	Навойска област	0
