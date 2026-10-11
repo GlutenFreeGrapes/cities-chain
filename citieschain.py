@@ -1,4 +1,4 @@
-import discord, re, math, mariadb, asyncio, io, json, aiohttp, datetime, pytz, traceback
+import discord, re, math, mariadb, asyncio, io, json, aiohttp, datetime, pytz, traceback, os
 from discord import app_commands
 from typing import Optional,Literal
 from os import environ as env
@@ -581,9 +581,9 @@ processes = {}
 processes_mutexes = {}
 processes_cvs = {}
 for (server_id,) in cur.fetchall():
-    processes[server_id] = []
-    # processes_mutexes[server_id] = Lock()
-    # processes_cvs[server_id] = Condition(processes_mutexes[server_id])
+    processes[server_id] = list()
+    processes_mutexes[server_id] = Lock()
+    processes_cvs[server_id] = Condition(processes_mutexes[server_id])
 
 # # mutexes for sql tables - dict of mutexes
 # sql_table_mutexes = dict()
@@ -608,6 +608,10 @@ async def on_ready():
     owner = await client.fetch_user(app_info.team.owner_id)
     max_ages.update({i.id:datetime.datetime.fromtimestamp(0) for i in client.guilds if i.id not in max_ages})
     # prepare github messages
+    if os.path.exists("commit_messages.txt"):
+        commit_message_str = open("commit_messages.txt", "r").read()
+        logging.getLogger.info(commit_message_str)
+
     async with aiohttp.ClientSession() as session:
         async with session.get("https://api.github.com/repos/GlutenFreeGrapes/cities-chain/commits",params={"since":(datetime.datetime.now(tz=pytz.utc)-datetime.timedelta(minutes=20)).isoformat()}) as resp:
             json_response = await resp.json()
@@ -651,7 +655,7 @@ async def on_ready():
                 client_member = g.get_member(client.user.id)
             except:
                 client_member = None
-                logging.getLogger().info(f"unable to write to fetch client user in server {g.id} ({g.name})")
+                # logging.getLogger().info(f"unable to write to fetch client user in server {g.id} ({g.name})")
             if g.id in guild_to_channel:
                 # guild has updates on
                 id_to_channel = {c.id:c for c in g.text_channels}
@@ -669,15 +673,16 @@ async def on_ready():
                 if chosen_channel:
                     try:
                         await chosen_channel.send(embeds=embeds)
-                        logging.getLogger().info(f"successfully sent to channel {chosen_channel.id} ({chosen_channel.name}) of server {g.id} ({g.name})")
+                        # logging.getLogger().info(f"successfully sent to channel {chosen_channel.id} ({chosen_channel.name}) of server {g.id} ({g.name})")
                     except:
-                        logging.getLogger().info(f"unable to write to channel {chosen_channel.id} ({chosen_channel.name}) of server {g.id} ({g.name})")
-    print(f'Logged in as {client.user} (ID: {client.user.id})\n------')
+                        pass
+                        # logging.getLogger().info(f"unable to write to channel {chosen_channel.id} ({chosen_channel.name}) of server {g.id} ({g.name})")
+    # print(f'Logged in as {client.user} (ID: {client.user.id})\n------')
 
 @client.event
 async def on_guild_join(guild:discord.Guild):
     global processes, cache
-    processes[guild.id]=[]
+    processes[guild.id] = list()
 
     cur.execute("SELECT * FROM server_info WHERE server_id = ?", (guild.id,))
     if cur.rowcount==0:
@@ -1098,6 +1103,9 @@ async def on_message(message:discord.Message):
     authorid=message.author.id
     if message.guild and authorid!=client.user.id:
         guildid=message.guild.id
+
+        if guildid not in processes:
+            processes[guildid] = list()
         channel_id, prefix=cache[guildid]["channel_id"], cache[guildid]["prefix"]
         if message.channel.id==channel_id and not message.author.bot:
             if content.strip().startswith(prefix) and len(sanitize_query(message.content[len(prefix):])):
