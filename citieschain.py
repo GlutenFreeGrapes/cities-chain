@@ -582,8 +582,8 @@ processes_mutexes = {}
 processes_cvs = {}
 for (server_id,) in cur.fetchall():
     processes[server_id] = list()
-    processes_mutexes[server_id] = Lock()
-    processes_cvs[server_id] = Condition(processes_mutexes[server_id])
+    # processes_mutexes[server_id] = Lock()
+    # processes_cvs[server_id] = Condition(processes_mutexes[server_id])
 
 # # mutexes for sql tables - dict of mutexes
 # sql_table_mutexes = dict()
