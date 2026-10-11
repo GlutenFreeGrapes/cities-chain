@@ -610,7 +610,7 @@ async def on_ready():
     # prepare github messages
     if os.path.exists("commit_messages.txt"):
         commit_message_str = open("commit_messages.txt", "r").read()
-        logging.getLogger.info(commit_message_str)
+        logging.getLogger().info(commit_message_str)
 
     async with aiohttp.ClientSession() as session:
         async with session.get("https://api.github.com/repos/GlutenFreeGrapes/cities-chain/commits",params={"since":(datetime.datetime.now(tz=pytz.utc)-datetime.timedelta(minutes=20)).isoformat()}) as resp:
